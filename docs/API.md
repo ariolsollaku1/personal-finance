@@ -56,7 +56,7 @@ Create a new account.
 }
 ```
 
-- `type`: `"stock"`, `"bank"`, or `"cash"`
+- `type`: `"stock"`, `"bank"`, `"cash"`, `"loan"`, `"credit"`, or `"asset"`
 - `currency`: `"EUR"`, `"USD"`, or `"ALL"`
 - `initialBalance`: Optional, defaults to 0
 
@@ -396,6 +396,171 @@ Get aggregated dashboard data with stock portfolio overview.
 - `byType.stock.total` is live market value converted to main currency
 - `dueRecurring` shows recurring transactions due today or earlier
 - `recentTransactions` shows last 10 transactions (bank/cash only)
+
+---
+
+## Projection
+
+### GET /api/projection
+
+Get financial projections based on recurring transactions.
+
+**Response 200:**
+```json
+{
+  "mainCurrency": "ALL",
+  "currentMonth": "2026-01",
+  "ytd": [
+    {
+      "month": "2026-01",
+      "label": "Jan 2026",
+      "netWorth": 87314897.37,
+      "liquidAssets": 82720107.50,
+      "investments": 1775071.87,
+      "assets": 17425000,
+      "totalDebt": 14605282,
+      "income": 500000,
+      "expenses": 138719.50,
+      "netCashFlow": 361280.50,
+      "savingsRate": 72.26,
+      "byType": {
+        "bank": 82714107.50,
+        "cash": 6000,
+        "stock": 1775071.87,
+        "asset": 17425000,
+        "loan": 14591282,
+        "credit": 14000
+      }
+    }
+  ],
+  "future": [
+    {
+      "month": "2026-02",
+      "label": "Feb 2026",
+      "netWorth": 87676177.87,
+      "liquidAssets": 83081388,
+      "investments": 1775071.87,
+      "assets": 17425000,
+      "totalDebt": 14605282,
+      "income": 500000,
+      "expenses": 138719.50,
+      "netCashFlow": 361280.50,
+      "savingsRate": 72.26,
+      "byType": { ... }
+    }
+  ],
+  "summary": {
+    "monthlyIncome": 500000,
+    "monthlyExpenses": 138719.50,
+    "monthlySavings": 361280.50,
+    "savingsRate": 72.26,
+    "projectedYearEndNetWorth": 91235000,
+    "projectedNetWorthChange": 3920102.63
+  },
+  "recurringBreakdown": {
+    "income": [
+      { "name": "DigitSapiens SHPK", "amount": 400000, "frequency": "monthly", "monthlyAmount": 400000 }
+    ],
+    "expenses": [
+      { "name": "Raiffaisen Bank", "amount": 57467, "frequency": "monthly", "monthlyAmount": 57467, "category": "Mortgage" }
+    ]
+  }
+}
+```
+
+**Notes:**
+- `ytd`: Year-to-date data (January to current month)
+- `future`: Next 12 months projection
+- Projections based on recurring transactions only
+- All amounts converted to main currency
+
+---
+
+## P&L (Profit & Loss)
+
+### GET /api/pnl
+
+Get monthly P&L summaries from January 2026 onwards.
+
+**Response 200:**
+```json
+{
+  "mainCurrency": "ALL",
+  "months": [
+    {
+      "month": "2026-01",
+      "label": "January 2026",
+      "income": 500000,
+      "expenses": 138000,
+      "net": 362000,
+      "transactionCount": 15
+    },
+    {
+      "month": "2026-02",
+      "label": "February 2026",
+      "income": 500000,
+      "expenses": 142000,
+      "net": 358000,
+      "transactionCount": 18
+    }
+  ]
+}
+```
+
+**Notes:**
+- Based on actual transactions only (not recurring projections)
+- Excludes transfer transactions to avoid double counting
+- All amounts converted to main currency
+
+### GET /api/pnl/:month
+
+Get transaction details for a specific month.
+
+**URL Parameters:**
+- `month`: Format `YYYY-MM` (e.g., `2026-01`)
+
+**Response 200:**
+```json
+{
+  "month": "2026-01",
+  "label": "January 2026",
+  "mainCurrency": "ALL",
+  "income": 500000,
+  "expenses": 138000,
+  "net": 362000,
+  "transactions": [
+    {
+      "id": 9,
+      "date": "2026-01-22",
+      "type": "outflow",
+      "amount": 14000,
+      "amountInMainCurrency": 14000,
+      "payee": "Market",
+      "category": "Groceries",
+      "accountName": "Raif - Lek",
+      "accountCurrency": "ALL",
+      "notes": null
+    },
+    {
+      "id": 8,
+      "date": "2026-01-20",
+      "type": "inflow",
+      "amount": 400000,
+      "amountInMainCurrency": 400000,
+      "payee": "DigitSapiens SHPK",
+      "category": "Salary",
+      "accountName": "Raif - Lek",
+      "accountCurrency": "ALL",
+      "notes": null
+    }
+  ]
+}
+```
+
+**Notes:**
+- Transactions sorted by date (newest first)
+- `amountInMainCurrency` provided for cross-currency transactions
+- Excludes transfer transactions
 
 ---
 

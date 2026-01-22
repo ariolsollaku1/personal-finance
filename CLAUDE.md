@@ -10,13 +10,15 @@
 ## Project Overview
 
 A full-stack personal finance management application with:
-- **Multi-account support**: Bank, Cash, and Stock accounts
-- **Multi-currency**: EUR, USD, ALL (Albanian Lek)
+- **Multi-account support**: Bank, Cash, Stock, Loan, Credit Card, and Asset accounts
+- **Multi-currency**: EUR, USD, ALL (Albanian Lek) with automatic conversion
 - **Stock portfolio tracking**: Real-time prices from Yahoo Finance, per-account holdings
 - **Dividend tracking**: With Albanian tax calculations (8% flat rate)
 - **Recurring transactions**: Weekly, bi-weekly, monthly, yearly
 - **Transfers between accounts**: Cross-currency support
 - **Categories and Payees**: For transaction organization
+- **Financial Projections**: YTD and 12-month forward projections based on recurring transactions
+- **Profit & Loss Reports**: Monthly P&L with transaction details
 
 Built with TypeScript throughout, using Express.js backend, React frontend, SQLite database, and Yahoo Finance for real-time stock data.
 
@@ -46,7 +48,7 @@ npm run build        # Production build
 ┌─────────────────────────────────────────────────────────────────┐
 │                        FRONTEND (React)                         │
 │  ┌───────────┐  ┌─────────────┐  ┌───────────┐  ┌──────────┐   │
-│  │ Dashboard │  │ AccountPage │  │ Dividends │  │ Settings │   │
+│  │ Dashboard │  │ AccountPage │  │Projection │  │   P&L    │   │
 │  └─────┬─────┘  └──────┬──────┘  └─────┬─────┘  └────┬─────┘   │
 │        └────────────────┴──────────────┴─────────────┘         │
 │  ┌─────────────────────────────────────────────────────────┐   │
@@ -66,6 +68,7 @@ npm run build        # Production build
 │  │  /api/accounts | /api/holdings | /api/dividends         │   │
 │  │  /api/dashboard | /api/quotes | /api/transfers          │   │
 │  │  /api/categories | /api/payees | /api/recurring         │   │
+│  │  /api/projection | /api/pnl                             │   │
 │  └───────────┬─────────────────────┬───────────────────────┘   │
 │              │                     │                            │
 │  ┌───────────┴───────┐  ┌─────────┴─────────┐                  │
@@ -113,7 +116,9 @@ finance/
 │   │   │   ├── recurring.ts       # Recurring transactions
 │   │   │   ├── transfers.ts       # Account transfers
 │   │   │   ├── categories.ts      # Category CRUD
-│   │   │   └── payees.ts          # Payee CRUD
+│   │   │   ├── payees.ts          # Payee CRUD
+│   │   │   ├── projection.ts      # Financial projections
+│   │   │   └── pnl.ts             # Profit & Loss reports
 │   │   │
 │   │   └── services/              # Business logic
 │   │       ├── yahoo.ts           # Yahoo Finance API wrapper (v3)
@@ -127,10 +132,12 @@ finance/
 │       │
 │       ├── pages/                 # Route components
 │       │   ├── Dashboard.tsx      # Net worth, stock portfolio overview
-│       │   ├── AccountPage.tsx    # Account detail (bank/cash/stock)
+│       │   ├── AccountPage.tsx    # Account detail (bank/cash/stock/loan/credit/asset)
 │       │   ├── AddAccountPage.tsx # Create new account
 │       │   ├── Dividends.tsx      # All dividends view
 │       │   ├── TransfersPage.tsx  # Account transfers
+│       │   ├── ProjectionPage.tsx # Financial projections with charts
+│       │   ├── PnLPage.tsx        # Monthly P&L with transaction details
 │       │   └── settings/
 │       │       ├── CategoriesPage.tsx
 │       │       ├── PayeesPage.tsx
@@ -153,6 +160,9 @@ finance/
 │       │   │   ├── DividendForm.tsx   # Add dividend (per-account)
 │       │   │   └── TaxSummary.tsx     # Annual tax breakdown
 │       │   │
+│       │   ├── Charts/
+│       │   │   └── PerformanceChart.tsx  # Stock price history
+│       │   │
 │       │   └── StockSearch.tsx    # Autocomplete stock search
 │       │
 │       └── lib/
@@ -165,6 +175,30 @@ finance/
 
 ---
 
+## Account Types
+
+| Type | Icon | Description | Net Worth Calculation |
+|------|------|-------------|----------------------|
+| `bank` | 🏦 | Checking, savings accounts | Balance adds to net worth |
+| `cash` | 💵 | Physical cash, wallet | Balance adds to net worth |
+| `stock` | 📈 | Investment/brokerage accounts | Cost basis adds to net worth |
+| `asset` | 🏠 | Real estate, vehicles, valuables | Initial value adds to net worth |
+| `loan` | 📋 | Mortgages, personal loans | Balance subtracts from net worth |
+| `credit` | 💳 | Credit cards | Amount owed subtracts from net worth |
+
+### Credit Card Logic
+- `initial_balance` = Credit limit
+- `balance` = Available credit
+- Amount owed = `initial_balance - balance`
+- Sidebar and dashboard show amount owed (not available credit)
+
+### Asset Account Logic
+- `initial_balance` = Current value of the asset
+- No transactions, just tracks value
+- Use "Edit" to update value when it changes
+
+---
+
 ## Database Schema
 
 ### Core Tables
@@ -174,7 +208,7 @@ finance/
 CREATE TABLE accounts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
-  type TEXT NOT NULL CHECK(type IN ('stock', 'bank', 'cash')),
+  type TEXT NOT NULL CHECK(type IN ('stock', 'bank', 'cash', 'loan', 'credit', 'asset')),
   currency TEXT NOT NULL CHECK(currency IN ('EUR', 'USD', 'ALL')),
   initial_balance REAL DEFAULT 0,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -327,16 +361,70 @@ CREATE TABLE settings (
 
 **Response includes:**
 - `totalNetWorth` - Total across all accounts in main currency
-- `stockPortfolio` - Aggregated stock data:
-  - `totalValue` - Market value of all holdings
-  - `totalCost` - Cost basis of all holdings
-  - `totalGain` / `totalGainPercent` - Overall gain/loss
-  - `dayChange` / `dayChangePercent` - Today's change
-  - `holdingsCount` - Number of holdings across all stock accounts
-- `byType` - Totals by account type (bank, cash, stock)
+- `stockPortfolio` - Aggregated stock data (market value, cost, gain, day change)
+- `byType` - Totals by account type (bank, cash, stock, loan, credit, asset)
 - `accounts` - All accounts with balances
 - `dueRecurring` - Recurring transactions due today or earlier
 - `recentTransactions` - Last 10 transactions
+
+### Projection
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/projection` | Financial projections based on recurring transactions |
+
+**Response includes:**
+- `ytd` - Year-to-date monthly data (Jan to current month)
+- `future` - Next 12 months projection
+- `summary` - Monthly income, expenses, savings, savings rate
+- `recurringBreakdown` - Income and expense sources breakdown
+
+### P&L (Profit & Loss)
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/pnl` | Monthly P&L summaries from Jan 2026 onwards |
+| `GET /api/pnl/:month` | Transaction details for a specific month (YYYY-MM) |
+
+**Summary Response:**
+```json
+{
+  "mainCurrency": "ALL",
+  "months": [
+    {
+      "month": "2026-01",
+      "label": "January 2026",
+      "income": 500000,
+      "expenses": 138000,
+      "net": 362000,
+      "transactionCount": 15
+    }
+  ]
+}
+```
+
+**Detail Response:**
+```json
+{
+  "month": "2026-01",
+  "label": "January 2026",
+  "income": 500000,
+  "expenses": 138000,
+  "net": 362000,
+  "transactions": [
+    {
+      "id": 1,
+      "date": "2026-01-15",
+      "type": "outflow",
+      "amount": 14000,
+      "payee": "Market",
+      "category": "Groceries",
+      "accountName": "Raif - Lek",
+      "accountCurrency": "ALL"
+    }
+  ]
+}
+```
 
 ### Quotes
 
@@ -350,49 +438,37 @@ CREATE TABLE settings (
 
 ## Key Features
 
+### Financial Projections
+- **YTD Chart**: Net worth progression from January to current month
+- **12-Month Forecast**: Projected net worth based on recurring transactions
+- **Asset Composition**: Stacked chart showing bank, cash, stocks, assets over time
+- **Liquid Assets vs Debt**: Comparison chart with "Today" marker
+- **Financial Health Indicators**:
+  - Savings Rate (circular gauge)
+  - Debt to Annual Income ratio
+  - Emergency Fund (months of expenses covered)
+
+### Profit & Loss Reports
+- **Monthly Cards**: 4-column grid showing income, expenses, net for each month
+- **Transaction Details**: Click any month to see full transaction list
+- **Sorted by Date**: Transactions sorted newest first
+- **Category & Account Info**: Each transaction shows category and source account
+
 ### Multi-Account Stock Portfolio
 - **Per-account holdings**: Each stock account has its own holdings
 - **Per-account dividends**: Dividends are tracked per stock account
 - **Sidebar shows cost basis**: No API calls needed for sidebar (fast loading)
 - **Dashboard shows live portfolio**: Aggregates all stock accounts with live prices
 
-### Auto-Refresh for Stock Accounts
-- Holdings refresh every 60 seconds
-- Pauses when browser tab is hidden (saves API calls)
-- "Updated X ago" indicator
-- Manual refresh button available
+### Recurring Transaction Badges
+- Sidebar shows badges next to each account:
+  - Green badge: Count of recurring income transactions
+  - Red badge: Count of recurring expense transactions
 
-### Sortable Holdings Table
-Click column headers to sort by:
-- Symbol, Shares, Avg Cost, Price, Market Value, Gain/Loss, Day Change
-
-### Currency Support
-- Three currencies: EUR, USD, ALL (Albanian Lek)
-- Main currency setting for dashboard totals
-- Automatic conversion using exchange rates
-
----
-
-## Business Logic
-
-### Stock Account Cost Basis (Sidebar)
-Sidebar displays cost basis for stock accounts (sum of shares × avgCost), not live market value. This avoids API calls when loading the sidebar.
-
-### Stock Portfolio Overview (Dashboard)
-Dashboard fetches live quotes and shows:
-- Market value, cost basis, total gain/loss, day change
-- Aggregated across ALL stock accounts
-
-### Average Cost Calculation
-When buying additional shares:
-```
-newAvgCost = (existingShares * existingAvgCost + newShares * newPrice + fees) / totalShares
-```
-
-### Dividend Tax (Albanian)
-- Default rate: 8% flat tax on dividends
-- Configurable via settings
-- Applied to gross amount: `taxAmount = grossAmount * taxRate`
+### Currency Formatting
+- **ALL**: `1,235 L` (no decimals, L suffix)
+- **EUR**: `1,234.56 €` (2 decimals, € suffix)
+- **USD**: `$1,234.56` (2 decimals, $ prefix)
 
 ---
 
@@ -401,13 +477,78 @@ newAvgCost = (existingShares * existingAvgCost + newShares * newPrice + fees) / 
 | Route | Page | Description |
 |-------|------|-------------|
 | `/` | Dashboard | Net worth, stock portfolio overview |
+| `/projection` | ProjectionPage | Financial projections with charts |
+| `/pnl` | PnLPage | Monthly P&L cards with detail modal |
 | `/accounts/new` | AddAccountPage | Create new account |
-| `/accounts/:id` | AccountPage | Account detail (bank/cash/stock) |
+| `/accounts/:id` | AccountPage | Account detail (all types) |
 | `/transfers` | TransfersPage | Account transfers |
-| `/dividends` | Dividends | All dividends (read-only, add from account) |
 | `/settings/categories` | CategoriesPage | Manage categories |
 | `/settings/payees` | PayeesPage | Manage payees |
 | `/settings/currency` | CurrencyPage | Set main currency |
+
+---
+
+## Sidebar Navigation
+
+```
+┌────────────────────┐
+│ [≡] Finance Manager│
+├────────────────────┤
+│ Dashboard          │
+│ Projection         │
+│ P&L                │
+├────────────────────┤
+│ 🏦 BANK ACCOUNTS   │
+│   > Checking  [2🟢]│
+│   > Savings        │
+│ 💵 CASH ACCOUNTS   │
+│   > Wallet         │
+│ 📈 STOCK ACCOUNTS  │
+│   > Portfolio      │
+│ 🏠 ASSETS          │
+│   > Apartment      │
+│ 📋 LOAN ACCOUNTS   │
+│   > Mortgage       │
+│ 💳 CREDIT CARDS    │
+│   > Visa           │
+├────────────────────┤
+│ [+] Add Account    │
+├────────────────────┤
+│ SETTINGS           │
+│   Categories       │
+│   Payees           │
+│   Currency         │
+│   Transfers        │
+└────────────────────┘
+```
+
+---
+
+## Business Logic
+
+### Net Worth Calculation
+```
+Net Worth = Bank + Cash + Stock(costBasis) + Assets - Loans - CreditOwed
+```
+
+Where:
+- Bank/Cash: Current balance
+- Stock: Sum of (shares × avgCost) for all holdings
+- Assets: initial_balance (current value)
+- Loans: Current balance (remaining debt)
+- Credit: initial_balance - balance (limit minus available = owed)
+
+### Projection Calculation
+- Based on recurring transactions only
+- Monthly net = sum(recurring inflows) - sum(recurring outflows)
+- YTD: Current state projected backwards
+- Future: Current state projected forwards
+
+### P&L Calculation
+- Based on actual transactions only
+- Excludes transfer transactions (to avoid double counting)
+- Groups by month (YYYY-MM format)
+- Converts all amounts to main currency
 
 ---
 
@@ -462,3 +603,5 @@ newAvgCost = (existingShares * existingAvgCost + newShares * newPrice + fees) / 
 | Modify Yahoo Finance integration | `src/server/services/yahoo.ts` |
 | Currency formatting | `src/client/lib/currency.ts` |
 | Sidebar navigation | `src/client/components/Layout/Sidebar.tsx` |
+| Projection logic | `src/server/routes/projection.ts` |
+| P&L logic | `src/server/routes/pnl.ts` |

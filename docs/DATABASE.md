@@ -14,13 +14,13 @@
 
 ### accounts
 
-Central table for all account types (bank, cash, stock).
+Central table for all account types.
 
 ```sql
 CREATE TABLE accounts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
-  type TEXT NOT NULL CHECK(type IN ('stock', 'bank', 'cash')),
+  type TEXT NOT NULL CHECK(type IN ('stock', 'bank', 'cash', 'loan', 'credit', 'asset')),
   currency TEXT NOT NULL CHECK(currency IN ('EUR', 'USD', 'ALL')),
   initial_balance REAL DEFAULT 0,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -31,10 +31,18 @@ CREATE TABLE accounts (
 |--------|------|-------------|-------------|
 | id | INTEGER | PRIMARY KEY, AUTOINCREMENT | Unique identifier |
 | name | TEXT | NOT NULL | Account display name |
-| type | TEXT | NOT NULL, CHECK | 'stock', 'bank', or 'cash' |
+| type | TEXT | NOT NULL, CHECK | 'stock', 'bank', 'cash', 'loan', 'credit', 'asset' |
 | currency | TEXT | NOT NULL, CHECK | 'EUR', 'USD', or 'ALL' |
 | initial_balance | REAL | DEFAULT 0 | Starting balance |
 | created_at | TEXT | DEFAULT CURRENT_TIMESTAMP | ISO timestamp |
+
+**Account Types:**
+- **bank**: Bank accounts (checking, savings)
+- **cash**: Physical cash accounts
+- **stock**: Investment/brokerage accounts with holdings
+- **loan**: Loans and mortgages (balance typically negative)
+- **credit**: Credit cards (balance typically negative)
+- **asset**: Other assets (property, vehicles, valuables)
 
 ---
 
@@ -344,7 +352,7 @@ settingsQueries.getSidebarCollapsed(): boolean
 ## TypeScript Types
 
 ```typescript
-type AccountType = 'stock' | 'bank' | 'cash';
+type AccountType = 'stock' | 'bank' | 'cash' | 'loan' | 'credit' | 'asset';
 type Currency = 'EUR' | 'USD' | 'ALL';
 type TransactionType = 'inflow' | 'outflow';
 type Frequency = 'weekly' | 'biweekly' | 'monthly' | 'yearly';

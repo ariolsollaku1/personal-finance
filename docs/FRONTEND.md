@@ -26,6 +26,8 @@ src/client/
 │   ├── AddAccountPage.tsx # /accounts/new
 │   ├── Dividends.tsx   # /dividends - All dividends view
 │   ├── TransfersPage.tsx # /transfers
+│   ├── ProjectionPage.tsx # /projection - Financial projections
+│   ├── PnLPage.tsx     # /pnl - Monthly profit & loss
 │   └── settings/
 │       ├── CategoriesPage.tsx
 │       ├── PayeesPage.tsx
@@ -80,6 +82,8 @@ src/client/
     <Route path="/accounts/new" element={<AddAccountPage />} />
     <Route path="/accounts/:id" element={<AccountPage />} />
     <Route path="/transfers" element={<TransfersPage />} />
+    <Route path="/projection" element={<ProjectionPage />} />
+    <Route path="/pnl" element={<PnLPage />} />
     <Route path="/dividends" element={<Dividends />} />
     <Route path="/settings/categories" element={<CategoriesPage />} />
     <Route path="/settings/payees" element={<PayeesPage />} />
@@ -140,6 +144,72 @@ Handles all account types with conditional rendering:
 - All dividends across all accounts (read-only view)
 - Tax summary by year
 - Note: Add dividends from within each stock account
+
+### ProjectionPage (`/projection`)
+
+**File**: `src/client/pages/ProjectionPage.tsx`
+
+**Features**:
+- Financial projections based on recurring transactions
+- YTD chart showing actual performance
+- 12-month forward projection chart
+- Multiple visualization components using Recharts
+
+**Charts & Metrics**:
+- **Net Worth Projection**: Area chart showing liquid assets, debt, and net worth over time
+- **Monthly Cash Flow**: Bar chart showing income vs expenses by month
+- **Cash Flow Summary**: Comparison of monthly income, expenses, and net
+- **Financial Health Indicators**: Three gauges:
+  - Savings Rate (target: 20%+)
+  - Debt-to-Income ratio (target: <36%)
+  - Emergency Fund (months of runway)
+- **Income Breakdown**: Table showing income sources with monthly and annual amounts
+- **Expense Breakdown**: Table showing expense categories with monthly and annual amounts
+
+**Data Source**:
+- Current account balances (bank, cash, stock, loan, credit, asset)
+- Recurring transactions with frequency multipliers:
+  - Weekly: 4.33x
+  - Biweekly: 2.17x
+  - Monthly: 1x
+  - Yearly: 1/12x
+- Exchange rates for multi-currency conversion
+
+### PnLPage (`/pnl`)
+
+**File**: `src/client/pages/PnLPage.tsx`
+
+**Features**:
+- Monthly profit & loss view starting from Jan 2026
+- Grid layout (4 cards per row)
+- Click-to-expand detail modal
+
+**Components**:
+
+**MonthCard**:
+- Displays month label
+- Transaction count
+- Income total (green)
+- Expenses total (red)
+- Net total (color-coded positive/negative)
+- Click to view details
+
+**MonthDetailModal**:
+- Summary cards: Income, Expenses, Net
+- Full transaction list sorted by date
+- Columns: Date, Payee, Category, Account, Amount
+- Multi-currency display (shows both original and converted amounts)
+- Excludes transfer transactions to avoid double-counting
+
+**API Integration**:
+```typescript
+// Get all monthly summaries
+pnlApi.getSummary(): Promise<PnLSummary>
+
+// Get transactions for a specific month
+pnlApi.getMonth(month: string): Promise<PnLMonthDetail>
+// month format: "YYYY-MM" (e.g., "2026-01")
+```
 
 ---
 
@@ -315,7 +385,7 @@ interface TaxSummaryCardProps {
 ### Key Types
 
 ```typescript
-type AccountType = 'stock' | 'bank' | 'cash';
+type AccountType = 'stock' | 'bank' | 'cash' | 'loan' | 'credit' | 'asset';
 type Currency = 'EUR' | 'USD' | 'ALL';
 
 interface Account {
@@ -357,7 +427,7 @@ interface PortfolioSummary {
 interface DashboardData {
   mainCurrency: Currency;
   totalNetWorth: number;
-  byType: { bank, cash, stock: { count, total } };
+  byType: { bank, cash, stock, loan, credit, asset: { count, total } };
   stockPortfolio: {
     totalValue: number;
     totalCost: number;
@@ -371,6 +441,78 @@ interface DashboardData {
   dueRecurring: DueRecurring[];
   recentTransactions: RecentTransaction[];
   exchangeRates: Record<Currency, number>;
+}
+
+// Projection types
+interface ProjectionMonth {
+  month: string;           // "YYYY-MM"
+  label: string;           // "Jan 2026"
+  liquidAssets: number;    // bank + cash + stock
+  debt: number;            // loan + credit (negative)
+  netWorth: number;
+  income: number;
+  expenses: number;
+  net: number;
+}
+
+interface ProjectionData {
+  mainCurrency: Currency;
+  currentBalances: {
+    bank: number;
+    cash: number;
+    stock: number;
+    loan: number;
+    credit: number;
+    asset: number;
+    liquidAssets: number;
+    debt: number;
+    netWorth: number;
+  };
+  monthlyRecurring: {
+    income: number;
+    expenses: number;
+    net: number;
+  };
+  incomeBreakdown: Array<{ payee: string; category: string; monthlyAmount: number; annualAmount: number }>;
+  expenseBreakdown: Array<{ payee: string; category: string; monthlyAmount: number; annualAmount: number }>;
+  ytdMonths: ProjectionMonth[];
+  projectionMonths: ProjectionMonth[];
+}
+
+// P&L types
+interface MonthlyPnL {
+  month: string;           // "YYYY-MM"
+  label: string;           // "January 2026"
+  income: number;
+  expenses: number;
+  net: number;
+  transactionCount: number;
+}
+
+interface PnLTransaction {
+  id: number;
+  date: string;
+  type: 'inflow' | 'outflow';
+  amount: number;
+  amountInMainCurrency: number;
+  payee: string | null;
+  category: string | null;
+  accountName: string;
+  accountCurrency: Currency;
+}
+
+interface PnLMonthDetail {
+  month: string;
+  label: string;
+  income: number;
+  expenses: number;
+  net: number;
+  transactions: PnLTransaction[];
+}
+
+interface PnLSummary {
+  mainCurrency: Currency;
+  months: MonthlyPnL[];
 }
 ```
 
@@ -424,6 +566,13 @@ dashboardApi.setSidebarCollapsed(collapsed): Promise<...>
 quotesApi.get(symbol): Promise<Quote>
 quotesApi.search(query): Promise<SearchResult[]>
 quotesApi.getHistory(symbol, period?, interval?): Promise<HistoricalPrice[]>
+
+// Projection
+projectionApi.get(): Promise<ProjectionData>
+
+// P&L (Profit & Loss)
+pnlApi.getSummary(): Promise<PnLSummary>
+pnlApi.getMonth(month: string): Promise<PnLMonthDetail>  // month: "YYYY-MM"
 ```
 
 ---

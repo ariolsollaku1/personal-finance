@@ -110,6 +110,26 @@ export default function AccountPage() {
     initialBalance: 0,
   });
 
+  // Helper function to get row styling for recurring transactions based on due date
+  const getRecurringRowStyle = (nextDueDate: string): string => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dueDate = new Date(nextDueDate);
+    dueDate.setHours(0, 0, 0, 0);
+
+    const diffTime = dueDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      // Overdue - red background
+      return 'bg-red-50 border-l-4 border-red-400';
+    } else if (diffDays <= 7) {
+      // Due within 7 days (including today) - light orange background
+      return 'bg-orange-50 border-l-4 border-orange-400';
+    }
+    return '';
+  };
+
   // Refresh only portfolio data (for auto-refresh)
   const refreshPortfolio = useCallback(async (isManual = false) => {
     if (!account || account.type !== 'stock') return;
@@ -619,7 +639,7 @@ export default function AccountPage() {
                 ) : (
                   <div className="divide-y divide-gray-200">
                     {recurring.map((rec) => (
-                      <div key={rec.id} className="py-2 px-4 flex justify-between items-center">
+                      <div key={rec.id} className={`py-2 px-4 flex justify-between items-center ${getRecurringRowStyle(rec.next_due_date)}`}>
                         <div className="flex items-center gap-4 min-w-0">
                           <span
                             className={`text-sm font-medium w-20 ${
@@ -836,7 +856,7 @@ export default function AccountPage() {
             ) : (
               <div className="divide-y divide-gray-200">
                 {recurring.map((rec) => (
-                  <div key={rec.id} className="py-2 px-4 flex justify-between items-center">
+                  <div key={rec.id} className={`py-2 px-4 flex justify-between items-center ${getRecurringRowStyle(rec.next_due_date)}`}>
                     <div className="flex items-center gap-4 min-w-0">
                       <span
                         className={`text-sm font-medium w-20 ${
