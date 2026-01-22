@@ -776,48 +776,46 @@ export default function AccountPage() {
                 )}
 
                 {transactions.length === 0 ? (
-                  <div className="p-6 text-center text-gray-500">No transactions yet</div>
+                  <div className="p-4 text-center text-gray-500 text-sm">No transactions yet</div>
                 ) : (
                   <div className="divide-y divide-gray-200">
                     {transactions.map((tx) => (
-                      <div key={tx.id} className="p-4 flex justify-between items-center hover:bg-gray-50">
-                        <div>
-                          <p className="font-medium text-gray-900">
-                            {tx.payee_name || tx.category_name || tx.notes || 'Transaction'}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            {tx.date}
-                            {tx.category_name && tx.payee_name && ` • ${tx.category_name}`}
-                            {tx.notes && !tx.notes.startsWith('Buy ') && !tx.notes.startsWith('Sell ') && ` • ${tx.notes}`}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            <p
-                              className={`font-medium ${
-                                tx.type === 'inflow' ? 'text-green-600' : 'text-red-600'
-                              }`}
-                            >
-                              {tx.type === 'inflow' ? '+' : '-'}
-                              {formatCurrency(tx.amount, account.currency)}
+                      <div key={tx.id} className="py-2 px-4 flex justify-between items-center hover:bg-gray-50">
+                        <div className="flex items-center gap-4 min-w-0">
+                          <span
+                            className={`text-sm font-medium w-20 ${
+                              tx.type === 'inflow' ? 'text-green-600' : 'text-red-600'
+                            }`}
+                          >
+                            {tx.type === 'inflow' ? '+' : '-'}
+                            {formatCurrency(tx.amount, account.currency)}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {tx.payee_name || tx.category_name || tx.notes || 'Transaction'}
+                              {tx.category_name && tx.payee_name && (
+                                <span className="text-gray-400 font-normal"> • {tx.category_name}</span>
+                              )}
                             </p>
-                            {tx.balance !== undefined && (
-                              <p className="text-sm text-gray-500">
-                                Balance: {formatCurrency(tx.balance, account.currency)}
-                              </p>
-                            )}
+                            <p className="text-xs text-gray-500">
+                              {tx.date}
+                              {tx.notes && !tx.notes.startsWith('Buy ') && !tx.notes.startsWith('Sell ') && ` • ${tx.notes}`}
+                              {tx.balance !== undefined && ` • Bal: ${formatCurrency(tx.balance, account.currency)}`}
+                            </p>
                           </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
                           {!tx.transfer_id && !tx.notes?.startsWith('Buy ') && !tx.notes?.startsWith('Sell ') && (
                             <>
                               <button
                                 onClick={() => setEditingTransaction(tx)}
-                                className="text-blue-600 hover:text-blue-800 text-sm"
+                                className="text-xs text-blue-600 hover:text-blue-800"
                               >
                                 Edit
                               </button>
                               <button
                                 onClick={() => handleDeleteTransaction(tx.id)}
-                                className="text-red-600 hover:text-red-800 text-sm"
+                                className="text-xs text-red-600 hover:text-red-800"
                               >
                                 Delete
                               </button>
@@ -825,6 +823,9 @@ export default function AccountPage() {
                           )}
                           {(tx.notes?.startsWith('Buy ') || tx.notes?.startsWith('Sell ')) && (
                             <span className="text-xs text-gray-400">Stock Trade</span>
+                          )}
+                          {tx.transfer_id && (
+                            <span className="text-xs text-gray-400">Transfer</span>
                           )}
                         </div>
                       </div>
@@ -1027,48 +1028,46 @@ export default function AccountPage() {
 
             {/* Transaction List */}
             {transactions.length === 0 ? (
-              <div className="p-6 text-center text-gray-500">No transactions yet</div>
+              <div className="p-4 text-center text-gray-500 text-sm">No transactions yet</div>
             ) : (
               <div className="divide-y divide-gray-200">
                 {transactions.map((tx) => (
-                  <div key={tx.id} className="p-4 flex justify-between items-center hover:bg-gray-50">
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {tx.payee_name || tx.category_name || 'Transaction'}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {tx.date}
-                        {tx.category_name && tx.payee_name && ` • ${tx.category_name}`}
-                        {tx.notes && ` • ${tx.notes}`}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <p
-                          className={`font-medium ${
-                            tx.type === 'inflow' ? 'text-green-600' : 'text-red-600'
-                          }`}
-                        >
-                          {tx.type === 'inflow' ? '+' : '-'}
-                          {formatCurrency(tx.amount, account.currency)}
+                  <div key={tx.id} className="py-2 px-4 flex justify-between items-center hover:bg-gray-50">
+                    <div className="flex items-center gap-4 min-w-0">
+                      <span
+                        className={`text-sm font-medium w-20 ${
+                          tx.type === 'inflow' ? 'text-green-600' : 'text-red-600'
+                        }`}
+                      >
+                        {tx.type === 'inflow' ? '+' : '-'}
+                        {formatCurrency(tx.amount, account.currency)}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {tx.payee_name || tx.category_name || 'Transaction'}
+                          {tx.category_name && tx.payee_name && (
+                            <span className="text-gray-400 font-normal"> • {tx.category_name}</span>
+                          )}
                         </p>
-                        {tx.balance !== undefined && (
-                          <p className="text-sm text-gray-500">
-                            Balance: {formatCurrency(tx.balance, account.currency)}
-                          </p>
-                        )}
+                        <p className="text-xs text-gray-500">
+                          {tx.date}
+                          {tx.notes && ` • ${tx.notes}`}
+                          {tx.balance !== undefined && ` • Bal: ${formatCurrency(tx.balance, account.currency)}`}
+                        </p>
                       </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       {!tx.transfer_id && (
                         <>
                           <button
                             onClick={() => setEditingTransaction(tx)}
-                            className="text-blue-600 hover:text-blue-800 text-sm"
+                            className="text-xs text-blue-600 hover:text-blue-800"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => handleDeleteTransaction(tx.id)}
-                            className="text-red-600 hover:text-red-800 text-sm"
+                            className="text-xs text-red-600 hover:text-red-800"
                           >
                             Delete
                           </button>
