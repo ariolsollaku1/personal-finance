@@ -47,6 +47,9 @@ router.get('/', async (_req: Request, res: Response) => {
       bank: { count: 0, total: 0 },
       cash: { count: 0, total: 0 },
       stock: { count: 0, total: 0 },
+      loan: { count: 0, total: 0 },
+      credit: { count: 0, total: 0, owed: 0 },
+      asset: { count: 0, total: 0 },
     };
 
     // Stock portfolio aggregation
@@ -152,9 +155,33 @@ router.get('/', async (_req: Request, res: Response) => {
         balanceInMainCurrency,
       });
 
-      totalNetWorth += balanceInMainCurrency;
-      byType[account.type as keyof typeof byType].count++;
-      byType[account.type as keyof typeof byType].total += balanceInMainCurrency;
+      // Loan accounts are liabilities, so they reduce net worth
+      // Credit cards: net worth = balance - limit (amount owed is limit - balance)
+      // Asset accounts add to net worth (like bank/cash)
+      if (account.type === 'loan') {
+        totalNetWorth -= balanceInMainCurrency;
+        byType.loan.count++;
+        byType.loan.total += balanceInMainCurrency;
+      } else if (account.type === 'credit') {
+        // For credit cards: initial_balance is the limit, balance is available credit
+        // Amount owed = limit - balance, net worth contribution = balance - limit (negative when owed)
+        const limitInMainCurrency = convertToMainCurrency(account.initial_balance, account.currency, mainCurrency);
+        const amountOwed = limitInMainCurrency - balanceInMainCurrency;
+        totalNetWorth -= amountOwed; // Subtract what's owed
+        byType.credit.count++;
+        byType.credit.total += limitInMainCurrency; // Total credit limit
+        byType.credit.owed += amountOwed; // Total amount owed
+      } else if (account.type === 'asset') {
+        // Asset accounts add to net worth (value stored in initial_balance)
+        const assetValue = convertToMainCurrency(account.initial_balance, account.currency, mainCurrency);
+        totalNetWorth += assetValue;
+        byType.asset.count++;
+        byType.asset.total += assetValue;
+      } else {
+        totalNetWorth += balanceInMainCurrency;
+        byType[account.type as keyof typeof byType].count++;
+        (byType[account.type as keyof typeof byType] as { count: number; total: number }).total += balanceInMainCurrency;
+      }
     }
 
     // Get due recurring transactions
@@ -217,6 +244,7 @@ router.get('/', async (_req: Request, res: Response) => {
         accountName: r.account_name,
         type: r.type,
         amount: r.amount,
+        currency: r.account_currency,
         payee: r.payee_name,
         category: r.category_name,
         frequency: r.frequency,

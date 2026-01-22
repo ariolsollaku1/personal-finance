@@ -47,7 +47,7 @@ export function initDatabase() {
     CREATE TABLE IF NOT EXISTS accounts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
-      type TEXT NOT NULL CHECK(type IN ('stock', 'bank', 'cash')),
+      type TEXT NOT NULL CHECK(type IN ('stock', 'bank', 'cash', 'loan', 'credit', 'asset')),
       currency TEXT NOT NULL CHECK(currency IN ('EUR', 'USD', 'ALL')),
       initial_balance REAL DEFAULT 0,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -189,6 +189,46 @@ export function initDatabase() {
 }
 
 function runMigrations() {
+  // Migration: Add 'loan' and 'credit' types to accounts table CHECK constraint
+  // SQLite doesn't support altering CHECK constraints, so we need to recreate the table
+  const accountsTableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='accounts'").get() as { sql: string } | undefined;
+  if (accountsTableInfo && !accountsTableInfo.sql.includes("'asset'")) {
+    console.log('Running migration: Adding asset type to accounts table...');
+
+    // Disable foreign keys temporarily for the migration
+    db.pragma('foreign_keys = OFF');
+
+    // Drop accounts_new if it exists from a previous failed migration
+    db.exec('DROP TABLE IF EXISTS accounts_new');
+
+    db.exec(`
+      -- Create new table with updated CHECK constraint
+      CREATE TABLE accounts_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL CHECK(type IN ('stock', 'bank', 'cash', 'loan', 'credit', 'asset')),
+        currency TEXT NOT NULL CHECK(currency IN ('EUR', 'USD', 'ALL')),
+        initial_balance REAL DEFAULT 0,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Copy data from old table
+      INSERT INTO accounts_new (id, name, type, currency, initial_balance, created_at)
+      SELECT id, name, type, currency, initial_balance, created_at FROM accounts;
+
+      -- Drop old table
+      DROP TABLE accounts;
+
+      -- Rename new table
+      ALTER TABLE accounts_new RENAME TO accounts;
+    `);
+
+    // Re-enable foreign keys
+    db.pragma('foreign_keys = ON');
+
+    console.log('Migration complete: asset type added to accounts table');
+  }
+
   // Check if we need to add account_id columns to existing tables
   const holdingsInfo = db.prepare("PRAGMA table_info(holdings)").all() as { name: string }[];
   const hasAccountId = holdingsInfo.some(col => col.name === 'account_id');

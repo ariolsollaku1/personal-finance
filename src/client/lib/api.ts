@@ -17,7 +17,7 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
 }
 
 // Common Types
-export type AccountType = 'stock' | 'bank' | 'cash';
+export type AccountType = 'stock' | 'bank' | 'cash' | 'loan' | 'credit' | 'asset';
 export type Currency = 'EUR' | 'USD' | 'ALL';
 export type TransactionType = 'inflow' | 'outflow';
 export type Frequency = 'weekly' | 'biweekly' | 'monthly' | 'yearly';
@@ -32,6 +32,8 @@ export interface Account {
   created_at: string;
   balance?: number;
   costBasis?: number; // For stock accounts: total cost basis of all holdings
+  recurringInflow?: number; // Count of active recurring inflow transactions
+  recurringOutflow?: number; // Count of active recurring outflow transactions
 }
 
 export interface Category {
@@ -102,6 +104,9 @@ export interface DashboardData {
     bank: { count: number; total: number };
     cash: { count: number; total: number };
     stock: { count: number; total: number };
+    loan: { count: number; total: number };
+    credit: { count: number; total: number; owed: number };
+    asset: { count: number; total: number };
   };
   stockPortfolio: {
     totalValue: number;
@@ -126,6 +131,7 @@ export interface DashboardData {
     accountName: string;
     type: string;
     amount: number;
+    currency: Currency;
     payee: string | null;
     category: string | null;
     frequency: string;
@@ -492,6 +498,23 @@ export const dividendsApi = {
       method: 'PUT',
       body: JSON.stringify({ rate }),
     }),
+  checkDividends: (accountId: number) =>
+    fetchApi<{
+      message: string;
+      dividendsFound: number;
+      dividendsCreated: number;
+      transactionsCreated: number;
+      newDividends: Array<{
+        id: number;
+        symbol: string;
+        exDate: string;
+        payDate: string;
+        sharesHeld: number;
+        grossAmount: number;
+        netAmount: number;
+        transactionCreated: boolean;
+      }>;
+    }>(`/dividends/check/${accountId}`, { method: 'POST' }),
 };
 
 // Quotes API

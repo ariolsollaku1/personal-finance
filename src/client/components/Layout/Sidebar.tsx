@@ -14,6 +14,9 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     bank: true,
     cash: true,
     stock: true,
+    loan: true,
+    credit: true,
+    asset: true,
   });
   const navigate = useNavigate();
   const location = useLocation();
@@ -46,11 +49,17 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const bankAccounts = accounts.filter((a) => a.type === 'bank');
   const cashAccounts = accounts.filter((a) => a.type === 'cash');
   const stockAccounts = accounts.filter((a) => a.type === 'stock');
+  const loanAccounts = accounts.filter((a) => a.type === 'loan');
+  const creditAccounts = accounts.filter((a) => a.type === 'credit');
+  const assetAccounts = accounts.filter((a) => a.type === 'asset');
 
   const accountGroups = [
     { key: 'bank', label: 'Bank Accounts', accounts: bankAccounts, icon: '🏦' },
     { key: 'cash', label: 'Cash Accounts', accounts: cashAccounts, icon: '💵' },
     { key: 'stock', label: 'Stock Accounts', accounts: stockAccounts, icon: '📈' },
+    { key: 'asset', label: 'Assets', accounts: assetAccounts, icon: '🏠' },
+    { key: 'loan', label: 'Loan Accounts', accounts: loanAccounts, icon: '📋' },
+    { key: 'credit', label: 'Credit Cards', accounts: creditAccounts, icon: '💳' },
   ];
 
   return (
@@ -153,10 +162,24 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                             }`
                           }
                         >
-                          <span className="truncate">{account.name}</span>
-                          <span className="text-xs text-gray-400 ml-2" title={account.type === 'stock' ? 'Cost Basis' : 'Balance'}>
+                          <div className="flex items-center min-w-0">
+                            <span className="truncate">{account.name}</span>
+                            {(account.recurringInflow || 0) > 0 && (
+                              <span className="ml-1.5 px-1.5 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded-full" title={`${account.recurringInflow} recurring income`}>
+                                {account.recurringInflow}
+                              </span>
+                            )}
+                            {(account.recurringOutflow || 0) > 0 && (
+                              <span className="ml-1 px-1.5 py-0.5 text-xs font-medium bg-red-100 text-red-700 rounded-full" title={`${account.recurringOutflow} recurring expense`}>
+                                {account.recurringOutflow}
+                              </span>
+                            )}
+                          </div>
+                          <span className={`text-xs ml-2 flex-shrink-0 ${account.type === 'credit' && (account.initial_balance - (account.balance || 0)) > 0 ? 'text-red-500' : 'text-gray-400'}`} title={account.type === 'stock' ? 'Cost Basis' : account.type === 'credit' ? 'Amount Owed' : 'Balance'}>
                             {account.type === 'stock'
                               ? `$${(account.costBasis || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                              : account.type === 'credit'
+                              ? formatCurrency(account.initial_balance - (account.balance || 0), account.currency)
                               : formatCurrency(account.balance || 0, account.currency)}
                           </span>
                         </NavLink>
@@ -184,9 +207,11 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                         : 'text-gray-600 hover:bg-gray-100'
                     }`
                   }
-                  title={account.type === 'stock'
-                    ? `${account.name} (Cost: $${(account.costBasis || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
-                    : `${account.name} (${formatCurrency(account.balance || 0, account.currency)})`}
+                  title={`${account.name}${account.type === 'stock'
+                    ? ` (Cost: $${(account.costBasis || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
+                    : account.type === 'credit'
+                    ? ` (Owed: ${formatCurrency(account.initial_balance - (account.balance || 0), account.currency)})`
+                    : ` (${formatCurrency(account.balance || 0, account.currency)})`}${(account.recurringInflow || 0) > 0 ? ` | ${account.recurringInflow} income` : ''}${(account.recurringOutflow || 0) > 0 ? ` | ${account.recurringOutflow} expense` : ''}`}
                 >
                   <span>{group.icon}</span>
                 </NavLink>

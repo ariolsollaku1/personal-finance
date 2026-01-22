@@ -64,8 +64,8 @@ export default function DividendList({ dividends, onDelete }: DividendListProps)
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Symbol
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Shares
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Payment Date
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Gross
@@ -93,8 +93,8 @@ export default function DividendList({ dividends, onDelete }: DividendListProps)
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                   {div.symbol}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
-                  {div.shares_held.toLocaleString()}
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {div.pay_date ? formatDate(div.pay_date) : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
                   {formatCurrency(div.amount)}

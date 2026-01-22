@@ -68,7 +68,7 @@ export default function Dashboard() {
       </div>
 
       {/* Account Type Breakdown */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -106,6 +106,45 @@ export default function Dashboard() {
             <span className="text-2xl">📈</span>
           </div>
           <p className="text-xs text-gray-400 mt-2">{data.byType.stock.count} account(s)</p>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Loan Accounts</p>
+              <p className="text-xl font-semibold text-red-600">
+                {formatCurrency(data.byType.loan.total, data.mainCurrency)}
+              </p>
+            </div>
+            <span className="text-2xl">📋</span>
+          </div>
+          <p className="text-xs text-gray-400 mt-2">{data.byType.loan.count} account(s)</p>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Credit Cards</p>
+              <p className={`text-xl font-semibold ${data.byType.credit.owed > 0 ? 'text-red-600' : 'text-gray-900'}`}>
+                {formatCurrency(data.byType.credit.owed, data.mainCurrency)}
+              </p>
+            </div>
+            <span className="text-2xl">💳</span>
+          </div>
+          <p className="text-xs text-gray-400 mt-2">{data.byType.credit.count} card(s) • Limit: {formatCurrency(data.byType.credit.total, data.mainCurrency)}</p>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Assets</p>
+              <p className="text-xl font-semibold text-gray-900">
+                {formatCurrency(data.byType.asset.total, data.mainCurrency)}
+              </p>
+            </div>
+            <span className="text-2xl">🏠</span>
+          </div>
+          <p className="text-xs text-gray-400 mt-2">{data.byType.asset.count} asset(s)</p>
         </div>
       </div>
 
@@ -181,7 +220,7 @@ export default function Dashboard() {
               >
                 <div className="flex items-center">
                   <span className="text-xl mr-3">
-                    {account.type === 'bank' ? '🏦' : account.type === 'cash' ? '💵' : '📈'}
+                    {account.type === 'bank' ? '🏦' : account.type === 'cash' ? '💵' : account.type === 'stock' ? '📈' : account.type === 'asset' ? '🏠' : account.type === 'loan' ? '📋' : '💳'}
                   </span>
                   <div>
                     <p className="font-medium text-gray-900">{account.name}</p>
@@ -230,8 +269,8 @@ export default function Dashboard() {
                       recurring.type === 'inflow' ? 'text-green-600' : 'text-red-600'
                     }`}
                   >
-                    {recurring.type === 'inflow' ? '+' : '-'}
-                    {recurring.amount.toFixed(2)}
+                    {recurring.type === 'inflow' ? '+' : ''}
+                    {formatCurrency(recurring.type === 'inflow' ? recurring.amount : -recurring.amount, recurring.currency)}
                   </span>
                   <button
                     onClick={() => handleApplyRecurring(recurring.id)}

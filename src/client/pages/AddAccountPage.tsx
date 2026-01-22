@@ -74,11 +74,17 @@ export default function AddAccountPage() {
             <option value="bank">Bank Account</option>
             <option value="cash">Cash Account</option>
             <option value="stock">Stock Account</option>
+            <option value="asset">Asset</option>
+            <option value="loan">Loan Account</option>
+            <option value="credit">Credit Card</option>
           </select>
           <p className="text-xs text-gray-500 mt-1">
             {formData.type === 'bank' && 'For checking, savings, or other bank accounts'}
             {formData.type === 'cash' && 'For physical cash or wallet tracking'}
             {formData.type === 'stock' && 'For stock portfolios and investment accounts (USD only)'}
+            {formData.type === 'asset' && 'For real estate, vehicles, or other valuable assets'}
+            {formData.type === 'loan' && 'For tracking debts and loans you owe'}
+            {formData.type === 'credit' && 'For credit cards - enter the credit limit'}
           </p>
         </div>
 
@@ -106,7 +112,7 @@ export default function AddAccountPage() {
         {formData.type !== 'stock' && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Initial Balance
+              {formData.type === 'credit' ? 'Credit Limit' : formData.type === 'asset' ? 'Current Value' : 'Initial Balance'}
             </label>
             <input
               type="number"
@@ -119,7 +125,11 @@ export default function AddAccountPage() {
               placeholder="0.00"
             />
             <p className="text-xs text-gray-500 mt-1">
-              The starting balance for this account
+              {formData.type === 'credit'
+                ? 'The maximum credit limit for this card'
+                : formData.type === 'asset'
+                ? 'The current market value of this asset'
+                : 'The starting balance for this account'}
             </p>
           </div>
         )}

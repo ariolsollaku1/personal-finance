@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Account,
   AccountTransaction,
@@ -22,14 +22,23 @@ import { formatCurrency } from '../lib/currency';
 import AddHoldingForm from '../components/Portfolio/AddHoldingForm';
 import HoldingsList from '../components/Portfolio/HoldingsList';
 import Summary from '../components/Portfolio/Summary';
-import DividendForm from '../components/Dividends/DividendForm';
 import DividendList from '../components/Dividends/DividendList';
 import TaxSummary from '../components/Dividends/TaxSummary';
 
 export default function AccountPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const accountId = parseInt(id || '0');
+
+  // Get initial tab from URL or default to 'holdings'
+  const getInitialTab = () => {
+    const tab = searchParams.get('tab');
+    if (tab === 'dividends' || tab === 'transactions' || tab === 'holdings') {
+      return tab;
+    }
+    return 'holdings';
+  };
 
   const [account, setAccount] = useState<Account | null>(null);
   const [transactions, setTransactions] = useState<AccountTransaction[]>([]);
@@ -52,8 +61,19 @@ export default function AccountPage() {
   } | null>(null);
   const [dividends, setDividends] = useState<Dividend[]>([]);
   const [taxSummary, setTaxSummary] = useState<TaxSummaryData | null>(null);
-  const [stockTab, setStockTab] = useState<'holdings' | 'dividends' | 'transactions'>('holdings');
+  const [stockTab, setStockTab] = useState<'holdings' | 'dividends' | 'transactions'>(getInitialTab);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  // Update URL when tab changes
+  const handleTabChange = (tab: 'holdings' | 'dividends' | 'transactions') => {
+    setStockTab(tab);
+    if (tab === 'holdings') {
+      searchParams.delete('tab');
+    } else {
+      searchParams.set('tab', tab);
+    }
+    setSearchParams(searchParams, { replace: true });
+  };
   const [refreshing, setRefreshing] = useState(false);
   const refreshIntervalRef = useRef<number | null>(null);
 
@@ -61,7 +81,8 @@ export default function AccountPage() {
   const [showAddRecurring, setShowAddRecurring] = useState(false);
   const [showEditAccount, setShowEditAccount] = useState(false);
   const [showAddHolding, setShowAddHolding] = useState(false);
-  const [showAddDividend, setShowAddDividend] = useState(false);
+  const [checkingDividends, setCheckingDividends] = useState(false);
+  const [dividendCheckResult, setDividendCheckResult] = useState<string | null>(null);
   const [editingTransaction, setEditingTransaction] = useState<AccountTransaction | null>(null);
   const [editingRecurring, setEditingRecurring] = useState<RecurringTransaction | null>(null);
 
@@ -232,6 +253,27 @@ export default function AccountPage() {
     }
   };
 
+  const handleCheckDividends = async () => {
+    setCheckingDividends(true);
+    setDividendCheckResult(null);
+    try {
+      const result = await dividendsApi.checkDividends(accountId);
+      if (result.dividendsCreated > 0) {
+        setDividendCheckResult(
+          `Found ${result.dividendsCreated} new dividend(s). ${result.transactionsCreated} transaction(s) created.`
+        );
+        loadAccount();
+        window.dispatchEvent(new Event('accounts-changed'));
+      } else {
+        setDividendCheckResult('No new dividends found.');
+      }
+    } catch (err) {
+      setDividendCheckResult(err instanceof Error ? err.message : 'Failed to check dividends');
+    } finally {
+      setCheckingDividends(false);
+    }
+  };
+
   const handleAddRecurring = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -369,7 +411,7 @@ export default function AccountPage() {
           <div>
             <div className="flex items-center gap-3">
               <span className="text-2xl">
-                {account.type === 'bank' ? '🏦' : account.type === 'cash' ? '💵' : '📈'}
+                {account.type === 'bank' ? '🏦' : account.type === 'cash' ? '💵' : account.type === 'stock' ? '📈' : account.type === 'asset' ? '🏠' : account.type === 'loan' ? '📋' : '💳'}
               </span>
               <h1 className="text-2xl font-bold text-gray-900">{account.name}</h1>
             </div>
@@ -471,7 +513,7 @@ export default function AccountPage() {
           <div className="border-b border-gray-200">
             <nav className="flex -mb-px">
               <button
-                onClick={() => setStockTab('holdings')}
+                onClick={() => handleTabChange('holdings')}
                 className={`px-6 py-3 text-sm font-medium border-b-2 ${
                   stockTab === 'holdings'
                     ? 'border-blue-500 text-blue-600'
@@ -481,7 +523,7 @@ export default function AccountPage() {
                 Holdings
               </button>
               <button
-                onClick={() => setStockTab('dividends')}
+                onClick={() => handleTabChange('dividends')}
                 className={`px-6 py-3 text-sm font-medium border-b-2 ${
                   stockTab === 'dividends'
                     ? 'border-blue-500 text-blue-600'
@@ -491,7 +533,7 @@ export default function AccountPage() {
                 Dividends
               </button>
               <button
-                onClick={() => setStockTab('transactions')}
+                onClick={() => handleTabChange('transactions')}
                 className={`px-6 py-3 text-sm font-medium border-b-2 ${
                   stockTab === 'transactions'
                     ? 'border-blue-500 text-blue-600'
@@ -533,24 +575,23 @@ export default function AccountPage() {
           {/* Dividends Tab */}
           {stockTab === 'dividends' && (
             <div className="space-y-6">
-              <div className="flex justify-end">
+              <div className="flex justify-between items-center">
+                <p className="text-sm text-gray-500">
+                  Automatically checks Yahoo Finance for dividends based on your holdings and purchase dates.
+                </p>
                 <button
-                  onClick={() => setShowAddDividend(!showAddDividend)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  onClick={handleCheckDividends}
+                  disabled={checkingDividends}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {showAddDividend ? 'Cancel' : 'Add Dividend'}
+                  {checkingDividends ? 'Checking...' : 'Check Dividends'}
                 </button>
               </div>
 
-              {showAddDividend && (
-                <DividendForm
-                  accountId={accountId}
-                  onSuccess={() => {
-                    setShowAddDividend(false);
-                    loadAccount();
-                  }}
-                  onCancel={() => setShowAddDividend(false)}
-                />
+              {dividendCheckResult && (
+                <div className={`p-4 rounded-md ${dividendCheckResult.includes('Failed') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
+                  {dividendCheckResult}
+                </div>
               )}
 
               <TaxSummary taxSummary={taxSummary} onUpdate={loadAccount} />
@@ -574,43 +615,48 @@ export default function AccountPage() {
                   </button>
                 </div>
                 {recurring.length === 0 ? (
-                  <div className="p-6 text-center text-gray-500">No recurring transactions</div>
+                  <div className="p-4 text-center text-gray-500 text-sm">No recurring transactions</div>
                 ) : (
                   <div className="divide-y divide-gray-200">
                     {recurring.map((rec) => (
-                      <div key={rec.id} className="p-4 flex justify-between items-center">
-                        <div>
-                          <p className="font-medium text-gray-900">
-                            {rec.payee_name || rec.category_name || 'Recurring'}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            {rec.frequency} • Next: {rec.next_due_date}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-4">
+                      <div key={rec.id} className="py-2 px-4 flex justify-between items-center">
+                        <div className="flex items-center gap-4 min-w-0">
                           <span
-                            className={`font-medium ${
+                            className={`text-sm font-medium w-20 ${
                               rec.type === 'inflow' ? 'text-green-600' : 'text-red-600'
                             }`}
                           >
-                            {rec.type === 'inflow' ? '+' : '-'}
-                            {formatCurrency(rec.amount, account.currency)}
+                            {rec.type === 'inflow' ? '+' : ''}
+                            {formatCurrency(rec.type === 'inflow' ? rec.amount : -rec.amount, account.currency)}
                           </span>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {rec.payee_name || 'No payee'}
+                              {rec.category_name && (
+                                <span className="text-gray-400 font-normal"> • {rec.category_name}</span>
+                              )}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {rec.frequency} • Next: {rec.next_due_date}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
                           <button
                             onClick={() => handleApplyRecurring(rec.id)}
-                            className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                            className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
                           >
                             Apply
                           </button>
                           <button
                             onClick={() => setEditingRecurring(rec)}
-                            className="text-blue-600 hover:text-blue-800"
+                            className="text-xs text-blue-600 hover:text-blue-800"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => handleDeleteRecurring(rec.id)}
-                            className="text-red-600 hover:text-red-800"
+                            className="text-xs text-red-600 hover:text-red-800"
                           >
                             Delete
                           </button>
@@ -786,43 +832,48 @@ export default function AccountPage() {
               </button>
             </div>
             {recurring.length === 0 ? (
-              <div className="p-6 text-center text-gray-500">No recurring transactions</div>
+              <div className="p-4 text-center text-gray-500 text-sm">No recurring transactions</div>
             ) : (
               <div className="divide-y divide-gray-200">
                 {recurring.map((rec) => (
-                  <div key={rec.id} className="p-4 flex justify-between items-center">
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {rec.payee_name || rec.category_name || 'Recurring'}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {rec.frequency} • Next: {rec.next_due_date}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-4">
+                  <div key={rec.id} className="py-2 px-4 flex justify-between items-center">
+                    <div className="flex items-center gap-4 min-w-0">
                       <span
-                        className={`font-medium ${
+                        className={`text-sm font-medium w-20 ${
                           rec.type === 'inflow' ? 'text-green-600' : 'text-red-600'
                         }`}
                       >
-                        {rec.type === 'inflow' ? '+' : '-'}
-                        {formatCurrency(rec.amount, account.currency)}
+                        {rec.type === 'inflow' ? '+' : ''}
+                        {formatCurrency(rec.type === 'inflow' ? rec.amount : -rec.amount, account.currency)}
                       </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {rec.payee_name || 'No payee'}
+                          {rec.category_name && (
+                            <span className="text-gray-400 font-normal"> • {rec.category_name}</span>
+                          )}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {rec.frequency} • Next: {rec.next_due_date}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <button
                         onClick={() => handleApplyRecurring(rec.id)}
-                        className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                        className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
                       >
                         Apply
                       </button>
                       <button
                         onClick={() => setEditingRecurring(rec)}
-                        className="text-blue-600 hover:text-blue-800"
+                        className="text-xs text-blue-600 hover:text-blue-800"
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => handleDeleteRecurring(rec.id)}
-                        className="text-red-600 hover:text-red-800"
+                        className="text-xs text-red-600 hover:text-red-800"
                       >
                         Delete
                       </button>

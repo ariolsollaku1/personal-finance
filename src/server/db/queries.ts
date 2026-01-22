@@ -1,7 +1,7 @@
 import { db } from './schema.js';
 
 // Types
-export type AccountType = 'stock' | 'bank' | 'cash';
+export type AccountType = 'stock' | 'bank' | 'cash' | 'loan' | 'credit' | 'asset';
 export type Currency = 'EUR' | 'USD' | 'ALL';
 export type TransactionType = 'inflow' | 'outflow';
 export type Frequency = 'weekly' | 'biweekly' | 'monthly' | 'yearly';
@@ -341,6 +341,16 @@ export const recurringQueries = {
     `).all(accountId) as RecurringTransaction[];
   },
 
+  getActiveCountsByAccount: (accountId: number) => {
+    return db.prepare(`
+      SELECT
+        SUM(CASE WHEN type = 'inflow' THEN 1 ELSE 0 END) as inflow_count,
+        SUM(CASE WHEN type = 'outflow' THEN 1 ELSE 0 END) as outflow_count
+      FROM recurring_transactions
+      WHERE account_id = ? AND is_active = 1
+    `).get(accountId) as { inflow_count: number; outflow_count: number };
+  },
+
   getById: (id: number) => {
     return db.prepare(`
       SELECT
@@ -360,14 +370,15 @@ export const recurringQueries = {
         rt.*,
         p.name as payee_name,
         c.name as category_name,
-        a.name as account_name
+        a.name as account_name,
+        a.currency as account_currency
       FROM recurring_transactions rt
       LEFT JOIN payees p ON rt.payee_id = p.id
       LEFT JOIN categories c ON rt.category_id = c.id
       LEFT JOIN accounts a ON rt.account_id = a.id
       WHERE rt.is_active = 1 AND rt.next_due_date <= ?
       ORDER BY rt.next_due_date ASC
-    `).all(beforeDate) as (RecurringTransaction & { account_name: string })[];
+    `).all(beforeDate) as (RecurringTransaction & { account_name: string; account_currency: Currency })[];
   },
 
   create: (
@@ -607,11 +618,12 @@ export const dividendQueries = {
     let whereClause = '';
     const params: (string | number)[] = [];
 
+    // Use pay_date for yearly grouping (fall back to ex_date if pay_date is null)
     if (year && accountId) {
-      whereClause = "WHERE strftime('%Y', ex_date) = ? AND account_id = ?";
+      whereClause = "WHERE strftime('%Y', COALESCE(pay_date, ex_date)) = ? AND account_id = ?";
       params.push(year.toString(), accountId);
     } else if (year) {
-      whereClause = "WHERE strftime('%Y', ex_date) = ?";
+      whereClause = "WHERE strftime('%Y', COALESCE(pay_date, ex_date)) = ?";
       params.push(year.toString());
     } else if (accountId) {
       whereClause = 'WHERE account_id = ?';
@@ -620,14 +632,14 @@ export const dividendQueries = {
 
     const query = `
       SELECT
-        strftime('%Y', ex_date) as year,
+        strftime('%Y', COALESCE(pay_date, ex_date)) as year,
         SUM(amount) as total_gross,
         SUM(tax_amount) as total_tax,
         SUM(net_amount) as total_net,
         COUNT(*) as dividend_count
       FROM dividends
       ${whereClause}
-      GROUP BY strftime('%Y', ex_date)
+      GROUP BY strftime('%Y', COALESCE(pay_date, ex_date))
       ORDER BY year DESC
     `;
 

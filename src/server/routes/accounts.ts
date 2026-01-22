@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { accountQueries, holdingsQueries, AccountType, Currency } from '../db/queries.js';
+import { accountQueries, holdingsQueries, recurringQueries, AccountType, Currency } from '../db/queries.js';
 import { getMultipleQuotes } from '../services/yahoo.js';
 
 const router = Router();
@@ -14,6 +14,11 @@ router.get('/', (_req: Request, res: Response) => {
       const balanceInfo = accountQueries.getBalance(account.id);
       const cashBalance = balanceInfo?.balance || 0;
 
+      // Get recurring transaction counts
+      const recurringCounts = recurringQueries.getActiveCountsByAccount(account.id);
+      const recurringInflow = recurringCounts?.inflow_count || 0;
+      const recurringOutflow = recurringCounts?.outflow_count || 0;
+
       if (account.type === 'stock') {
         // For stock accounts, calculate cost basis from holdings
         const holdings = holdingsQueries.getByAccount(account.id);
@@ -26,12 +31,16 @@ router.get('/', (_req: Request, res: Response) => {
           ...account,
           balance: Math.round(cashBalance * 100) / 100,  // Cash balance
           costBasis: Math.round(costBasis * 100) / 100,  // Holdings cost basis
+          recurringInflow,
+          recurringOutflow,
         };
       }
 
       return {
         ...account,
         balance: Math.round(cashBalance * 100) / 100,
+        recurringInflow,
+        recurringOutflow,
       };
     });
 
@@ -51,7 +60,7 @@ router.post('/', (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Name, type, and currency are required' });
     }
 
-    if (!['stock', 'bank', 'cash'].includes(type)) {
+    if (!['stock', 'bank', 'cash', 'loan', 'credit', 'asset'].includes(type)) {
       return res.status(400).json({ error: 'Invalid account type' });
     }
 

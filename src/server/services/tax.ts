@@ -7,15 +7,15 @@ export interface DividendTaxCalculation {
   netAmount: number;
 }
 
-// Albanian dividend tax rate (8% as of 2024)
-const DEFAULT_ALBANIAN_DIVIDEND_TAX_RATE = 0.08;
+// Dividend tax rate (30%)
+const DEFAULT_DIVIDEND_TAX_RATE = 0.30;
 
 export function calculateDividendTax(
   dividendPerShare: number,
   sharesHeld: number,
   taxRate?: number
 ): DividendTaxCalculation {
-  const rate = taxRate ?? settingsQueries.getDividendTaxRate() ?? DEFAULT_ALBANIAN_DIVIDEND_TAX_RATE;
+  const rate = taxRate ?? settingsQueries.getDividendTaxRate() ?? DEFAULT_DIVIDEND_TAX_RATE;
   const grossAmount = dividendPerShare * sharesHeld;
   const taxAmount = grossAmount * rate;
   const netAmount = grossAmount - taxAmount;
@@ -48,7 +48,7 @@ export function calculateAnnualTax(dividends: DividendTaxCalculation[]): {
 }
 
 export function getCurrentTaxRate(): number {
-  return settingsQueries.getDividendTaxRate() ?? DEFAULT_ALBANIAN_DIVIDEND_TAX_RATE;
+  return settingsQueries.getDividendTaxRate() ?? DEFAULT_DIVIDEND_TAX_RATE;
 }
 
 export function setTaxRate(rate: number): void {

@@ -1,6 +1,7 @@
 import { Router } from 'express';
-import { dividendQueries, holdingsQueries } from '../db/queries.js';
+import { dividendQueries, holdingsQueries, transactionQueries, accountTransactionQueries } from '../db/queries.js';
 import { calculateDividendTax, getCurrentTaxRate, setTaxRate } from '../services/tax.js';
+import { getDividendHistory } from '../services/yahoo.js';
 
 const router = Router();
 
@@ -158,6 +159,129 @@ router.put('/tax-rate', (req, res) => {
   } catch (error) {
     console.error('Error updating tax rate:', error);
     res.status(500).json({ error: 'Failed to update tax rate' });
+  }
+});
+
+// POST /api/dividends/check/:accountId - Check and auto-record dividends for an account
+router.post('/check/:accountId', async (req, res) => {
+  try {
+    const accountId = parseInt(req.params.accountId);
+
+    // Get all holdings for this account
+    const holdings = holdingsQueries.getByAccount(accountId);
+
+    if (holdings.length === 0) {
+      return res.json({ message: 'No holdings found', dividendsFound: 0, dividendsCreated: 0, transactionsCreated: 0 });
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    let dividendsFound = 0;
+    let dividendsCreated = 0;
+    let transactionsCreated = 0;
+    const newDividends: any[] = [];
+
+    // Get existing dividends for this account to avoid duplicates
+    const existingDividends = dividendQueries.getByAccount(accountId);
+    const existingDividendKeys = new Set(
+      existingDividends.map(d => `${d.symbol}-${d.ex_date}`)
+    );
+
+    for (const holding of holdings) {
+      // Get dividend history from Yahoo Finance
+      const dividendHistory = await getDividendHistory(holding.symbol);
+
+      // Get stock transactions for this symbol to determine ownership history
+      const stockTransactions = transactionQueries.getBySymbol(holding.symbol, accountId);
+
+      for (const dividend of dividendHistory) {
+        dividendsFound++;
+
+        const exDate = dividend.date.toISOString().split('T')[0];
+        const dividendKey = `${holding.symbol}-${exDate}`;
+
+        // Skip if already recorded
+        if (existingDividendKeys.has(dividendKey)) {
+          continue;
+        }
+
+        // Calculate shares held on ex-dividend date
+        // Start from 0 and replay transactions up to and including ex-date
+        let sharesHeldOnExDate = 0;
+        for (const tx of [...stockTransactions].reverse()) { // oldest first
+          if (tx.date <= exDate) {
+            if (tx.type === 'buy') {
+              sharesHeldOnExDate += tx.shares;
+            } else if (tx.type === 'sell') {
+              sharesHeldOnExDate -= tx.shares;
+            }
+          }
+        }
+
+        // If user didn't own any shares on ex-date, skip
+        if (sharesHeldOnExDate <= 0) {
+          continue;
+        }
+
+        // Calculate dividend amount and tax
+        const taxCalc = calculateDividendTax(dividend.dividends, sharesHeldOnExDate);
+
+        // Estimate payment date (typically 2-4 weeks after ex-date)
+        const payDate = new Date(dividend.date);
+        payDate.setDate(payDate.getDate() + 30); // Assume ~30 days after ex-date
+        const payDateStr = payDate.toISOString().split('T')[0];
+
+        // Create dividend record
+        const dividendId = dividendQueries.create(
+          holding.symbol,
+          taxCalc.grossAmount,
+          sharesHeldOnExDate,
+          exDate,
+          payDateStr,
+          taxCalc.taxRate,
+          taxCalc.taxAmount,
+          taxCalc.netAmount,
+          accountId
+        );
+        dividendsCreated++;
+        existingDividendKeys.add(dividendKey);
+
+        // If payment date has passed, create an account transaction for the net dividend
+        if (payDateStr <= today) {
+          accountTransactionQueries.create(
+            accountId,
+            'inflow',
+            taxCalc.netAmount,
+            payDateStr,
+            null,
+            null,
+            `Dividend: ${holding.symbol} ($${dividend.dividends.toFixed(4)}/share × ${sharesHeldOnExDate} shares, 30% tax)`
+          );
+          transactionsCreated++;
+        }
+
+        newDividends.push({
+          id: dividendId,
+          symbol: holding.symbol,
+          exDate,
+          payDate: payDateStr,
+          sharesHeld: sharesHeldOnExDate,
+          grossAmount: taxCalc.grossAmount,
+          netAmount: taxCalc.netAmount,
+          transactionCreated: payDateStr <= today,
+        });
+      }
+    }
+
+    res.json({
+      message: `Checked ${holdings.length} holding(s)`,
+      dividendsFound,
+      dividendsCreated,
+      transactionsCreated,
+      newDividends,
+    });
+  } catch (error) {
+    console.error('Error checking dividends:', error);
+    res.status(500).json({ error: 'Failed to check dividends' });
   }
 });
 
