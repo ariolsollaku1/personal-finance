@@ -400,19 +400,12 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         <div className="mt-4 px-2">
           <button
             onClick={() => navigate('/accounts/new')}
-            className={`flex items-center w-full px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors ${
-              collapsed ? 'justify-center' : ''
-            }`}
+            className="flex items-center justify-center w-full px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-lg shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-[1.02] transition-all"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
-            {!collapsed && <span className="ml-3">Add Account</span>}
+            {!collapsed && <span className="ml-2">Add Account</span>}
           </button>
         </div>
 
