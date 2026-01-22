@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(npm run dev)",
+      "Bash(npm run build:*)",
+      "Bash(curl:*)",
+      "Bash(sqlite3:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(cmd //c \"taskkill /PID 43672 /F\")",
+      "Bash(cmd //c \"taskkill /PID 43548 /F\")",
+      "WebFetch(domain:github.com)",
+      "Bash(npm install:*)",
+      "Bash(cmd //c \"taskkill /PID 43504 /F\")",
+      "Bash(cmd //c \"taskkill /PID 9060 /F\")",
+      "Bash(cmd //c \"taskkill /PID 32064 /F\")",
+      "Bash(cmd //c \"taskkill /PID 39124 /F\")",
+      "Bash(npm rebuild:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npx tsc:*)"
+    ]
+  }
+}
