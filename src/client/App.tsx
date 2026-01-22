@@ -7,6 +7,8 @@ import TransfersPage from './pages/TransfersPage';
 import CategoriesPage from './pages/settings/CategoriesPage';
 import PayeesPage from './pages/settings/PayeesPage';
 import CurrencyPage from './pages/settings/CurrencyPage';
+import ProjectionPage from './pages/ProjectionPage';
+import PnLPage from './pages/PnLPage';
 
 function App() {
   return (
@@ -16,6 +18,8 @@ function App() {
         <Route path="/accounts/new" element={<AddAccountPage />} />
         <Route path="/accounts/:id" element={<AccountPage />} />
         <Route path="/transfers" element={<TransfersPage />} />
+        <Route path="/projection" element={<ProjectionPage />} />
+        <Route path="/pnl" element={<PnLPage />} />
         <Route path="/settings/categories" element={<CategoriesPage />} />
         <Route path="/settings/payees" element={<PayeesPage />} />
         <Route path="/settings/currency" element={<CurrencyPage />} />

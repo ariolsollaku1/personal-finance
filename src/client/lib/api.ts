@@ -517,6 +517,97 @@ export const dividendsApi = {
     }>(`/dividends/check/${accountId}`, { method: 'POST' }),
 };
 
+// Projection Types
+export interface MonthlyProjectionData {
+  month: string;
+  label: string;
+  netWorth: number;
+  liquidAssets: number;
+  investments: number;
+  assets: number;
+  totalDebt: number;
+  income: number;
+  expenses: number;
+  netCashFlow: number;
+  savingsRate: number;
+  byType: {
+    bank: number;
+    cash: number;
+    stock: number;
+    asset: number;
+    loan: number;
+    credit: number;
+  };
+}
+
+export interface ProjectionData {
+  mainCurrency: Currency;
+  currentMonth: string;
+  ytd: MonthlyProjectionData[];
+  future: MonthlyProjectionData[];
+  summary: {
+    monthlyIncome: number;
+    monthlyExpenses: number;
+    monthlySavings: number;
+    savingsRate: number;
+    projectedYearEndNetWorth: number;
+    projectedNetWorthChange: number;
+  };
+  recurringBreakdown: {
+    income: Array<{ name: string; amount: number; frequency: string; monthlyAmount: number }>;
+    expenses: Array<{ name: string; amount: number; frequency: string; monthlyAmount: number; category: string }>;
+  };
+}
+
+// Projection API
+export const projectionApi = {
+  get: () => fetchApi<ProjectionData>('/projection'),
+};
+
+// P&L Types
+export interface MonthlyPnL {
+  month: string;
+  label: string;
+  income: number;
+  expenses: number;
+  net: number;
+  transactionCount: number;
+}
+
+export interface PnLSummary {
+  mainCurrency: Currency;
+  months: MonthlyPnL[];
+}
+
+export interface PnLTransactionDetail {
+  id: number;
+  date: string;
+  type: 'inflow' | 'outflow';
+  amount: number;
+  amountInMainCurrency: number;
+  payee: string | null;
+  category: string | null;
+  accountName: string;
+  accountCurrency: string;
+  notes: string | null;
+}
+
+export interface PnLMonthDetail {
+  month: string;
+  label: string;
+  mainCurrency: Currency;
+  income: number;
+  expenses: number;
+  net: number;
+  transactions: PnLTransactionDetail[];
+}
+
+// P&L API
+export const pnlApi = {
+  getSummary: () => fetchApi<PnLSummary>('/pnl'),
+  getMonth: (month: string) => fetchApi<PnLMonthDetail>(`/pnl/${month}`),
+};
+
 // Quotes API
 export interface Quote {
   symbol: string;

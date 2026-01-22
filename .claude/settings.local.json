@@ -19,7 +19,9 @@
       "Bash(cmd //c \"taskkill /PID 39124 /F\")",
       "Bash(npm rebuild:*)",
       "Bash(npm uninstall:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(python3:*)",
+      "Bash(node -e:*)"
     ]
   }
 }

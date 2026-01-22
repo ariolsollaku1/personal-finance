@@ -32,7 +32,7 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
+    <div className="h-screen bg-gray-100 flex overflow-hidden">
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
@@ -51,12 +51,12 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
       </div>
 
       {/* Desktop sidebar */}
-      <div className="hidden lg:flex">
+      <div className="hidden lg:flex h-full">
         <Sidebar collapsed={collapsed} onToggle={handleToggle} />
       </div>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         {/* Mobile header */}
         <header className="lg:hidden bg-white shadow-sm h-16 flex items-center px-4">
           <button

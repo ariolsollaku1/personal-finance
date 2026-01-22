@@ -15,6 +15,8 @@ import accountTransactionsRoutes from './routes/accountTransactions.js';
 import recurringRoutes from './routes/recurring.js';
 import transfersRoutes from './routes/transfers.js';
 import dashboardRoutes from './routes/dashboard.js';
+import projectionRoutes from './routes/projection.js';
+import pnlRoutes from './routes/pnl.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,6 +38,8 @@ app.use('/api/payees', payeesRoutes);
 app.use('/api/recurring', recurringRoutes);
 app.use('/api/transfers', transfersRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/projection', projectionRoutes);
+app.use('/api/pnl', pnlRoutes);
 
 // API routes - Legacy portfolio routes (still supported)
 app.use('/api/portfolio', portfolioRoutes);
