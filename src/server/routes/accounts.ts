@@ -253,4 +253,23 @@ router.delete('/:id', (req: Request, res: Response) => {
   }
 });
 
+// PUT /api/accounts/:id/favorite - Toggle favorite status
+router.put('/:id/favorite', (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { isFavorite } = req.body;
+
+    const account = accountQueries.getById(id);
+    if (!account) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
+
+    accountQueries.setFavorite(id, isFavorite);
+    res.json({ success: true, isFavorite });
+  } catch (error) {
+    console.error('Error toggling favorite:', error);
+    res.status(500).json({ error: 'Failed to toggle favorite' });
+  }
+});
+
 export default router;

@@ -29,6 +29,7 @@ export interface Account {
   type: AccountType;
   currency: Currency;
   initial_balance: number;
+  is_favorite?: number;
   created_at: string;
   balance?: number;
   costBasis?: number; // For stock accounts: total cost basis of all holdings
@@ -168,6 +169,11 @@ export const accountsApi = {
     }),
   delete: (id: number) =>
     fetchApi<{ success: boolean }>(`/accounts/${id}`, { method: 'DELETE' }),
+  setFavorite: (id: number, isFavorite: boolean) =>
+    fetchApi<{ success: boolean; isFavorite: boolean }>(`/accounts/${id}/favorite`, {
+      method: 'PUT',
+      body: JSON.stringify({ isFavorite }),
+    }),
 };
 
 // Account Transactions API

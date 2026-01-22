@@ -1,7 +1,29 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { Account, accountsApi } from '../../lib/api';
-import { formatCurrency } from '../../lib/currency';
+import { Account, accountsApi, Currency } from '../../lib/api';
+
+// Compact currency formatter for sidebar (e.g., 494k L, 1.5M €)
+function formatCompactCurrency(amount: number, currency: Currency): string {
+  const absAmount = Math.abs(amount);
+  const sign = amount < 0 ? '-' : '';
+
+  let formatted: string;
+  if (absAmount >= 1_000_000) {
+    const millions = absAmount / 1_000_000;
+    formatted = millions % 1 === 0 ? `${millions}M` : `${millions.toFixed(1)}M`;
+  } else if (absAmount >= 1_000) {
+    const thousands = absAmount / 1_000;
+    formatted = thousands % 1 === 0 ? `${thousands}k` : `${thousands.toFixed(1)}k`;
+  } else {
+    formatted = absAmount.toFixed(0);
+  }
+
+  const symbols: Record<Currency, string> = { ALL: ' L', EUR: ' €', USD: '$' };
+  if (currency === 'USD') {
+    return `${sign}${symbols.USD}${formatted}`;
+  }
+  return `${sign}${formatted}${symbols[currency]}`;
+}
 
 interface SidebarProps {
   collapsed: boolean;
@@ -11,12 +33,13 @@ interface SidebarProps {
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
-    bank: true,
-    cash: true,
-    stock: true,
-    loan: true,
-    credit: true,
-    asset: true,
+    favorites: true,
+    bank: false,
+    cash: false,
+    stock: false,
+    loan: false,
+    credit: false,
+    asset: false,
   });
   const navigate = useNavigate();
   const location = useLocation();
@@ -46,6 +69,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     setExpandedGroups((prev) => ({ ...prev, [group]: !prev[group] }));
   };
 
+  const favoriteAccounts = accounts.filter((a) => a.is_favorite === 1);
   const bankAccounts = accounts.filter((a) => a.type === 'bank');
   const cashAccounts = accounts.filter((a) => a.type === 'cash');
   const stockAccounts = accounts.filter((a) => a.type === 'stock');
@@ -61,6 +85,29 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     { key: 'loan', label: 'Loan Accounts', accounts: loanAccounts, icon: '📋' },
     { key: 'credit', label: 'Credit Cards', accounts: creditAccounts, icon: '💳' },
   ];
+
+  const getAccountIcon = (type: Account['type']) => {
+    switch (type) {
+      case 'bank': return '🏦';
+      case 'cash': return '💵';
+      case 'stock': return '📈';
+      case 'asset': return '🏠';
+      case 'loan': return '📋';
+      case 'credit': return '💳';
+      default: return '💰';
+    }
+  };
+
+  const handleToggleFavorite = async (e: React.MouseEvent, account: Account) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await accountsApi.setFavorite(account.id, !account.is_favorite);
+      loadAccounts();
+    } catch (error) {
+      console.error('Failed to toggle favorite:', error);
+    }
+  };
 
   return (
     <aside
@@ -160,9 +207,83 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           {!collapsed && <span className="ml-3">P&L</span>}
         </NavLink>
 
+        {/* Favorites Section */}
+        {!collapsed && (
+          <div className="mt-4">
+            <button
+              onClick={() => toggleGroup('favorites')}
+              className="w-full flex items-center justify-between px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:bg-gray-50"
+            >
+              <span className="flex items-center">
+                <span className="mr-2">⭐</span>
+                Favorites
+              </span>
+              <svg
+                className={`w-4 h-4 transition-transform ${
+                  expandedGroups.favorites ? 'rotate-180' : ''
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+            {expandedGroups.favorites && (
+              <div className="mt-1">
+                {favoriteAccounts.length === 0 ? (
+                  <p className="px-4 py-2 text-sm text-gray-400 italic">No favorites</p>
+                ) : (
+                  favoriteAccounts.map((account) => (
+                    <NavLink
+                      key={account.id}
+                      to={`/accounts/${account.id}`}
+                      className={({ isActive }) =>
+                        `flex items-center justify-between px-4 py-2 mx-2 rounded-lg text-sm transition-colors ${
+                          isActive
+                            ? 'bg-blue-50 text-blue-700'
+                            : 'text-gray-600 hover:bg-gray-100'
+                        }`
+                      }
+                    >
+                      <div className="flex items-center min-w-0">
+                        <span className="mr-2 text-xs">{getAccountIcon(account.type)}</span>
+                        <span className="truncate">{account.name}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className={`text-xs flex-shrink-0 ${account.type === 'credit' && (account.initial_balance - (account.balance || 0)) > 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                          {account.type === 'stock'
+                            ? formatCompactCurrency(account.costBasis || 0, 'USD')
+                            : account.type === 'credit'
+                            ? formatCompactCurrency(account.initial_balance - (account.balance || 0), account.currency)
+                            : formatCompactCurrency(account.balance || 0, account.currency)}
+                        </span>
+                        <button
+                          onClick={(e) => handleToggleFavorite(e, account)}
+                          className="p-0.5 hover:bg-gray-200 rounded text-yellow-500"
+                          title="Remove from favorites"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                        </button>
+                      </div>
+                    </NavLink>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Account Groups */}
         {!collapsed && (
-          <div className="mt-6">
+          <div className="mt-4">
             {accountGroups.map((group) => (
               <div key={group.key} className="mb-2">
                 <button
@@ -219,13 +340,24 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                               </span>
                             )}
                           </div>
-                          <span className={`text-xs ml-2 flex-shrink-0 ${account.type === 'credit' && (account.initial_balance - (account.balance || 0)) > 0 ? 'text-red-500' : 'text-gray-400'}`} title={account.type === 'stock' ? 'Cost Basis' : account.type === 'credit' ? 'Amount Owed' : 'Balance'}>
-                            {account.type === 'stock'
-                              ? `$${(account.costBasis || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                              : account.type === 'credit'
-                              ? formatCurrency(account.initial_balance - (account.balance || 0), account.currency)
-                              : formatCurrency(account.balance || 0, account.currency)}
-                          </span>
+                          <div className="flex items-center gap-1">
+                            <span className={`text-xs flex-shrink-0 ${account.type === 'credit' && (account.initial_balance - (account.balance || 0)) > 0 ? 'text-red-500' : 'text-gray-400'}`} title={account.type === 'stock' ? 'Cost Basis' : account.type === 'credit' ? 'Amount Owed' : 'Balance'}>
+                              {account.type === 'stock'
+                                ? formatCompactCurrency(account.costBasis || 0, 'USD')
+                                : account.type === 'credit'
+                                ? formatCompactCurrency(account.initial_balance - (account.balance || 0), account.currency)
+                                : formatCompactCurrency(account.balance || 0, account.currency)}
+                            </span>
+                            <button
+                              onClick={(e) => handleToggleFavorite(e, account)}
+                              className={`p-0.5 hover:bg-gray-200 rounded ${account.is_favorite ? 'text-yellow-500' : 'text-gray-300 hover:text-yellow-500'}`}
+                              title={account.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
+                            >
+                              <svg className="w-3.5 h-3.5" fill={account.is_favorite ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 20 20">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                              </svg>
+                            </button>
+                          </div>
                         </NavLink>
                       ))
                     )}
@@ -252,10 +384,10 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     }`
                   }
                   title={`${account.name}${account.type === 'stock'
-                    ? ` (Cost: $${(account.costBasis || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
+                    ? ` (Cost: ${formatCompactCurrency(account.costBasis || 0, 'USD')})`
                     : account.type === 'credit'
-                    ? ` (Owed: ${formatCurrency(account.initial_balance - (account.balance || 0), account.currency)})`
-                    : ` (${formatCurrency(account.balance || 0, account.currency)})`}${(account.recurringInflow || 0) > 0 ? ` | ${account.recurringInflow} income` : ''}${(account.recurringOutflow || 0) > 0 ? ` | ${account.recurringOutflow} expense` : ''}`}
+                    ? ` (Owed: ${formatCompactCurrency(account.initial_balance - (account.balance || 0), account.currency)})`
+                    : ` (${formatCompactCurrency(account.balance || 0, account.currency)})`}${(account.recurringInflow || 0) > 0 ? ` | ${account.recurringInflow} income` : ''}${(account.recurringOutflow || 0) > 0 ? ` | ${account.recurringOutflow} expense` : ''}`}
                 >
                   <span>{group.icon}</span>
                 </NavLink>

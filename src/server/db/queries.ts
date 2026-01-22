@@ -12,6 +12,7 @@ export interface Account {
   type: AccountType;
   currency: Currency;
   initial_balance: number;
+  is_favorite: number;
   created_at: string;
 }
 
@@ -158,6 +159,15 @@ export const accountQueries = {
       account,
       balance: account.initial_balance + result.transaction_total
     };
+  },
+
+  setFavorite: (id: number, isFavorite: boolean) => {
+    const stmt = db.prepare('UPDATE accounts SET is_favorite = ? WHERE id = ?');
+    return stmt.run(isFavorite ? 1 : 0, id);
+  },
+
+  getFavorites: () => {
+    return db.prepare('SELECT * FROM accounts WHERE is_favorite = 1 ORDER BY type, name').all() as Account[];
   },
 };
 

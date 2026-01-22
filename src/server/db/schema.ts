@@ -189,6 +189,19 @@ export function initDatabase() {
 }
 
 function runMigrations() {
+  // Migration: Add is_favorite column to accounts table
+  const accountsColumns = db.prepare("PRAGMA table_info(accounts)").all() as { name: string }[];
+  const hasIsFavorite = accountsColumns.some(col => col.name === 'is_favorite');
+  if (!hasIsFavorite) {
+    console.log('Running migration: Adding is_favorite column to accounts table...');
+    try {
+      db.exec('ALTER TABLE accounts ADD COLUMN is_favorite INTEGER DEFAULT 0');
+      console.log('Migration complete: is_favorite column added');
+    } catch (e) {
+      // Column might already exist
+    }
+  }
+
   // Migration: Add 'loan' and 'credit' types to accounts table CHECK constraint
   // SQLite doesn't support altering CHECK constraints, so we need to recreate the table
   const accountsTableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='accounts'").get() as { sql: string } | undefined;
