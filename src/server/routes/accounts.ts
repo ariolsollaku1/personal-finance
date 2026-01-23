@@ -5,23 +5,24 @@ import { getMultipleQuotes } from '../services/yahoo.js';
 const router = Router();
 
 // GET /api/accounts - List all accounts with balances
-router.get('/', async (_req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response) => {
   try {
-    const accounts = await accountQueries.getAll();
+    const userId = req.userId!;
+    const accounts = await accountQueries.getAll(userId);
 
     // Calculate balances for each account
     const accountsWithBalances = await Promise.all(accounts.map(async (account) => {
-      const balanceInfo = await accountQueries.getBalance(account.id);
+      const balanceInfo = await accountQueries.getBalance(userId, account.id);
       const cashBalance = balanceInfo?.balance || 0;
 
       // Get recurring transaction counts
-      const recurringCounts = await recurringQueries.getActiveCountsByAccount(account.id);
+      const recurringCounts = await recurringQueries.getActiveCountsByAccount(userId, account.id);
       const recurringInflow = Number(recurringCounts?.inflow_count) || 0;
       const recurringOutflow = Number(recurringCounts?.outflow_count) || 0;
 
       if (account.type === 'stock') {
         // For stock accounts, calculate cost basis from holdings
-        const holdings = await holdingsQueries.getByAccount(account.id);
+        const holdings = await holdingsQueries.getByAccount(userId, account.id);
         let costBasis = 0;
         for (const holding of holdings) {
           costBasis += Number(holding.shares) * Number(holding.avg_cost);
@@ -54,6 +55,7 @@ router.get('/', async (_req: Request, res: Response) => {
 // POST /api/accounts - Create account
 router.post('/', async (req: Request, res: Response) => {
   try {
+    const userId = req.userId!;
     const { name, type, currency, initialBalance } = req.body;
 
     if (!name || !type || !currency) {
@@ -68,8 +70,8 @@ router.post('/', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid currency' });
     }
 
-    const id = await accountQueries.create(name, type as AccountType, currency as Currency, initialBalance || 0);
-    const account = await accountQueries.getById(id as number);
+    const id = await accountQueries.create(userId, name, type as AccountType, currency as Currency, initialBalance || 0);
+    const account = await accountQueries.getById(userId, id as number);
 
     res.status(201).json(account);
   } catch (error) {
@@ -81,18 +83,19 @@ router.post('/', async (req: Request, res: Response) => {
 // GET /api/accounts/:id - Get account with balance
 router.get('/:id', async (req: Request, res: Response) => {
   try {
+    const userId = req.userId!;
     const id = parseInt(req.params.id);
-    const account = await accountQueries.getById(id);
+    const account = await accountQueries.getById(userId, id);
 
     if (!account) {
       return res.status(404).json({ error: 'Account not found' });
     }
 
-    const balanceInfo = await accountQueries.getBalance(id);
+    const balanceInfo = await accountQueries.getBalance(userId, id);
     const cashBalance = balanceInfo?.balance || 0;
 
     if (account.type === 'stock') {
-      const holdings = await holdingsQueries.getByAccount(id);
+      const holdings = await holdingsQueries.getByAccount(userId, id);
       let costBasis = 0;
       for (const holding of holdings) {
         costBasis += Number(holding.shares) * Number(holding.avg_cost);
@@ -118,8 +121,9 @@ router.get('/:id', async (req: Request, res: Response) => {
 // GET /api/accounts/:id/portfolio - Get stock account portfolio with live prices
 router.get('/:id/portfolio', async (req: Request, res: Response) => {
   try {
+    const userId = req.userId!;
     const id = parseInt(req.params.id);
-    const account = await accountQueries.getById(id);
+    const account = await accountQueries.getById(userId, id);
 
     if (!account) {
       return res.status(404).json({ error: 'Account not found' });
@@ -130,10 +134,10 @@ router.get('/:id/portfolio', async (req: Request, res: Response) => {
     }
 
     // Get cash balance
-    const balanceInfo = await accountQueries.getBalance(id);
+    const balanceInfo = await accountQueries.getBalance(userId, id);
     const cashBalance = balanceInfo?.balance || 0;
 
-    const holdings = await holdingsQueries.getByAccount(id);
+    const holdings = await holdingsQueries.getByAccount(userId, id);
 
     if (holdings.length === 0) {
       return res.json({
@@ -210,10 +214,11 @@ router.get('/:id/portfolio', async (req: Request, res: Response) => {
 // PUT /api/accounts/:id - Update account
 router.put('/:id', async (req: Request, res: Response) => {
   try {
+    const userId = req.userId!;
     const id = parseInt(req.params.id);
     const { name, currency, initialBalance } = req.body;
 
-    const account = await accountQueries.getById(id);
+    const account = await accountQueries.getById(userId, id);
     if (!account) {
       return res.status(404).json({ error: 'Account not found' });
     }
@@ -223,13 +228,14 @@ router.put('/:id', async (req: Request, res: Response) => {
     }
 
     await accountQueries.update(
+      userId,
       id,
       name || account.name,
       (currency as Currency) || account.currency,
       initialBalance !== undefined ? initialBalance : account.initial_balance
     );
 
-    const updatedAccount = await accountQueries.getById(id);
+    const updatedAccount = await accountQueries.getById(userId, id);
     res.json(updatedAccount);
   } catch (error) {
     console.error('Error updating account:', error);
@@ -240,14 +246,15 @@ router.put('/:id', async (req: Request, res: Response) => {
 // DELETE /api/accounts/:id - Delete account
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
+    const userId = req.userId!;
     const id = parseInt(req.params.id);
-    const account = await accountQueries.getById(id);
+    const account = await accountQueries.getById(userId, id);
 
     if (!account) {
       return res.status(404).json({ error: 'Account not found' });
     }
 
-    await accountQueries.delete(id);
+    await accountQueries.delete(userId, id);
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting account:', error);
@@ -258,15 +265,16 @@ router.delete('/:id', async (req: Request, res: Response) => {
 // PUT /api/accounts/:id/favorite - Toggle favorite status
 router.put('/:id/favorite', async (req: Request, res: Response) => {
   try {
+    const userId = req.userId!;
     const id = parseInt(req.params.id);
     const { isFavorite } = req.body;
 
-    const account = await accountQueries.getById(id);
+    const account = await accountQueries.getById(userId, id);
     if (!account) {
       return res.status(404).json({ error: 'Account not found' });
     }
 
-    await accountQueries.setFavorite(id, isFavorite);
+    await accountQueries.setFavorite(userId, id, isFavorite);
     res.json({ success: true, isFavorite });
   } catch (error) {
     console.error('Error toggling favorite:', error);

@@ -1,13 +1,14 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { holdingsQueries } from '../db/queries.js';
 import { getMultipleQuotes } from '../services/yahoo.js';
 
 const router = Router();
 
 // GET /api/portfolio - Get portfolio summary with live prices
-router.get('/', async (_req, res) => {
+router.get('/', async (req: Request, res: Response) => {
   try {
-    const holdings = await holdingsQueries.getAll();
+    const userId = req.userId!;
+    const holdings = await holdingsQueries.getAll(userId);
 
     if (holdings.length === 0) {
       return res.json({

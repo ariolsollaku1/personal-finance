@@ -17,8 +17,8 @@ export const pool = new Pool({
   },
 });
 
-// Default categories to seed
-const DEFAULT_CATEGORIES = [
+// Default categories to seed for new users
+export const DEFAULT_CATEGORIES = [
   { name: 'Salary', type: 'income' },
   { name: 'Investment Income', type: 'income' },
   { name: 'Other Income', type: 'income' },
@@ -38,6 +38,7 @@ const DEFAULT_CATEGORIES = [
   { name: 'Subscriptions', type: 'expense' },
   { name: 'Other Expenses', type: 'expense' },
 ];
+
 
 export async function initDatabase() {
   const client = await pool.connect();
@@ -101,6 +102,7 @@ export async function initDatabase() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS accounts (
         id SERIAL PRIMARY KEY,
+        user_id UUID NOT NULL,
         name TEXT NOT NULL,
         type account_type NOT NULL,
         currency currency NOT NULL,
@@ -110,23 +112,69 @@ export async function initDatabase() {
       )
     `);
 
+    // Add user_id column if it doesn't exist (migration for existing tables)
+    await client.query(`
+      DO $$ BEGIN
+        ALTER TABLE accounts ADD COLUMN IF NOT EXISTS user_id UUID;
+      EXCEPTION
+        WHEN duplicate_column THEN null;
+      END $$;
+    `);
+
+    // Create index on user_id for accounts
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON accounts(user_id);
+    `);
+
     // Categories: income/expense types
     await client.query(`
       CREATE TABLE IF NOT EXISTS categories (
         id SERIAL PRIMARY KEY,
-        name TEXT NOT NULL UNIQUE,
+        user_id UUID NOT NULL,
+        name TEXT NOT NULL,
         type category_type DEFAULT 'expense',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, name)
       )
     `);
 
-    // Payees: global, shared across accounts
+    // Migration: add user_id column if it doesn't exist
+    await client.query(`
+      DO $$ BEGIN
+        ALTER TABLE categories ADD COLUMN IF NOT EXISTS user_id UUID;
+      EXCEPTION
+        WHEN duplicate_column THEN null;
+      END $$;
+    `);
+
+    // Create index on user_id for categories
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_categories_user_id ON categories(user_id);
+    `);
+
+    // Payees: per-user
     await client.query(`
       CREATE TABLE IF NOT EXISTS payees (
         id SERIAL PRIMARY KEY,
-        name TEXT NOT NULL UNIQUE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        user_id UUID NOT NULL,
+        name TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, name)
       )
+    `);
+
+    // Migration: add user_id column if it doesn't exist
+    await client.query(`
+      DO $$ BEGIN
+        ALTER TABLE payees ADD COLUMN IF NOT EXISTS user_id UUID;
+      EXCEPTION
+        WHEN duplicate_column THEN null;
+      END $$;
+    `);
+
+    // Create index on user_id for payees
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_payees_user_id ON payees(user_id);
     `);
 
     // Holdings: current stock positions
@@ -178,6 +226,7 @@ export async function initDatabase() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS transfers (
         id SERIAL PRIMARY KEY,
+        user_id UUID NOT NULL,
         from_account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
         to_account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
         from_amount DECIMAL(15,2) NOT NULL,
@@ -186,6 +235,20 @@ export async function initDatabase() {
         notes TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
+    `);
+
+    // Migration: add user_id column to transfers if it doesn't exist
+    await client.query(`
+      DO $$ BEGIN
+        ALTER TABLE transfers ADD COLUMN IF NOT EXISTS user_id UUID;
+      EXCEPTION
+        WHEN duplicate_column THEN null;
+      END $$;
+    `);
+
+    // Create index on user_id for transfers
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_transfers_user_id ON transfers(user_id);
     `);
 
     // Account Transactions: for bank/cash accounts (NOT stock transactions)
@@ -221,7 +284,17 @@ export async function initDatabase() {
       )
     `);
 
-    // Settings: user preferences
+    // User Settings: per-user preferences
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_settings (
+        user_id UUID NOT NULL,
+        key TEXT NOT NULL,
+        value TEXT NOT NULL,
+        PRIMARY KEY (user_id, key)
+      )
+    `);
+
+    // Legacy settings table (kept for migration, can be removed later)
     await client.query(`
       CREATE TABLE IF NOT EXISTS settings (
         key TEXT PRIMARY KEY,
@@ -229,41 +302,9 @@ export async function initDatabase() {
       )
     `);
 
-    // Set default settings if not exists
-    await client.query(`
-      INSERT INTO settings (key, value) VALUES ('dividend_tax_rate', '0.08')
-      ON CONFLICT (key) DO NOTHING
-    `);
-    await client.query(`
-      INSERT INTO settings (key, value) VALUES ('main_currency', 'ALL')
-      ON CONFLICT (key) DO NOTHING
-    `);
-    await client.query(`
-      INSERT INTO settings (key, value) VALUES ('sidebar_collapsed', '0')
-      ON CONFLICT (key) DO NOTHING
-    `);
-
-    // Seed default categories
-    await seedCategories(client);
-
     console.log('Database initialized successfully');
   } finally {
     client.release();
-  }
-}
-
-async function seedCategories(client: pg.PoolClient) {
-  const result = await client.query('SELECT COUNT(*) as count FROM categories');
-  const count = parseInt(result.rows[0].count);
-
-  if (count === 0) {
-    console.log('Seeding default categories...');
-    for (const category of DEFAULT_CATEGORIES) {
-      await client.query(
-        'INSERT INTO categories (name, type) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING',
-        [category.name, category.type]
-      );
-    }
   }
 }
 

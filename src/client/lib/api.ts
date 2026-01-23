@@ -1,12 +1,30 @@
+import { supabase } from './supabase';
+
 const API_BASE = '/api';
 
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (!session) {
+    // Redirect to login if not authenticated
+    window.location.href = '/login';
+    throw new Error('Not authenticated');
+  }
+
   const response = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
     headers: {
       'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+      ...options?.headers,
     },
-    ...options,
   });
+
+  if (response.status === 401) {
+    // Session expired or invalid - redirect to login
+    window.location.href = '/login';
+    throw new Error('Session expired');
+  }
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Request failed' }));

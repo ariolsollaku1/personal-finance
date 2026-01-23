@@ -6,6 +6,59 @@ All endpoints return JSON. Errors return `{ error: string }` with appropriate HT
 
 ---
 
+## Authentication
+
+All API endpoints (except `/api/auth/*`) require a valid JWT token from Supabase Auth.
+
+### Headers
+
+Include the JWT token in the Authorization header:
+```
+Authorization: Bearer <supabase-access-token>
+```
+
+### Error Responses
+
+| Status | Description |
+|--------|-------------|
+| `401` | Missing or invalid token |
+| `403` | Token expired |
+
+### POST /api/auth/init
+
+Initialize a new user with default categories and settings. Should be called after first login.
+
+**Response 200:**
+```json
+{
+  "initialized": true,
+  "message": "User initialized with default categories and settings"
+}
+```
+
+**Response 200 (already initialized):**
+```json
+{
+  "initialized": false,
+  "message": "User already initialized"
+}
+```
+
+### GET /api/auth/status
+
+Check if the current user has been initialized.
+
+**Response 200:**
+```json
+{
+  "initialized": true,
+  "accountCount": 5,
+  "categoryCount": 15
+}
+```
+
+---
+
 ## Accounts
 
 ### GET /api/accounts
@@ -883,5 +936,7 @@ All errors follow this format:
 
 **Common Status Codes:**
 - `400` - Bad Request (missing/invalid parameters)
+- `401` - Unauthorized (missing or invalid auth token)
+- `403` - Forbidden (token expired)
 - `404` - Not Found (resource doesn't exist)
 - `500` - Server Error (database or Yahoo Finance issues)

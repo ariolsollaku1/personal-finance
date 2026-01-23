@@ -10,6 +10,7 @@
 ## Project Overview
 
 A full-stack personal finance management application with:
+- **Multi-user authentication**: Supabase Auth with email/password and Google OAuth
 - **Multi-account support**: Bank, Cash, Stock, Loan, Credit Card, and Asset accounts
 - **Multi-currency**: EUR, USD, ALL (Albanian Lek) with automatic conversion
 - **Stock portfolio tracking**: Real-time prices from Yahoo Finance, per-account holdings
@@ -20,7 +21,7 @@ A full-stack personal finance management application with:
 - **Financial Projections**: YTD and 12-month forward projections based on recurring transactions
 - **Profit & Loss Reports**: Monthly P&L with transaction details
 
-Built with TypeScript throughout, using Express.js backend, React frontend, SQLite database, and Yahoo Finance for real-time stock data.
+Built with TypeScript throughout, using Express.js backend, React frontend, SQLite database, Supabase for authentication, and Yahoo Finance for real-time stock data.
 
 ## Quick Reference
 
@@ -29,6 +30,7 @@ Built with TypeScript throughout, using Express.js backend, React frontend, SQLi
 | Backend | Express.js + TypeScript | 3000 | `src/server/index.ts` |
 | Frontend | React + TypeScript + Tailwind | 5173 | `src/client/main.tsx` |
 | Database | SQLite (better-sqlite3) | - | `data/portfolio.db` |
+| Authentication | Supabase Auth | - | `src/server/middleware/auth.ts` |
 | Stock Data | yahoo-finance2 (v3) | - | `src/server/services/yahoo.ts` |
 
 ## Commands
@@ -57,31 +59,36 @@ npm run build        # Production build
 │  └──────────────────────────┬──────────────────────────────┘   │
 │                             │                                   │
 │  ┌──────────────────────────┴──────────────────────────────┐   │
-│  │              Hooks & API Layer (lib/api.ts)              │   │
+│  │     AuthContext | Hooks & API Layer (lib/api.ts)         │   │
 │  └──────────────────────────┬──────────────────────────────┘   │
 └─────────────────────────────┼───────────────────────────────────┘
-                              │ HTTP (Vite proxy /api → :3000)
+                              │ HTTP + JWT (Vite proxy /api → :3000)
 ┌─────────────────────────────┼───────────────────────────────────┐
 │                             │        BACKEND (Express)          │
+│  ┌──────────────────────────┴──────────────────────────────┐   │
+│  │              Auth Middleware (JWT verification)          │   │
+│  └──────────────────────────┬──────────────────────────────┘   │
 │  ┌──────────────────────────┴──────────────────────────────┐   │
 │  │                    Routes Layer                          │   │
 │  │  /api/accounts | /api/holdings | /api/dividends         │   │
 │  │  /api/dashboard | /api/quotes | /api/transfers          │   │
 │  │  /api/categories | /api/payees | /api/recurring         │   │
-│  │  /api/projection | /api/pnl                             │   │
+│  │  /api/projection | /api/pnl | /api/auth                 │   │
 │  └───────────┬─────────────────────┬───────────────────────┘   │
 │              │                     │                            │
 │  ┌───────────┴───────┐  ┌─────────┴─────────┐                  │
 │  │  Services Layer   │  │   Database Layer  │                  │
 │  │  yahoo.ts | tax.ts│  │  schema.ts        │                  │
-│  └───────────────────┘  │  queries.ts       │                  │
-│                         └─────────┬─────────┘                  │
+│  │  userSetup.ts     │  │  queries.ts       │                  │
+│  └───────────────────┘  └─────────┬─────────┘                  │
 └───────────────────────────────────┼─────────────────────────────┘
                                     │
-                          ┌─────────┴─────────┐
-                          │   SQLite Database │
-                          │  data/portfolio.db│
-                          └───────────────────┘
+        ┌───────────────────────────┼───────────────────────────┐
+        │                           │                           │
+┌───────┴───────┐         ┌─────────┴─────────┐      ┌─────────┴─────────┐
+│ Supabase Auth │         │   SQLite Database │      │   Yahoo Finance   │
+│  (JWT tokens) │         │  data/portfolio.db│      │    (stock data)   │
+└───────────────┘         └───────────────────┘      └───────────────────┘
 ```
 
 ---
@@ -104,9 +111,16 @@ finance/
 │   │   │
 │   │   ├── db/                    # Database layer
 │   │   │   ├── schema.ts          # Table creation, DB initialization
-│   │   │   └── queries.ts         # All SQL queries as functions
+│   │   │   └── queries.ts         # All SQL queries as functions (userId filtered)
 │   │   │
-│   │   ├── routes/                # API endpoints
+│   │   ├── lib/
+│   │   │   └── supabase.ts        # Supabase admin client
+│   │   │
+│   │   ├── middleware/
+│   │   │   └── auth.ts            # JWT verification middleware
+│   │   │
+│   │   ├── routes/                # API endpoints (all require authentication)
+│   │   │   ├── auth.ts            # User initialization endpoint
 │   │   │   ├── accounts.ts        # Account CRUD, per-account portfolio
 │   │   │   ├── holdings.ts        # Stock holdings (per-account)
 │   │   │   ├── dividends.ts       # Dividends (per-account), tax summary
@@ -122,15 +136,22 @@ finance/
 │   │   │
 │   │   └── services/              # Business logic
 │   │       ├── yahoo.ts           # Yahoo Finance API wrapper (v3)
-│   │       └── tax.ts             # Albanian dividend tax calculations
+│   │       ├── tax.ts             # Albanian dividend tax calculations
+│   │       └── userSetup.ts       # New user initialization (categories, settings)
 │   │
 │   └── client/                    # FRONTEND
 │       ├── index.html             # HTML entry point
-│       ├── main.tsx               # React entry point
-│       ├── App.tsx                # Router setup
+│       ├── main.tsx               # React entry point (with AuthProvider)
+│       ├── App.tsx                # Router setup (public + protected routes)
 │       ├── index.css              # Tailwind imports + global styles
 │       │
+│       ├── contexts/
+│       │   └── AuthContext.tsx    # Authentication state and methods
+│       │
 │       ├── pages/                 # Route components
+│       │   ├── LoginPage.tsx      # Email/password + Google OAuth login
+│       │   ├── SignupPage.tsx     # User registration
+│       │   ├── AuthCallbackPage.tsx # OAuth redirect handler
 │       │   ├── Dashboard.tsx      # Net worth, stock portfolio overview
 │       │   ├── AccountPage.tsx    # Account detail (bank/cash/stock/loan/credit/asset)
 │       │   ├── AddAccountPage.tsx # Create new account
@@ -144,8 +165,10 @@ finance/
 │       │       └── CurrencyPage.tsx
 │       │
 │       ├── components/            # Reusable UI components
+│       │   ├── ProtectedRoute.tsx # Auth guard for protected routes
+│       │   │
 │       │   ├── Layout/
-│       │   │   ├── Sidebar.tsx        # Collapsible sidebar with account list
+│       │   │   ├── Sidebar.tsx        # Collapsible sidebar with user info + logout
 │       │   │   └── SidebarLayout.tsx  # Main layout wrapper
 │       │   │
 │       │   ├── Portfolio/
@@ -166,7 +189,8 @@ finance/
 │       │   └── StockSearch.tsx    # Autocomplete stock search
 │       │
 │       └── lib/
-│           ├── api.ts             # API client functions + TypeScript types
+│           ├── api.ts             # API client with auth token injection
+│           ├── supabase.ts        # Supabase client for frontend
 │           └── currency.ts        # Currency formatting utilities
 │
 └── data/
@@ -201,18 +225,23 @@ finance/
 
 ## Database Schema
 
+> **Note**: All user-facing tables include a `user_id` column for multi-user data isolation.
+
 ### Core Tables
 
 #### `accounts` - All account types
 ```sql
 CREATE TABLE accounts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,           -- Supabase user UUID
   name TEXT NOT NULL,
   type TEXT NOT NULL CHECK(type IN ('stock', 'bank', 'cash', 'loan', 'credit', 'asset')),
   currency TEXT NOT NULL CHECK(currency IN ('EUR', 'USD', 'ALL')),
   initial_balance REAL DEFAULT 0,
+  is_favorite INTEGER DEFAULT 0,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX idx_accounts_user_id ON accounts(user_id);
 ```
 
 #### `holdings` - Stock positions (per-account)
@@ -265,15 +294,19 @@ CREATE TABLE account_transactions (
 ```sql
 CREATE TABLE categories (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL UNIQUE,
+  user_id TEXT NOT NULL,
+  name TEXT NOT NULL,
   type TEXT DEFAULT 'expense' CHECK(type IN ('income', 'expense')),
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, name)  -- Unique per user
 );
 
 CREATE TABLE payees (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL UNIQUE,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  user_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, name)  -- Unique per user
 );
 ```
 
@@ -298,6 +331,7 @@ CREATE TABLE recurring_transactions (
 ```sql
 CREATE TABLE transfers (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
   from_account_id INTEGER NOT NULL REFERENCES accounts(id),
   to_account_id INTEGER NOT NULL REFERENCES accounts(id),
   from_amount REAL NOT NULL,
@@ -306,13 +340,16 @@ CREATE TABLE transfers (
   notes TEXT,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX idx_transfers_user_id ON transfers(user_id);
 ```
 
-#### `settings`
+#### `user_settings` (per-user settings)
 ```sql
-CREATE TABLE settings (
-  key TEXT PRIMARY KEY,
-  value TEXT NOT NULL
+CREATE TABLE user_settings (
+  user_id TEXT NOT NULL,
+  key TEXT NOT NULL,
+  value TEXT NOT NULL,
+  PRIMARY KEY (user_id, key)
 );
 -- Keys: dividend_tax_rate, main_currency, sidebar_collapsed
 ```
@@ -320,6 +357,15 @@ CREATE TABLE settings (
 ---
 
 ## API Reference
+
+> **Note**: All API endpoints (except `/api/auth/*`) require authentication. Include the JWT token in the `Authorization` header: `Bearer <token>`
+
+### Authentication
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /api/auth/init` | Initialize new user (creates default categories/settings) |
+| `GET /api/auth/status` | Check if user is initialized |
 
 ### Accounts
 
@@ -472,7 +518,43 @@ CREATE TABLE settings (
 
 ---
 
+## Authentication
+
+The app uses Supabase for authentication with support for:
+- **Email/Password**: Traditional signup and signin
+- **Google OAuth**: One-click Google login
+
+### Auth Flow
+1. Unauthenticated users are redirected to `/login`
+2. After login, users are redirected to the dashboard
+3. New users are automatically initialized with default categories and settings
+4. JWT tokens are automatically included in all API requests
+
+### Environment Variables
+```bash
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
+
+### Data Isolation
+- All data is filtered by `user_id` at the database level
+- Users can only see and modify their own data
+- New users get seeded with default categories and settings
+
+---
+
 ## Frontend Routes
+
+### Public Routes (No authentication required)
+
+| Route | Page | Description |
+|-------|------|-------------|
+| `/login` | LoginPage | Email/password + Google OAuth login |
+| `/signup` | SignupPage | User registration |
+| `/auth/callback` | AuthCallbackPage | OAuth redirect handler |
+
+### Protected Routes (Authentication required)
 
 | Route | Page | Description |
 |-------|------|-------------|
@@ -554,18 +636,211 @@ Where:
 
 ## Styling
 
-### Tailwind Classes Used
+### Theme
+The app uses an **orange** color scheme as the primary brand color.
+
+---
+
+## UI Design System
+
+### Design Principles
+
+1. **Modern & Clean**: Use generous whitespace, rounded corners (xl), and subtle shadows
+2. **Split Layouts**: Full-page forms use 50/50 split with branding panel on left
+3. **Mobile-First**: Responsive design, branding panels hidden on mobile (`hidden lg:flex`)
+4. **Smooth Transitions**: All interactive elements use `transition-all duration-200`
+5. **Visual Hierarchy**: Clear headings, supportive subtext, and grouped content
+
+### Color Palette
+
+```
+Primary:     orange-500 (#f97316) - buttons, accents, links
+Primary Hover: orange-600 (#ea580c)
+Gradient:    from-orange-500 via-orange-600 to-amber-600 - branding panels
+
+Text:        gray-900 (headings), gray-600 (body), gray-500 (muted)
+Background:  gray-50 (page), white (cards/inputs)
+Borders:     gray-200 (subtle), gray-300 (inputs)
+
+Success:     green-600 (text), green-100 (bg)
+Error:       red-700 (text), red-50 (bg), red-200 (border)
+```
+
+### Component Patterns
+
+#### Full-Page Auth Layout (Login, Signup)
+```tsx
+<div className="min-h-screen flex">
+  {/* Left: Branding panel - hidden on mobile */}
+  <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 p-12 flex-col justify-between">
+    {/* Logo */}
+    {/* Hero text + features */}
+    {/* Footer text */}
+  </div>
+
+  {/* Right: Form panel */}
+  <div className="flex-1 flex items-center justify-center p-8 bg-gray-50">
+    <div className="w-full max-w-md space-y-8">
+      {/* Mobile logo (lg:hidden) */}
+      {/* Heading + subtext */}
+      {/* Error alert if any */}
+      {/* OAuth buttons first */}
+      {/* Divider */}
+      {/* Form */}
+      {/* Footer link */}
+    </div>
+  </div>
+</div>
+```
+
+#### Logo with Icon
+```tsx
+<div className="flex items-center gap-3">
+  <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center">
+    <svg className="w-6 h-6 text-white" .../>
+  </div>
+  <span className="text-white text-xl font-semibold">Finance Manager</span>
+</div>
+```
+
+#### Primary Button
+```tsx
+<button className="w-full py-3 px-4 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40">
+  Button Text
+</button>
+```
+
+#### Secondary/OAuth Button
+```tsx
+<button className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 shadow-sm">
+  <Icon /> Button Text
+</button>
+```
+
+#### Text Input
+```tsx
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+    Label
+  </label>
+  <input
+    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
+    placeholder="Placeholder text"
+  />
+</div>
+```
+
+#### Error Alert
+```tsx
+<div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
+  <svg className="w-5 h-5 flex-shrink-0" .../>
+  <span className="text-sm">{error}</span>
+</div>
+```
+
+#### Success State with Icon
+```tsx
+<div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+  <svg className="w-8 h-8 text-green-600" ...>
+    <path d="M5 13l4 4L19 7" />
+  </svg>
+</div>
+```
+
+#### Divider with Text
+```tsx
+<div className="relative">
+  <div className="absolute inset-0 flex items-center">
+    <div className="w-full border-t border-gray-200" />
+  </div>
+  <div className="relative flex justify-center text-sm">
+    <span className="px-4 bg-gray-50 text-gray-500">or continue with</span>
+  </div>
+</div>
+```
+
+#### Feature List (Branding Panel)
+```tsx
+<div className="flex items-center gap-3">
+  <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+    <svg className="w-4 h-4 text-white">
+      <path d="M5 13l4 4L19 7" />
+    </svg>
+  </div>
+  <span className="text-white">Feature description</span>
+</div>
+```
+
+#### Loading Spinner
+```tsx
+<span className="flex items-center justify-center gap-2">
+  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+  </svg>
+  Loading...
+</span>
+```
+
+#### Link
+```tsx
+<Link className="font-semibold text-orange-600 hover:text-orange-500 transition-colors">
+  Link text
+</Link>
+```
+
+#### Info Box
+```tsx
+<div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
+  <p className="text-sm text-orange-800">Info message here</p>
+</div>
+```
+
+### Key Tailwind Classes
+
+| Element | Classes |
+|---------|---------|
+| Page background | `bg-gray-50` |
+| Card/Panel | `bg-white rounded-xl shadow-sm p-6` |
+| Branding gradient | `bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600` |
+| Glass effect | `bg-white/20 backdrop-blur` |
+| Rounded corners | `rounded-xl` (large), `rounded-lg` (medium) |
+| Shadows | `shadow-sm` (subtle), `shadow-lg shadow-orange-500/25` (buttons) |
+| Transitions | `transition-all duration-200` |
+| Focus state | `focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent` |
+| Disabled state | `disabled:opacity-50 disabled:cursor-not-allowed` |
+| Spacing | `space-y-8` (sections), `space-y-5` (form fields), `gap-3` (inline items) |
+
+### Typography
+
+| Element | Classes |
+|---------|---------|
+| Page heading | `text-3xl font-bold text-gray-900` |
+| Hero heading (branding) | `text-4xl font-bold text-white leading-tight` |
+| Subtext | `text-gray-600` or `text-orange-100` (on gradient) |
+| Label | `text-sm font-medium text-gray-700` |
+| Small/muted | `text-sm text-gray-500` |
+| Footer text (branding) | `text-orange-200 text-sm` |
+
+### Icons
+Use Heroicons (outline style) via inline SVG:
+- Size: `w-5 h-5` (inline), `w-6 h-6` (logo), `w-8 h-8` (large)
+- Color: `text-white`, `text-gray-500`, `text-green-600`, `text-red-600`
+
+---
+
+### Legacy Classes (for reference)
 - Layout: `max-w-7xl mx-auto px-4 sm:px-6 lg:px-8`
 - Cards: `bg-white rounded-lg shadow p-6`
 - Tables: `min-w-full divide-y divide-gray-200`
-- Buttons: `px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700`
-- Forms: `px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500`
 
 ### Color Conventions
 - Positive/gains: `text-green-600`
 - Negative/losses: `text-red-600`
-- Primary actions: `bg-blue-600`
+- Primary actions: `bg-orange-500` / `bg-orange-600`
 - Destructive actions: `bg-red-600`
+- Links: `text-orange-600 hover:text-orange-500`
+- Focus rings: `focus:ring-orange-500`
 
 ---
 
@@ -605,3 +880,8 @@ Where:
 | Sidebar navigation | `src/client/components/Layout/Sidebar.tsx` |
 | Projection logic | `src/server/routes/projection.ts` |
 | P&L logic | `src/server/routes/pnl.ts` |
+| Auth middleware | `src/server/middleware/auth.ts` |
+| Auth context (frontend) | `src/client/contexts/AuthContext.tsx` |
+| New user setup | `src/server/services/userSetup.ts` |
+| Supabase client (backend) | `src/server/lib/supabase.ts` |
+| Supabase client (frontend) | `src/client/lib/supabase.ts` |

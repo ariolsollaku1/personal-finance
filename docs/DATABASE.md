@@ -8,6 +8,13 @@
 - **Schema File**: `src/server/db/schema.ts`
 - **Queries File**: `src/server/db/queries.ts`
 
+## Multi-User Architecture
+
+All user-facing tables include a `user_id` column (Supabase UUID) for data isolation:
+- Each user can only access their own data
+- All queries are filtered by `user_id`
+- Indexes on `user_id` columns for performance
+
 ---
 
 ## Schema
@@ -19,21 +26,26 @@ Central table for all account types.
 ```sql
 CREATE TABLE accounts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
   name TEXT NOT NULL,
   type TEXT NOT NULL CHECK(type IN ('stock', 'bank', 'cash', 'loan', 'credit', 'asset')),
   currency TEXT NOT NULL CHECK(currency IN ('EUR', 'USD', 'ALL')),
   initial_balance REAL DEFAULT 0,
+  is_favorite INTEGER DEFAULT 0,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX idx_accounts_user_id ON accounts(user_id);
 ```
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | id | INTEGER | PRIMARY KEY, AUTOINCREMENT | Unique identifier |
+| user_id | TEXT | NOT NULL | Supabase user UUID |
 | name | TEXT | NOT NULL | Account display name |
 | type | TEXT | NOT NULL, CHECK | 'stock', 'bank', 'cash', 'loan', 'credit', 'asset' |
 | currency | TEXT | NOT NULL, CHECK | 'EUR', 'USD', or 'ALL' |
 | initial_balance | REAL | DEFAULT 0 | Starting balance |
+| is_favorite | INTEGER | DEFAULT 0 | 1 = favorited for quick access |
 | created_at | TEXT | DEFAULT CURRENT_TIMESTAMP | ISO timestamp |
 
 **Account Types:**
@@ -167,18 +179,21 @@ CREATE TABLE account_transactions (
 
 ### categories
 
-Income/expense categories for organizing transactions.
+Income/expense categories for organizing transactions. Per-user with unique names.
 
 ```sql
 CREATE TABLE categories (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL UNIQUE,
+  user_id TEXT NOT NULL,
+  name TEXT NOT NULL,
   type TEXT DEFAULT 'expense' CHECK(type IN ('income', 'expense')),
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, name)
 );
+CREATE INDEX idx_categories_user_id ON categories(user_id);
 ```
 
-**Default categories seeded on migration:**
+**Default categories seeded for new users:**
 - Income: Salary, Bonus, Investment Income, Other Income
 - Expense: Groceries, Utilities, Transportation, Entertainment, etc.
 
@@ -186,14 +201,17 @@ CREATE TABLE categories (
 
 ### payees
 
-Payee/merchant names for transactions.
+Payee/merchant names for transactions. Per-user with unique names.
 
 ```sql
 CREATE TABLE payees (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL UNIQUE,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  user_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, name)
 );
+CREATE INDEX idx_payees_user_id ON payees(user_id);
 ```
 
 ---
@@ -233,6 +251,7 @@ Links two account_transactions for account-to-account transfers.
 ```sql
 CREATE TABLE transfers (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
   from_account_id INTEGER NOT NULL REFERENCES accounts(id),
   to_account_id INTEGER NOT NULL REFERENCES accounts(id),
   from_amount REAL NOT NULL,
@@ -241,6 +260,7 @@ CREATE TABLE transfers (
   notes TEXT,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX idx_transfers_user_id ON transfers(user_id);
 ```
 
 **Notes:**
@@ -249,14 +269,16 @@ CREATE TABLE transfers (
 
 ---
 
-### settings
+### user_settings
 
-Key-value store for application settings.
+Per-user key-value store for application settings.
 
 ```sql
-CREATE TABLE settings (
-  key TEXT PRIMARY KEY,
-  value TEXT NOT NULL
+CREATE TABLE user_settings (
+  user_id TEXT NOT NULL,
+  key TEXT NOT NULL,
+  value TEXT NOT NULL,
+  PRIMARY KEY (user_id, key)
 );
 ```
 
@@ -267,84 +289,88 @@ CREATE TABLE settings (
 | main_currency | string | "ALL" | Dashboard totals currency |
 | sidebar_collapsed | string | "0" | "1" = collapsed, "0" = expanded |
 
+**Note:** Default settings are seeded when a new user is initialized via `/api/auth/init`.
+
 ---
 
 ## Query Functions
 
 Located in `src/server/db/queries.ts`
 
+> **Note:** All query functions require `userId` as the first parameter for multi-user data isolation.
+
 ### Account Queries
 
 ```typescript
-accountQueries.getAll(): Account[]
-accountQueries.getById(id: number): Account | undefined
-accountQueries.create(name, type, currency, initialBalance): number
-accountQueries.update(id, name, currency, initialBalance): void
-accountQueries.delete(id: number): void
-accountQueries.getBalance(id: number): { balance: number } | undefined
+accountQueries.getAll(userId: string): Account[]
+accountQueries.getById(userId: string, id: number): Account | undefined
+accountQueries.create(userId: string, name, type, currency, initialBalance): number
+accountQueries.update(userId: string, id, name, currency, initialBalance): void
+accountQueries.delete(userId: string, id: number): void
+accountQueries.getBalance(userId: string, id: number): { balance: number } | undefined
 ```
 
 ### Holdings Queries
 
 ```typescript
-holdingsQueries.getAll(): Holding[]
-holdingsQueries.getByAccount(accountId: number): Holding[]
-holdingsQueries.getBySymbolAndAccount(symbol, accountId): Holding | undefined
-holdingsQueries.create(accountId, symbol, shares, avgCost): number
-holdingsQueries.update(id, shares, avgCost): void
-holdingsQueries.delete(id: number): void
+holdingsQueries.getAll(userId: string): Holding[]
+holdingsQueries.getByAccount(userId: string, accountId: number): Holding[]
+holdingsQueries.getBySymbolAndAccount(userId: string, symbol, accountId): Holding | undefined
+holdingsQueries.create(userId: string, accountId, symbol, shares, avgCost): number
+holdingsQueries.update(userId: string, id, shares, avgCost): void
+holdingsQueries.delete(userId: string, id: number): void
 ```
 
 ### Dividend Queries
 
 ```typescript
-dividendQueries.getAll(): Dividend[]
-dividendQueries.getByAccount(accountId: number): Dividend[]
-dividendQueries.create(accountId, symbol, amount, sharesHeld, exDate, payDate, taxRate, taxAmount, netAmount): number
-dividendQueries.delete(id: number): void
-dividendQueries.getTaxSummary(year?, accountId?): TaxSummaryYear[]
+dividendQueries.getAll(userId: string): Dividend[]
+dividendQueries.getByAccount(userId: string, accountId: number): Dividend[]
+dividendQueries.create(userId: string, accountId, symbol, amount, sharesHeld, exDate, payDate, taxRate, taxAmount, netAmount): number
+dividendQueries.delete(userId: string, id: number): void
+dividendQueries.getTaxSummary(userId: string, year?, accountId?): TaxSummaryYear[]
 ```
 
 ### Account Transaction Queries
 
 ```typescript
-accountTransactionQueries.getByAccount(accountId): AccountTransaction[]
-accountTransactionQueries.create(accountId, type, amount, date, payeeId?, categoryId?, notes?): number
-accountTransactionQueries.delete(id: number): void
+accountTransactionQueries.getByAccount(userId: string, accountId): AccountTransaction[]
+accountTransactionQueries.create(userId: string, accountId, type, amount, date, payeeId?, categoryId?, notes?): number
+accountTransactionQueries.delete(userId: string, id: number): void
 ```
 
 ### Recurring Queries
 
 ```typescript
-recurringQueries.getByAccount(accountId): RecurringTransaction[]
-recurringQueries.getDue(date: string): RecurringTransaction[]
-recurringQueries.create(accountId, type, amount, ...): number
-recurringQueries.apply(id: number): void  // Creates transaction, advances date
-recurringQueries.delete(id: number): void
+recurringQueries.getByAccount(userId: string, accountId): RecurringTransaction[]
+recurringQueries.getDue(userId: string, date: string): RecurringTransaction[]
+recurringQueries.create(userId: string, accountId, type, amount, ...): number
+recurringQueries.apply(userId: string, id: number): void  // Creates transaction, advances date
+recurringQueries.delete(userId: string, id: number): void
 ```
 
 ### Category/Payee Queries
 
 ```typescript
-categoryQueries.getAll(): Category[]
-categoryQueries.findOrCreate(name, type): number
-categoryQueries.delete(id: number): void
+categoryQueries.getAll(userId: string): Category[]
+categoryQueries.findOrCreate(userId: string, name, type): number
+categoryQueries.delete(userId: string, id: number): void
 
-payeeQueries.getAll(): Payee[]
-payeeQueries.search(query: string): Payee[]
-payeeQueries.findOrCreate(name): number
-payeeQueries.merge(keepId, mergeIds): void
-payeeQueries.delete(id: number): void
+payeeQueries.getAll(userId: string): Payee[]
+payeeQueries.search(userId: string, query: string): Payee[]
+payeeQueries.findOrCreate(userId: string, name): number
+payeeQueries.merge(userId: string, keepId, mergeIds): void
+payeeQueries.delete(userId: string, id: number): void
 ```
 
 ### Settings Queries
 
 ```typescript
-settingsQueries.get(key: string): string | undefined
-settingsQueries.set(key: string, value: string): void
-settingsQueries.getDividendTaxRate(): number
-settingsQueries.getMainCurrency(): Currency
-settingsQueries.getSidebarCollapsed(): boolean
+settingsQueries.get(userId: string, key: string): string | undefined
+settingsQueries.set(userId: string, key: string, value: string): void
+settingsQueries.getDividendTaxRate(userId: string): number
+settingsQueries.getMainCurrency(userId: string): Currency
+settingsQueries.getSidebarCollapsed(userId: string): boolean
 ```
 
 ---

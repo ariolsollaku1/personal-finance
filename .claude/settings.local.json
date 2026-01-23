@@ -22,7 +22,15 @@
       "Bash(npx tsc:*)",
       "Bash(python3:*)",
       "Bash(node -e:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npm run dev:server:*)",
+      "Bash(timeout /t 5 /nobreak)",
+      "Bash(echo:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: Migrate database from SQLite to Supabase PostgreSQL\n\n- Replace better-sqlite3 with pg \\(node-postgres\\) for async database access\n- Rewrite schema.ts with PostgreSQL connection pool and ENUM types\n- Convert all queries to async with $1, $2 parameter placeholders\n- Update all route handlers to use async/await\n- Make tax service functions async for database settings access\n- Add dotenv for environment variable configuration\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(npx tsx:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(cmd //c \"taskkill /F /PID 13168\")"
     ]
   }
 }

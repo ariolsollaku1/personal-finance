@@ -74,10 +74,11 @@ function getMonthlyMultiplier(frequency: string): number {
 }
 
 // GET /api/projection - Get projection data
-router.get('/', async (_req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response) => {
   try {
-    const mainCurrency = await settingsQueries.get('main_currency') || 'ALL';
-    const accounts = await accountQueries.getAll();
+    const userId = req.userId!;
+    const mainCurrency = await settingsQueries.getMainCurrency(userId);
+    const accounts = await accountQueries.getAll(userId);
 
     // Get all active recurring transactions
     const allRecurring: Array<{
@@ -92,7 +93,7 @@ router.get('/', async (_req: Request, res: Response) => {
     }> = [];
 
     for (const account of accounts) {
-      const recurring = await recurringQueries.getByAccount(account.id);
+      const recurring = await recurringQueries.getByAccount(userId, account.id);
       for (const rec of recurring) {
         if (rec.is_active) {
           allRecurring.push({
@@ -160,7 +161,7 @@ router.get('/', async (_req: Request, res: Response) => {
 
     for (const account of accounts) {
       // Get the actual balance from the database
-      const balanceInfo = await accountQueries.getBalance(account.id);
+      const balanceInfo = await accountQueries.getBalance(userId, account.id);
       const balance = balanceInfo?.balance || 0;
       const balanceInMain = convertToMainCurrency(balance, account.currency, mainCurrency);
 
@@ -172,7 +173,7 @@ router.get('/', async (_req: Request, res: Response) => {
         currentNetWorth += balanceInMain;
       } else if (account.type === 'stock') {
         // For stock accounts, calculate cost basis from holdings
-        const holdings = await holdingsQueries.getByAccount(account.id);
+        const holdings = await holdingsQueries.getByAccount(userId, account.id);
         let costBasis = 0;
         for (const holding of holdings) {
           costBasis += Number(holding.shares) * Number(holding.avg_cost);

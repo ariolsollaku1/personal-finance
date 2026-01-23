@@ -3,6 +3,8 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initDatabase } from './db/schema.js';
+import { authMiddleware } from './middleware/auth.js';
+import authRoutes from './routes/auth.js';
 import portfolioRoutes from './routes/portfolio.js';
 import holdingsRoutes from './routes/holdings.js';
 import transactionsRoutes from './routes/transactions.js';
@@ -32,6 +34,12 @@ async function start() {
   try {
     await initDatabase();
     console.log('Database initialized');
+
+    // Apply auth middleware to all /api routes
+    app.use('/api', authMiddleware);
+
+    // Auth routes
+    app.use('/api/auth', authRoutes);
 
     // API routes - New finance manager routes
     app.use('/api/accounts', accountsRoutes);

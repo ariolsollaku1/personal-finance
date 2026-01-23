@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { query, queryOne } from '../db/schema.js';
-import { settingsQueries } from '../db/queries.js';
+import { query } from '../db/schema.js';
+import { settingsQueries, accountQueries } from '../db/queries.js';
 
 const router = Router();
 
@@ -40,9 +40,21 @@ interface TransactionDetail {
 }
 
 // GET /api/pnl - Get monthly P&L summaries
-router.get('/', async (_req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response) => {
   try {
-    const mainCurrency = await settingsQueries.get('main_currency') || 'ALL';
+    const userId = req.userId!;
+    const mainCurrency = await settingsQueries.getMainCurrency(userId);
+
+    // Get all accounts for this user to filter transactions
+    const accounts = await accountQueries.getAll(userId);
+    const accountIds = accounts.map(a => a.id);
+
+    if (accountIds.length === 0) {
+      return res.json({
+        mainCurrency,
+        months: [],
+      });
+    }
 
     // Get all transactions with account info, starting from Jan 2026
     const transactions = await query<{
@@ -78,9 +90,9 @@ router.get('/', async (_req: Request, res: Response) => {
       LEFT JOIN payees p ON at.payee_id = p.id
       LEFT JOIN categories c ON at.category_id = c.id
       LEFT JOIN accounts a ON at.account_id = a.id
-      WHERE at.date >= '2026-01-01'
+      WHERE at.date >= '2026-01-01' AND at.account_id = ANY($1)
       ORDER BY at.date ASC
-    `);
+    `, [accountIds]);
 
     // Group by month
     const monthlyData: Map<string, { income: number; expenses: number; count: number }> = new Map();
@@ -150,12 +162,33 @@ router.get('/', async (_req: Request, res: Response) => {
 // GET /api/pnl/:month - Get transaction details for a specific month
 router.get('/:month', async (req: Request, res: Response) => {
   try {
+    const userId = req.userId!;
     const { month } = req.params; // Format: YYYY-MM
-    const mainCurrency = await settingsQueries.get('main_currency') || 'ALL';
+    const mainCurrency = await settingsQueries.getMainCurrency(userId);
 
     // Validate month format
     if (!/^\d{4}-\d{2}$/.test(month)) {
       return res.status(400).json({ error: 'Invalid month format. Use YYYY-MM' });
+    }
+
+    // Get all accounts for this user to filter transactions
+    const accounts = await accountQueries.getAll(userId);
+    const accountIds = accounts.map(a => a.id);
+
+    if (accountIds.length === 0) {
+      const [year, monthNum] = month.split('-').map(Number);
+      const monthDate = new Date(year, monthNum - 1, 1);
+      const label = monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+      return res.json({
+        month,
+        label,
+        mainCurrency,
+        income: 0,
+        expenses: 0,
+        net: 0,
+        transactions: [],
+      });
     }
 
     // Get transactions for the month
@@ -192,9 +225,9 @@ router.get('/:month', async (req: Request, res: Response) => {
       LEFT JOIN payees p ON at.payee_id = p.id
       LEFT JOIN categories c ON at.category_id = c.id
       LEFT JOIN accounts a ON at.account_id = a.id
-      WHERE at.date >= $1 AND at.date <= $2
+      WHERE at.date >= $1 AND at.date <= $2 AND at.account_id = ANY($3)
       ORDER BY at.date DESC, at.id DESC
-    `, [startDate, endDate]);
+    `, [startDate, endDate, accountIds]);
 
     // Calculate totals and format transactions
     let totalIncome = 0;

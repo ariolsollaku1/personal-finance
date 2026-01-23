@@ -1,13 +1,14 @@
-import { Router } from 'express';
-import { holdingsQueries, transactionQueries, accountTransactionQueries } from '../db/queries.js';
+import { Router, Request, Response } from 'express';
+import { holdingsQueries, transactionQueries, accountTransactionQueries, accountQueries } from '../db/queries.js';
 import { getQuote } from '../services/yahoo.js';
 
 const router = Router();
 
 // GET /api/holdings - List all holdings (global - for dashboard aggregation)
-router.get('/', async (_req, res) => {
+router.get('/', async (req: Request, res: Response) => {
   try {
-    const holdings = await holdingsQueries.getAll();
+    const userId = req.userId!;
+    const holdings = await holdingsQueries.getAll(userId);
     res.json(holdings);
   } catch (error) {
     console.error('Error fetching holdings:', error);
@@ -16,10 +17,11 @@ router.get('/', async (_req, res) => {
 });
 
 // GET /api/holdings/account/:accountId - List holdings for specific account
-router.get('/account/:accountId', async (req, res) => {
+router.get('/account/:accountId', async (req: Request, res: Response) => {
   try {
+    const userId = req.userId!;
     const accountId = parseInt(req.params.accountId);
-    const holdings = await holdingsQueries.getByAccount(accountId);
+    const holdings = await holdingsQueries.getByAccount(userId, accountId);
     res.json(holdings);
   } catch (error) {
     console.error('Error fetching holdings:', error);
@@ -28,10 +30,11 @@ router.get('/account/:accountId', async (req, res) => {
 });
 
 // GET /api/holdings/:symbol - Get specific holding (optionally filtered by account)
-router.get('/:symbol', async (req, res) => {
+router.get('/:symbol', async (req: Request, res: Response) => {
   try {
+    const userId = req.userId!;
     const accountId = req.query.accountId ? parseInt(req.query.accountId as string) : undefined;
-    const holding = await holdingsQueries.getBySymbol(req.params.symbol.toUpperCase(), accountId);
+    const holding = await holdingsQueries.getBySymbol(userId, req.params.symbol.toUpperCase(), accountId);
     if (!holding) {
       return res.status(404).json({ error: 'Holding not found' });
     }
@@ -43,8 +46,9 @@ router.get('/:symbol', async (req, res) => {
 });
 
 // POST /api/holdings - Add new holding (buy shares) - requires accountId
-router.post('/', async (req, res) => {
+router.post('/', async (req: Request, res: Response) => {
   try {
+    const userId = req.userId!;
     const { symbol, shares, price, fees = 0, date, accountId } = req.body;
 
     if (!symbol || !shares || !price) {
@@ -53,6 +57,12 @@ router.post('/', async (req, res) => {
 
     if (!accountId) {
       return res.status(400).json({ error: 'accountId is required' });
+    }
+
+    // Verify account belongs to user
+    const account = await accountQueries.getById(userId, accountId);
+    if (!account) {
+      return res.status(404).json({ error: 'Account not found' });
     }
 
     const upperSymbol = symbol.toUpperCase();
@@ -68,7 +78,7 @@ router.post('/', async (req, res) => {
     const avgCostPerShare = totalCost / shares;
 
     // Check if holding already exists for this account
-    const existingHolding = await holdingsQueries.getBySymbol(upperSymbol, accountId);
+    const existingHolding = await holdingsQueries.getBySymbol(userId, upperSymbol, accountId);
 
     if (existingHolding) {
       // Update existing holding with new average cost
@@ -76,16 +86,17 @@ router.post('/', async (req, res) => {
       const totalValue = Number(existingHolding.shares) * Number(existingHolding.avg_cost) + totalCost;
       const newAvgCost = totalValue / totalShares;
 
-      await holdingsQueries.update(existingHolding.id, totalShares, newAvgCost);
+      await holdingsQueries.update(userId, existingHolding.id, totalShares, newAvgCost);
     } else {
       // Create new holding for this account
-      await holdingsQueries.create(upperSymbol, shares, avgCostPerShare, accountId);
+      await holdingsQueries.create(userId, upperSymbol, shares, avgCostPerShare, accountId);
     }
 
     const txDate = date || new Date().toISOString().split('T')[0];
 
     // Record stock transaction with accountId
     await transactionQueries.create(
+      userId,
       upperSymbol,
       'buy',
       shares,
@@ -97,6 +108,7 @@ router.post('/', async (req, res) => {
 
     // Create account transaction (outflow) to reduce cash balance
     await accountTransactionQueries.create(
+      userId,
       accountId,
       'outflow',
       totalCost,
@@ -106,7 +118,7 @@ router.post('/', async (req, res) => {
       `Buy ${shares} ${upperSymbol} @ $${price.toFixed(2)}`
     );
 
-    const updatedHolding = await holdingsQueries.getBySymbol(upperSymbol, accountId);
+    const updatedHolding = await holdingsQueries.getBySymbol(userId, upperSymbol, accountId);
     res.status(201).json(updatedHolding);
   } catch (error) {
     console.error('Error adding holding:', error);
@@ -115,10 +127,11 @@ router.post('/', async (req, res) => {
 });
 
 // DELETE /api/holdings/:id - Remove holding
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', async (req: Request, res: Response) => {
   try {
+    const userId = req.userId!;
     const id = parseInt(req.params.id);
-    await holdingsQueries.delete(id);
+    await holdingsQueries.delete(userId, id);
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting holding:', error);
@@ -127,8 +140,9 @@ router.delete('/:id', async (req, res) => {
 });
 
 // POST /api/holdings/:symbol/sell - Sell shares (requires accountId in query or body)
-router.post('/:symbol/sell', async (req, res) => {
+router.post('/:symbol/sell', async (req: Request, res: Response) => {
   try {
+    const userId = req.userId!;
     const { shares, price, fees = 0, date, accountId } = req.body;
     const symbol = req.params.symbol.toUpperCase();
 
@@ -140,7 +154,13 @@ router.post('/:symbol/sell', async (req, res) => {
       return res.status(400).json({ error: 'accountId is required' });
     }
 
-    const holding = await holdingsQueries.getBySymbol(symbol, accountId);
+    // Verify account belongs to user
+    const account = await accountQueries.getById(userId, accountId);
+    if (!account) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
+
+    const holding = await holdingsQueries.getBySymbol(userId, symbol, accountId);
     if (!holding) {
       return res.status(404).json({ error: 'Holding not found' });
     }
@@ -154,6 +174,7 @@ router.post('/:symbol/sell', async (req, res) => {
 
     // Record sell transaction with accountId
     await transactionQueries.create(
+      userId,
       symbol,
       'sell',
       shares,
@@ -165,6 +186,7 @@ router.post('/:symbol/sell', async (req, res) => {
 
     // Create account transaction (inflow) to increase cash balance
     await accountTransactionQueries.create(
+      userId,
       accountId,
       'inflow',
       proceeds,
@@ -178,12 +200,12 @@ router.post('/:symbol/sell', async (req, res) => {
 
     if (remainingShares <= 0) {
       // Remove holding if no shares remain
-      await holdingsQueries.delete(holding.id);
+      await holdingsQueries.delete(userId, holding.id);
       return res.json({ success: true, holding: null });
     } else {
       // Update holding with remaining shares (avg cost stays the same)
-      await holdingsQueries.update(holding.id, remainingShares, Number(holding.avg_cost));
-      const updatedHolding = await holdingsQueries.getBySymbol(symbol, accountId);
+      await holdingsQueries.update(userId, holding.id, remainingShares, Number(holding.avg_cost));
+      const updatedHolding = await holdingsQueries.getBySymbol(userId, symbol, accountId);
       return res.json({ success: true, holding: updatedHolding });
     }
   } catch (error) {

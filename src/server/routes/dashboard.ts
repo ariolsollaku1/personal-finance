@@ -28,10 +28,11 @@ function convertToMainCurrency(amount: number, fromCurrency: Currency, mainCurre
 }
 
 // GET /api/dashboard - Aggregated dashboard data
-router.get('/', async (_req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response) => {
   try {
-    const mainCurrency = await settingsQueries.getMainCurrency();
-    const accounts = await accountQueries.getAll();
+    const userId = req.userId!;
+    const mainCurrency = await settingsQueries.getMainCurrency(userId);
+    const accounts = await accountQueries.getAll(userId);
 
     let totalNetWorth = 0;
     const accountSummaries: {
@@ -68,7 +69,7 @@ router.get('/', async (_req: Request, res: Response) => {
     const stockAccounts = accounts.filter(a => a.type === 'stock');
 
     for (const account of stockAccounts) {
-      const holdings = await holdingsQueries.getByAccount(account.id);
+      const holdings = await holdingsQueries.getByAccount(userId, account.id);
       for (const holding of holdings) {
         allStockHoldings.push({
           symbol: holding.symbol,
@@ -111,7 +112,7 @@ router.get('/', async (_req: Request, res: Response) => {
 
       if (account.type === 'stock') {
         // For stock accounts, calculate total value from holdings + cash balance
-        const holdings = await holdingsQueries.getByAccount(account.id);
+        const holdings = await holdingsQueries.getByAccount(userId, account.id);
         let stockValue = 0;
         for (const holding of holdings) {
           const quote = quotes.get(holding.symbol);
@@ -123,7 +124,7 @@ router.get('/', async (_req: Request, res: Response) => {
         }
         // Also include cash balance from transactions
         let cashBalance = Number(account.initial_balance);
-        const transactions = await accountTransactionQueries.getByAccount(account.id);
+        const transactions = await accountTransactionQueries.getByAccount(userId, account.id);
         for (const tx of transactions) {
           if (tx.type === 'inflow') {
             cashBalance += Number(tx.amount);
@@ -134,7 +135,7 @@ router.get('/', async (_req: Request, res: Response) => {
         balance = stockValue + cashBalance;
       } else {
         // For bank/cash accounts, calculate from transactions
-        const transactions = await accountTransactionQueries.getByAccount(account.id);
+        const transactions = await accountTransactionQueries.getByAccount(userId, account.id);
         for (const tx of transactions) {
           if (tx.type === 'inflow') {
             balance += Number(tx.amount);
@@ -186,7 +187,7 @@ router.get('/', async (_req: Request, res: Response) => {
 
     // Get due recurring transactions
     const today = new Date().toISOString().split('T')[0];
-    const dueRecurring = await recurringQueries.getDue(today);
+    const dueRecurring = await recurringQueries.getDue(userId, today);
 
     // Get recent transactions (last 10 across all accounts)
     const recentTransactions: {
@@ -203,7 +204,7 @@ router.get('/', async (_req: Request, res: Response) => {
 
     for (const account of accounts) {
       if (account.type !== 'stock') {
-        const transactions = await accountTransactionQueries.getByAccount(account.id);
+        const transactions = await accountTransactionQueries.getByAccount(userId, account.id);
         for (const tx of transactions.slice(0, 5)) {
           recentTransactions.push({
             id: tx.id,
@@ -260,9 +261,10 @@ router.get('/', async (_req: Request, res: Response) => {
 });
 
 // GET /api/settings/currency - Get main currency setting
-router.get('/settings/currency', async (_req: Request, res: Response) => {
+router.get('/settings/currency', async (req: Request, res: Response) => {
   try {
-    const mainCurrency = await settingsQueries.getMainCurrency();
+    const userId = req.userId!;
+    const mainCurrency = await settingsQueries.getMainCurrency(userId);
     res.json({ mainCurrency, exchangeRates: EXCHANGE_RATES });
   } catch (error) {
     console.error('Error fetching currency settings:', error);
@@ -273,13 +275,14 @@ router.get('/settings/currency', async (_req: Request, res: Response) => {
 // PUT /api/settings/currency - Update main currency
 router.put('/settings/currency', async (req: Request, res: Response) => {
   try {
+    const userId = req.userId!;
     const { currency } = req.body;
 
     if (!currency || !['EUR', 'USD', 'ALL'].includes(currency)) {
       return res.status(400).json({ error: 'Invalid currency' });
     }
 
-    await settingsQueries.set('main_currency', currency);
+    await settingsQueries.set(userId, 'main_currency', currency);
     res.json({ mainCurrency: currency });
   } catch (error) {
     console.error('Error updating currency settings:', error);
@@ -288,9 +291,10 @@ router.put('/settings/currency', async (req: Request, res: Response) => {
 });
 
 // GET /api/settings/sidebar - Get sidebar collapsed state
-router.get('/settings/sidebar', async (_req: Request, res: Response) => {
+router.get('/settings/sidebar', async (req: Request, res: Response) => {
   try {
-    const collapsed = await settingsQueries.getSidebarCollapsed();
+    const userId = req.userId!;
+    const collapsed = await settingsQueries.getSidebarCollapsed(userId);
     res.json({ collapsed });
   } catch (error) {
     console.error('Error fetching sidebar settings:', error);
@@ -301,13 +305,14 @@ router.get('/settings/sidebar', async (_req: Request, res: Response) => {
 // PUT /api/settings/sidebar - Update sidebar collapsed state
 router.put('/settings/sidebar', async (req: Request, res: Response) => {
   try {
+    const userId = req.userId!;
     const { collapsed } = req.body;
 
     if (typeof collapsed !== 'boolean') {
       return res.status(400).json({ error: 'collapsed must be a boolean' });
     }
 
-    await settingsQueries.set('sidebar_collapsed', collapsed ? '1' : '0');
+    await settingsQueries.set(userId, 'sidebar_collapsed', collapsed ? '1' : '0');
     res.json({ collapsed });
   } catch (error) {
     console.error('Error updating sidebar settings:', error);

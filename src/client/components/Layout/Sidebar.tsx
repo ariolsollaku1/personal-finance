@@ -1,6 +1,7 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Account, accountsApi, Currency } from '../../lib/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Compact currency formatter for sidebar (e.g., 494k L, 1.5M €)
 function formatCompactCurrency(amount: number, currency: Currency): string {
@@ -43,6 +44,12 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   });
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/login');
+  };
 
   // Reload accounts on route change (e.g., after creating/deleting an account)
   useEffect(() => {
@@ -503,6 +510,53 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           {!collapsed && <span className="ml-3">Transfers</span>}
         </NavLink>
       </nav>
+
+      {/* User Info & Logout */}
+      <div className="border-t border-gray-200 p-4">
+        {!collapsed ? (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center min-w-0">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white font-medium text-sm">
+                {user?.email?.charAt(0).toUpperCase() || 'U'}
+              </div>
+              <div className="ml-3 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {user?.email || 'User'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleSignOut}
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Sign out"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
+              </svg>
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleSignOut}
+            className="w-full flex items-center justify-center p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Sign out"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+              />
+            </svg>
+          </button>
+        )}
+      </div>
     </aside>
   );
 }

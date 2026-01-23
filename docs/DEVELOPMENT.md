@@ -6,6 +6,10 @@
 # Install dependencies
 npm install
 
+# Configure environment variables (see below)
+cp .env.example .env
+# Edit .env with your Supabase credentials
+
 # Start development servers (backend + frontend)
 npm run dev
 
@@ -13,6 +17,49 @@ npm run dev
 # Frontend: http://localhost:5173
 # Backend:  http://localhost:3000
 ```
+
+## Supabase Setup
+
+The app requires Supabase for authentication. Follow these steps:
+
+### 1. Create a Supabase Project
+
+1. Go to [supabase.com](https://supabase.com) and create an account
+2. Create a new project
+3. Note your project URL and keys from Settings > API
+
+### 2. Configure Environment Variables
+
+Create a `.env` file in the project root:
+
+```bash
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
+
+### 3. Enable Auth Providers
+
+In your Supabase Dashboard:
+
+**Email/Password:**
+1. Go to Authentication > Providers
+2. Enable "Email" provider
+3. Configure email templates if desired
+
+**Google OAuth (optional):**
+1. Go to Authentication > Providers > Google
+2. Enable Google provider
+3. Create OAuth credentials in Google Cloud Console
+4. Add callback URL: `https://your-project-id.supabase.co/auth/v1/callback`
+5. Enter Client ID and Secret in Supabase
+
+### 4. First User Setup
+
+When a user first logs in:
+1. The frontend calls `/api/auth/init`
+2. Backend creates default categories and settings for the user
+3. User is redirected to the dashboard
 
 ---
 
@@ -199,40 +246,55 @@ curl -X POST http://localhost:3000/api/dividends \
 
 ## Testing API Endpoints
 
+### Authentication Required
+
+All API endpoints (except `/api/auth/*`) require a valid JWT token. Include it in the Authorization header:
+
+```bash
+# Get a token by logging in via the frontend, then extract from browser DevTools
+# Or use Supabase CLI/API to get a token programmatically
+TOKEN="your-jwt-token"
+```
+
 ### Using curl
 
 ```bash
-# Get portfolio
-curl http://localhost:3000/api/portfolio
-
-# Search stocks
+# Search stocks (no auth required for quotes)
 curl "http://localhost:3000/api/quotes/search?q=apple"
 
 # Get quote
 curl http://localhost:3000/api/quotes/AAPL
 
-# Add holding
+# Get portfolio (requires auth)
+curl http://localhost:3000/api/portfolio \
+  -H "Authorization: Bearer $TOKEN"
+
+# Add holding (requires auth)
 curl -X POST http://localhost:3000/api/holdings \
   -H "Content-Type: application/json" \
-  -d '{"symbol":"AAPL","shares":10,"price":150}'
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"symbol":"AAPL","shares":10,"price":150,"accountId":1}'
 
-# Sell shares
+# Sell shares (requires auth)
 curl -X POST http://localhost:3000/api/holdings/AAPL/sell \
   -H "Content-Type: application/json" \
-  -d '{"shares":5,"price":175}'
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"shares":5,"price":175,"accountId":1}'
 
-# Add dividend
+# Add dividend (requires auth)
 curl -X POST http://localhost:3000/api/dividends \
   -H "Content-Type: application/json" \
-  -d '{"symbol":"AAPL","amountPerShare":0.24,"exDate":"2024-02-09"}'
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"symbol":"AAPL","amountPerShare":0.24,"exDate":"2024-02-09","accountId":1}'
 
-# Get tax summary
-curl http://localhost:3000/api/dividends/tax
+# Get tax summary (requires auth)
+curl http://localhost:3000/api/dividends/tax \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ### Using browser
 
-Navigate to http://localhost:3000/api/portfolio in browser to see JSON response.
+For authenticated endpoints, use the frontend app (which handles token management) or browser extensions that can add auth headers.
 
 ---
 
@@ -313,14 +375,20 @@ NODE_ENV=production node dist/server/index.js
 
 ## Environment Variables
 
-Currently none required. Future additions:
+Required for authentication:
 
 ```bash
-# .env (create if needed)
-PORT=3000                    # Backend port
-YAHOO_API_KEY=xxx           # If needed for premium API
-DATABASE_PATH=./data/portfolio.db
+# .env (required)
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# Optional
+PORT=3000                    # Backend port (default: 3000)
+DATABASE_PATH=./data/portfolio.db  # SQLite database location
 ```
+
+**Note**: The `VITE_` prefix is required for variables that need to be accessible in the frontend (Vite exposes these to the client).
 
 ---
 

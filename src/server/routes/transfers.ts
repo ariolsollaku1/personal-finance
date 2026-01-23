@@ -4,9 +4,10 @@ import { accountQueries, transferQueries } from '../db/queries.js';
 const router = Router();
 
 // GET /api/transfers - List all transfers
-router.get('/', async (_req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response) => {
   try {
-    const transfers = await transferQueries.getAll();
+    const userId = req.userId!;
+    const transfers = await transferQueries.getAll(userId);
     res.json(transfers);
   } catch (error) {
     console.error('Error fetching transfers:', error);
@@ -17,8 +18,9 @@ router.get('/', async (_req: Request, res: Response) => {
 // GET /api/transfers/:id - Get single transfer
 router.get('/:id', async (req: Request, res: Response) => {
   try {
+    const userId = req.userId!;
     const id = parseInt(req.params.id);
-    const transfer = await transferQueries.getById(id);
+    const transfer = await transferQueries.getById(userId, id);
 
     if (!transfer) {
       return res.status(404).json({ error: 'Transfer not found' });
@@ -34,14 +36,15 @@ router.get('/:id', async (req: Request, res: Response) => {
 // POST /api/transfers - Create transfer
 router.post('/', async (req: Request, res: Response) => {
   try {
+    const userId = req.userId!;
     const { fromAccountId, toAccountId, fromAmount, toAmount, date, notes } = req.body;
 
     if (!fromAccountId || !toAccountId || !fromAmount || !date) {
       return res.status(400).json({ error: 'fromAccountId, toAccountId, fromAmount, and date are required' });
     }
 
-    const fromAccount = await accountQueries.getById(fromAccountId);
-    const toAccount = await accountQueries.getById(toAccountId);
+    const fromAccount = await accountQueries.getById(userId, fromAccountId);
+    const toAccount = await accountQueries.getById(userId, toAccountId);
 
     if (!fromAccount) {
       return res.status(404).json({ error: 'Source account not found' });
@@ -69,6 +72,7 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     const id = await transferQueries.create(
+      userId,
       fromAccountId,
       toAccountId,
       fromAmount,
@@ -77,7 +81,7 @@ router.post('/', async (req: Request, res: Response) => {
       notes || null
     );
 
-    const transfer = await transferQueries.getById(id as number);
+    const transfer = await transferQueries.getById(userId, id as number);
     res.status(201).json(transfer);
   } catch (error) {
     console.error('Error creating transfer:', error);
@@ -88,14 +92,15 @@ router.post('/', async (req: Request, res: Response) => {
 // DELETE /api/transfers/:id - Delete transfer (removes both linked transactions)
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
+    const userId = req.userId!;
     const id = parseInt(req.params.id);
-    const transfer = await transferQueries.getById(id);
+    const transfer = await transferQueries.getById(userId, id);
 
     if (!transfer) {
       return res.status(404).json({ error: 'Transfer not found' });
     }
 
-    await transferQueries.delete(id);
+    await transferQueries.delete(userId, id);
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting transfer:', error);

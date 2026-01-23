@@ -7,6 +7,7 @@
 - **Styling**: Tailwind CSS 3
 - **Routing**: React Router DOM 6
 - **Charts**: Recharts 2
+- **Authentication**: Supabase Auth
 - **Entry Point**: `src/client/main.tsx`
 
 ---
@@ -16,11 +17,17 @@
 ```
 src/client/
 ├── index.html          # HTML template
-├── main.tsx            # React entry point
-├── App.tsx             # Router configuration
+├── main.tsx            # React entry point (with AuthProvider)
+├── App.tsx             # Router configuration (public + protected routes)
 ├── index.css           # Tailwind imports + global styles
 │
+├── contexts/
+│   └── AuthContext.tsx # Authentication state and methods
+│
 ├── pages/              # Route-level components
+│   ├── LoginPage.tsx   # /login - Email/password + Google OAuth
+│   ├── SignupPage.tsx  # /signup - User registration
+│   ├── AuthCallbackPage.tsx # /auth/callback - OAuth redirect handler
 │   ├── Dashboard.tsx   # / - Net worth, stock portfolio overview
 │   ├── AccountPage.tsx # /accounts/:id - Account detail (all types)
 │   ├── AddAccountPage.tsx # /accounts/new
@@ -34,8 +41,9 @@ src/client/
 │       └── CurrencyPage.tsx
 │
 ├── components/         # Reusable components
+│   ├── ProtectedRoute.tsx # Auth guard for protected routes
 │   ├── Layout/
-│   │   ├── Sidebar.tsx         # Collapsible sidebar navigation
+│   │   ├── Sidebar.tsx         # Collapsible sidebar with user info + logout
 │   │   └── SidebarLayout.tsx   # Main layout wrapper
 │   │
 │   ├── Portfolio/
@@ -66,8 +74,103 @@ src/client/
 │   └── StockSearch.tsx     # Autocomplete stock search
 │
 └── lib/
-    ├── api.ts              # API client + TypeScript types
+    ├── api.ts              # API client with auth token injection
+    ├── supabase.ts         # Supabase client for frontend
     └── currency.ts         # Currency formatting utilities
+```
+
+---
+
+## Authentication
+
+### Overview
+
+The app uses Supabase for authentication with support for:
+- Email/password authentication
+- Google OAuth (one-click login)
+- Automatic token refresh
+- Protected routes
+
+### AuthContext
+
+**File**: `src/client/contexts/AuthContext.tsx`
+
+Provides authentication state and methods throughout the app.
+
+```typescript
+interface AuthContextType {
+  user: User | null;          // Current Supabase user
+  session: Session | null;    // Current session with tokens
+  loading: boolean;           // True while checking auth state
+  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
+  signUp: (email: string, password: string) => Promise<{ error: AuthError | null }>;
+  signInWithGoogle: () => Promise<{ error: AuthError | null }>;
+  signOut: () => Promise<void>;
+  initializeUser: () => Promise<void>;  // Seeds default data for new users
+}
+
+// Usage in components
+const { user, signOut, loading } = useAuth();
+```
+
+### ProtectedRoute
+
+**File**: `src/client/components/ProtectedRoute.tsx`
+
+Wraps routes that require authentication. Redirects to `/login` if not authenticated.
+
+```tsx
+<Route
+  path="/*"
+  element={
+    <ProtectedRoute>
+      <SidebarLayout>
+        <Routes>
+          {/* Protected routes */}
+        </Routes>
+      </SidebarLayout>
+    </ProtectedRoute>
+  }
+/>
+```
+
+### Auth Pages
+
+| Page | File | Description |
+|------|------|-------------|
+| LoginPage | `pages/LoginPage.tsx` | Email/password form + Google OAuth button |
+| SignupPage | `pages/SignupPage.tsx` | Registration form with email confirmation |
+| AuthCallbackPage | `pages/AuthCallbackPage.tsx` | Handles OAuth redirects from Google |
+
+### API Client Authentication
+
+**File**: `src/client/lib/api.ts`
+
+All API requests automatically include the JWT token:
+
+```typescript
+async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (!session) {
+    window.location.href = '/login';
+    throw new Error('Not authenticated');
+  }
+
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+    },
+    ...options,
+  });
+
+  // Handle 401 - redirect to login
+  if (response.status === 401) {
+    window.location.href = '/login';
+  }
+  // ...
+}
 ```
 
 ---
@@ -77,22 +180,36 @@ src/client/
 ```tsx
 // App.tsx
 <Routes>
-  <Route element={<SidebarLayout />}>
-    <Route path="/" element={<Dashboard />} />
-    <Route path="/accounts/new" element={<AddAccountPage />} />
-    <Route path="/accounts/:id" element={<AccountPage />} />
-    <Route path="/transfers" element={<TransfersPage />} />
-    <Route path="/projection" element={<ProjectionPage />} />
-    <Route path="/pnl" element={<PnLPage />} />
-    <Route path="/dividends" element={<Dividends />} />
-    <Route path="/settings/categories" element={<CategoriesPage />} />
-    <Route path="/settings/payees" element={<PayeesPage />} />
-    <Route path="/settings/currency" element={<CurrencyPage />} />
-  </Route>
+  {/* Public routes - no authentication required */}
+  <Route path="/login" element={<LoginPage />} />
+  <Route path="/signup" element={<SignupPage />} />
+  <Route path="/auth/callback" element={<AuthCallbackPage />} />
+
+  {/* Protected routes - require authentication */}
+  <Route
+    path="/*"
+    element={
+      <ProtectedRoute>
+        <SidebarLayout>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/accounts/new" element={<AddAccountPage />} />
+            <Route path="/accounts/:id" element={<AccountPage />} />
+            <Route path="/transfers" element={<TransfersPage />} />
+            <Route path="/projection" element={<ProjectionPage />} />
+            <Route path="/pnl" element={<PnLPage />} />
+            <Route path="/settings/categories" element={<CategoriesPage />} />
+            <Route path="/settings/payees" element={<PayeesPage />} />
+            <Route path="/settings/currency" element={<CurrencyPage />} />
+          </Routes>
+        </SidebarLayout>
+      </ProtectedRoute>
+    }
+  />
 </Routes>
 ```
 
-All routes are wrapped in `<SidebarLayout>` which provides the collapsible sidebar navigation.
+Protected routes are wrapped in `<ProtectedRoute>` which redirects to `/login` if not authenticated, then `<SidebarLayout>` which provides the collapsible sidebar navigation with user info and logout.
 
 ---
 
@@ -226,11 +343,22 @@ pnlApi.getMonth(month: string): Promise<PnLMonthDetail>
 - Dashboard link
 - Add Account button
 - Settings section (Categories, Payees, Currency)
+- **User info and logout**: Shows user email and logout button at bottom
 - **Auto-refresh**: Reloads on route change and listens for `accounts-changed` events
 
 **Account Display**:
 - Expanded: Account name + balance/cost basis
 - Collapsed: Icon only with tooltip
+
+**User Section** (at bottom of sidebar):
+```tsx
+const { user, signOut } = useAuth();
+// ...
+<div className="border-t border-gray-200 p-4">
+  <span>{user?.email}</span>
+  <button onClick={signOut}>Sign out</button>
+</div>
+```
 
 **Refresh Mechanism**:
 ```typescript
