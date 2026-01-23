@@ -47,7 +47,7 @@ export interface Account {
   type: AccountType;
   currency: Currency;
   initial_balance: number;
-  is_favorite?: number;
+  is_favorite?: boolean;
   created_at: string;
   balance?: number;
   costBasis?: number; // For stock accounts: total cost basis of all holdings

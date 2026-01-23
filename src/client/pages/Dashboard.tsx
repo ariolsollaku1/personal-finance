@@ -190,61 +190,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Accounts List */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-gray-700">All Accounts</h2>
-            <Link
-              to="/accounts/new"
-              className="text-sm text-orange-600 hover:text-orange-800"
-            >
-              + Add Account
-            </Link>
-          </div>
-        </div>
-        <div className="divide-y divide-gray-200">
-          {data.accounts.length === 0 ? (
-            <div className="p-4 text-center text-gray-500 text-sm">
-              No accounts yet.{' '}
-              <Link to="/accounts/new" className="text-orange-600 hover:underline">
-                Create your first account
-              </Link>
-            </div>
-          ) : (
-            data.accounts.map((account) => (
-              <Link
-                key={account.id}
-                to={`/accounts/${account.id}`}
-                className="flex items-center justify-between py-2 px-4 hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="text-base">
-                    {account.type === 'bank' ? '🏦' : account.type === 'cash' ? '💵' : account.type === 'stock' ? '📈' : account.type === 'asset' ? '🏠' : account.type === 'loan' ? '📋' : '💳'}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {account.name}
-                      <span className="text-gray-400 font-normal capitalize"> • {account.type}</span>
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <span className="text-sm font-medium text-gray-900">
-                    {formatCurrency(account.balance, account.currency)}
-                  </span>
-                  {account.currency !== data.mainCurrency && (
-                    <span className="text-xs text-gray-500 ml-1">
-                      ({formatCurrency(account.balanceInMainCurrency, data.mainCurrency)})
-                    </span>
-                  )}
-                </div>
-              </Link>
-            ))
-          )}
-        </div>
-      </div>
-
       {/* Due Recurring Transactions */}
       {data.dueRecurring.length > 0 && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -287,44 +232,106 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Recent Transactions */}
-      {data.recentTransactions.length > 0 && (
+      {/* Accounts List & Recent Activity - Side by Side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Accounts List */}
+        <div className="bg-white rounded-lg shadow">
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-gray-700">All Accounts</h2>
+              <Link
+                to="/accounts/new"
+                className="text-sm text-orange-600 hover:text-orange-800"
+              >
+                + Add Account
+              </Link>
+            </div>
+          </div>
+          <div className="divide-y divide-gray-200">
+            {data.accounts.length === 0 ? (
+              <div className="p-4 text-center text-gray-500 text-sm">
+                No accounts yet.{' '}
+                <Link to="/accounts/new" className="text-orange-600 hover:underline">
+                  Create your first account
+                </Link>
+              </div>
+            ) : (
+              data.accounts.map((account) => (
+                <Link
+                  key={account.id}
+                  to={`/accounts/${account.id}`}
+                  className="flex items-center justify-between py-2 px-4 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-base">
+                      {account.type === 'bank' ? '🏦' : account.type === 'cash' ? '💵' : account.type === 'stock' ? '📈' : account.type === 'asset' ? '🏠' : account.type === 'loan' ? '📋' : '💳'}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {account.name}
+                        <span className="text-gray-400 font-normal capitalize"> • {account.type}</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <span className="text-sm font-medium text-gray-900">
+                      {formatCurrency(account.balance, account.currency)}
+                    </span>
+                    {account.currency !== data.mainCurrency && (
+                      <span className="text-xs text-gray-500 ml-1">
+                        ({formatCurrency(account.balanceInMainCurrency, data.mainCurrency)})
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Recent Transactions */}
         <div className="bg-white rounded-lg shadow">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-700">Recent Activity</h2>
           </div>
           <div className="divide-y divide-gray-200">
-            {data.recentTransactions.map((tx) => (
-              <div
-                key={`${tx.accountId}-${tx.id}`}
-                className="flex items-center justify-between py-2 px-4"
-              >
-                <div className="flex items-center gap-4 min-w-0">
-                  <span
-                    className={`text-sm font-medium w-20 ${
-                      tx.type === 'inflow' ? 'text-green-600' : 'text-red-600'
-                    }`}
-                  >
-                    {tx.type === 'inflow' ? '+' : '-'}
-                    {formatCurrency(tx.amount, tx.currency)}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {tx.payee || tx.category || 'Transaction'}
-                      {tx.category && tx.payee && (
-                        <span className="text-gray-400 font-normal"> • {tx.category}</span>
-                      )}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {tx.accountName} • {tx.date}
-                    </p>
+            {data.recentTransactions.length === 0 ? (
+              <div className="p-4 text-center text-gray-500 text-sm">
+                No recent transactions
+              </div>
+            ) : (
+              data.recentTransactions.map((tx) => (
+                <div
+                  key={`${tx.accountId}-${tx.id}`}
+                  className="flex items-center justify-between py-2 px-4"
+                >
+                  <div className="flex items-center gap-4 min-w-0">
+                    <span
+                      className={`text-sm font-medium w-20 ${
+                        tx.type === 'inflow' ? 'text-green-600' : 'text-red-600'
+                      }`}
+                    >
+                      {tx.type === 'inflow' ? '+' : '-'}
+                      {formatCurrency(tx.amount, tx.currency)}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {tx.payee || tx.category || 'Transaction'}
+                        {tx.category && tx.payee && (
+                          <span className="text-gray-400 font-normal"> • {tx.category}</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {tx.accountName} • {tx.date}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -76,7 +76,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     setExpandedGroups((prev) => ({ ...prev, [group]: !prev[group] }));
   };
 
-  const favoriteAccounts = accounts.filter((a) => a.is_favorite === 1);
+  const favoriteAccounts = accounts.filter((a) => a.is_favorite);
   const bankAccounts = accounts.filter((a) => a.type === 'bank');
   const cashAccounts = accounts.filter((a) => a.type === 'cash');
   const stockAccounts = accounts.filter((a) => a.type === 'stock');

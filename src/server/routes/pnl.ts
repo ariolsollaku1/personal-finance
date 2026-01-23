@@ -17,6 +17,15 @@ function convertToMainCurrency(amount: number, fromCurrency: string, mainCurrenc
   return amountInALL / EXCHANGE_RATES[mainCurrency];
 }
 
+// Format date to YYYY-MM-DD string (handles both Date objects and strings)
+function formatDateString(date: Date | string): string {
+  if (date instanceof Date) {
+    return date.toISOString().split('T')[0];
+  }
+  // If it's already a string, return as-is (might be YYYY-MM-DD format)
+  return String(date).split('T')[0];
+}
+
 interface MonthlyPnL {
   month: string; // YYYY-MM
   label: string; // "January 2026"
@@ -101,7 +110,8 @@ router.get('/', async (req: Request, res: Response) => {
       // Skip transfers to avoid double counting
       if (tx.transfer_id) continue;
 
-      const monthKey = tx.date.toString().substring(0, 7); // YYYY-MM
+      const dateStr = formatDateString(tx.date);
+      const monthKey = dateStr.substring(0, 7); // YYYY-MM
 
       if (!monthlyData.has(monthKey)) {
         monthlyData.set(monthKey, { income: 0, expenses: 0, count: 0 });
@@ -249,7 +259,7 @@ router.get('/:month', async (req: Request, res: Response) => {
 
       details.push({
         id: tx.id,
-        date: tx.date.toString(),
+        date: formatDateString(tx.date),
         type: tx.type as 'inflow' | 'outflow',
         amount: Number(tx.amount),
         amountInMainCurrency: Math.round(amountInMain * 100) / 100,
