@@ -113,7 +113,7 @@ function MonthCard({ month, currency, onClick }: MonthCardProps) {
   return (
     <button
       onClick={onClick}
-      className="bg-white rounded-lg shadow p-4 text-left hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-blue-500"
+      className="bg-white rounded-lg shadow p-4 text-left hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-orange-500"
     >
       <div className="flex justify-between items-start mb-3">
         <h3 className="font-semibold text-gray-900">{month.label}</h3>
@@ -145,7 +145,7 @@ function MonthCard({ month, currency, onClick }: MonthCardProps) {
         </div>
       </div>
 
-      <div className="mt-3 text-xs text-blue-600 hover:text-blue-800">
+      <div className="mt-3 text-xs text-orange-600 hover:text-orange-800">
         Click to view details
       </div>
     </button>
@@ -201,9 +201,9 @@ function MonthDetailModal({ detail, loading, currency, onClose }: MonthDetailMod
                     -{formatCurrency(detail.expenses, currency as 'ALL' | 'EUR' | 'USD')}
                   </p>
                 </div>
-                <div className={`rounded-lg p-4 ${detail.net >= 0 ? 'bg-blue-50' : 'bg-orange-50'}`}>
-                  <p className={`text-sm ${detail.net >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>Net</p>
-                  <p className={`text-xl font-bold ${detail.net >= 0 ? 'text-blue-700' : 'text-orange-700'}`}>
+                <div className={`rounded-lg p-4 ${detail.net >= 0 ? 'bg-orange-50' : 'bg-orange-50'}`}>
+                  <p className={`text-sm ${detail.net >= 0 ? 'text-orange-600' : 'text-orange-600'}`}>Net</p>
+                  <p className={`text-xl font-bold ${detail.net >= 0 ? 'text-orange-700' : 'text-orange-700'}`}>
                     {detail.net >= 0 ? '+' : ''}{formatCurrency(detail.net, currency as 'ALL' | 'EUR' | 'USD')}
                   </p>
                 </div>

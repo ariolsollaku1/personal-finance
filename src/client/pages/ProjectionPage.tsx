@@ -101,30 +101,30 @@ export default function ProjectionPage() {
         </div>
         <div className="bg-white rounded-lg shadow p-4">
           <p className="text-sm text-gray-500">Monthly Savings</p>
-          <p className={`text-xl font-semibold ${data.summary.monthlySavings >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+          <p className={`text-xl font-semibold ${data.summary.monthlySavings >= 0 ? 'text-orange-600' : 'text-red-600'}`}>
             {formatCurrency(data.summary.monthlySavings, currency)}
           </p>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
           <p className="text-sm text-gray-500">Savings Rate</p>
-          <p className={`text-xl font-semibold ${data.summary.savingsRate >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+          <p className={`text-xl font-semibold ${data.summary.savingsRate >= 0 ? 'text-orange-600' : 'text-red-600'}`}>
             {data.summary.savingsRate.toFixed(1)}%
           </p>
         </div>
       </div>
 
       {/* Year-End Projection */}
-      <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow p-6 text-white">
+      <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg shadow p-6 text-white">
         <h2 className="text-lg font-semibold mb-2">Year-End Projection</h2>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <p className="text-blue-100 text-sm">Projected Net Worth (Dec 31)</p>
+            <p className="text-orange-100 text-sm">Projected Net Worth (Dec 31)</p>
             <p className="text-3xl font-bold">
               {formatCurrency(data.summary.projectedYearEndNetWorth, currency)}
             </p>
           </div>
           <div>
-            <p className="text-blue-100 text-sm">Projected Change (YTD)</p>
+            <p className="text-orange-100 text-sm">Projected Change (YTD)</p>
             <p className={`text-3xl font-bold ${data.summary.projectedNetWorthChange >= 0 ? 'text-green-300' : 'text-red-300'}`}>
               {data.summary.projectedNetWorthChange >= 0 ? '+' : ''}
               {formatCurrency(data.summary.projectedNetWorthChange, currency)}
@@ -141,8 +141,8 @@ export default function ProjectionPage() {
             <AreaChart data={data.ytd}>
               <defs>
                 <linearGradient id="colorNetWorth" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#f97316" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -161,7 +161,7 @@ export default function ProjectionPage() {
                 type="monotone"
                 dataKey="netWorth"
                 name="Net Worth"
-                stroke="#3b82f6"
+                stroke="#f97316"
                 strokeWidth={2}
                 fill="url(#colorNetWorth)"
               />
@@ -235,8 +235,8 @@ export default function ProjectionPage() {
                 dataKey="byType.bank"
                 name="Bank"
                 stackId="1"
-                stroke="#3b82f6"
-                fill="#3b82f6"
+                stroke="#f97316"
+                fill="#f97316"
               />
               <Area
                 type="monotone"
@@ -259,8 +259,8 @@ export default function ProjectionPage() {
                 dataKey="byType.asset"
                 name="Assets"
                 stackId="1"
-                stroke="#8b5cf6"
-                fill="#8b5cf6"
+                stroke="#fb923c"
+                fill="#fb923c"
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -321,7 +321,7 @@ export default function ProjectionPage() {
               <Legend />
               <Bar dataKey="income" name="Income" fill="#22c55e" />
               <Bar dataKey="expenses" name="Expenses" fill="#ef4444" />
-              <Bar dataKey="savings" name="Net Savings" fill="#3b82f6" />
+              <Bar dataKey="savings" name="Net Savings" fill="#f97316" />
             </BarChart>
           </ResponsiveContainer>
         </div>

@@ -197,7 +197,7 @@ export default function Dashboard() {
             <h2 className="text-lg font-semibold text-gray-700">All Accounts</h2>
             <Link
               to="/accounts/new"
-              className="text-sm text-blue-600 hover:text-blue-800"
+              className="text-sm text-orange-600 hover:text-orange-800"
             >
               + Add Account
             </Link>
@@ -207,7 +207,7 @@ export default function Dashboard() {
           {data.accounts.length === 0 ? (
             <div className="p-4 text-center text-gray-500 text-sm">
               No accounts yet.{' '}
-              <Link to="/accounts/new" className="text-blue-600 hover:underline">
+              <Link to="/accounts/new" className="text-orange-600 hover:underline">
                 Create your first account
               </Link>
             </div>

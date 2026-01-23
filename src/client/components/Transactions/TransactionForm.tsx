@@ -65,7 +65,7 @@ export default function TransactionForm({ onSuccess, onCancel }: TransactionForm
             <select
               value={type}
               onChange={(e) => setType(e.target.value as 'buy' | 'sell')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
             >
               <option value="buy">Buy</option>
               <option value="sell">Sell</option>
@@ -81,7 +81,7 @@ export default function TransactionForm({ onSuccess, onCancel }: TransactionForm
               step="any"
               min="0"
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
           </div>
 
@@ -94,7 +94,7 @@ export default function TransactionForm({ onSuccess, onCancel }: TransactionForm
               step="any"
               min="0"
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
           </div>
 
@@ -106,7 +106,7 @@ export default function TransactionForm({ onSuccess, onCancel }: TransactionForm
               onChange={(e) => setFees(e.target.value)}
               step="any"
               min="0"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
           </div>
 
@@ -117,7 +117,7 @@ export default function TransactionForm({ onSuccess, onCancel }: TransactionForm
               value={date}
               onChange={(e) => setDate(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
           </div>
         </div>
@@ -133,7 +133,7 @@ export default function TransactionForm({ onSuccess, onCancel }: TransactionForm
           <button
             type="submit"
             disabled={loading || !symbol || !shares || !price}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 transition-colors"
           >
             {loading ? 'Adding...' : 'Add Transaction'}
           </button>

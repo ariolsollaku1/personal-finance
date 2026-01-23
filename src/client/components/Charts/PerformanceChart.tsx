@@ -60,7 +60,7 @@ export default function PerformanceChart({ symbol }: PerformanceChartProps) {
               onClick={() => setPeriod(p.value)}
               className={`px-3 py-1 text-sm rounded ${
                 period === p.value
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-orange-600 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >

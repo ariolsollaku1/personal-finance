@@ -77,7 +77,7 @@ export default function HoldingRow({ holding, accountId, onUpdate }: HoldingRowP
         <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-2">
           <button
             onClick={() => setShowSellForm(true)}
-            className="text-blue-600 hover:text-blue-800"
+            className="text-orange-600 hover:text-orange-800"
           >
             Sell
           </button>

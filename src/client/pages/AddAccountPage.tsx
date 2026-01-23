@@ -47,7 +47,7 @@ export default function AddAccountPage() {
             type="text"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
             placeholder="e.g., Main Checking"
             required
           />
@@ -69,7 +69,7 @@ export default function AddAccountPage() {
                 initialBalance: newType === 'stock' ? 0 : formData.initialBalance,
               });
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
           >
             <option value="bank">Bank Account</option>
             <option value="cash">Cash Account</option>
@@ -95,7 +95,7 @@ export default function AddAccountPage() {
           <select
             value={formData.currency}
             onChange={(e) => setFormData({ ...formData, currency: e.target.value as Currency })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 disabled:bg-gray-100"
             disabled={formData.type === 'stock'}
           >
             <option value="ALL">ALL (Albanian Lek)</option>
@@ -121,7 +121,7 @@ export default function AddAccountPage() {
               onChange={(e) =>
                 setFormData({ ...formData, initialBalance: parseFloat(e.target.value) || 0 })
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
               placeholder="0.00"
             />
             <p className="text-xs text-gray-500 mt-1">
@@ -145,7 +145,7 @@ export default function AddAccountPage() {
           <button
             type="submit"
             disabled={loading || !formData.name}
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Creating...' : 'Create Account'}
           </button>

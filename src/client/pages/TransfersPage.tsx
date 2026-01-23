@@ -108,7 +108,7 @@ export default function TransfersPage() {
         <h1 className="text-2xl font-bold text-gray-900">Transfers</h1>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700"
         >
           {showAddForm ? 'Cancel' : 'New Transfer'}
         </button>
@@ -218,7 +218,7 @@ export default function TransfersPage() {
             <div className="flex justify-end">
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700"
               >
                 Create Transfer
               </button>

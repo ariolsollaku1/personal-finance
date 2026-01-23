@@ -68,7 +68,7 @@ export default function SellForm({ symbol, maxShares, currentPrice, accountId, o
             min="0"
             max={maxShares}
             required
-            className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
           />
         </div>
 
@@ -81,7 +81,7 @@ export default function SellForm({ symbol, maxShares, currentPrice, accountId, o
             step="any"
             min="0"
             required
-            className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
           />
         </div>
 
@@ -93,7 +93,7 @@ export default function SellForm({ symbol, maxShares, currentPrice, accountId, o
             onChange={(e) => setFees(e.target.value)}
             step="any"
             min="0"
-            className="w-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
           />
         </div>
 
@@ -104,7 +104,7 @@ export default function SellForm({ symbol, maxShares, currentPrice, accountId, o
             value={date}
             onChange={(e) => setDate(e.target.value)}
             required
-            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
           />
         </div>
 

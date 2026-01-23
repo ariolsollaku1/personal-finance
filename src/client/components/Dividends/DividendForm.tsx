@@ -72,7 +72,7 @@ export default function DividendForm({ accountId, onSuccess, onCancel }: Dividen
               min="0"
               required
               placeholder="0.25"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
           </div>
 
@@ -87,7 +87,7 @@ export default function DividendForm({ accountId, onSuccess, onCancel }: Dividen
               step="any"
               min="0"
               placeholder="Auto-detect from holdings"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
             <p className="text-xs text-gray-500 mt-1">
               Leave empty to use current holding
@@ -101,7 +101,7 @@ export default function DividendForm({ accountId, onSuccess, onCancel }: Dividen
               value={exDate}
               onChange={(e) => setExDate(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
           </div>
 
@@ -113,12 +113,12 @@ export default function DividendForm({ accountId, onSuccess, onCancel }: Dividen
               type="date"
               value={payDate}
               onChange={(e) => setPayDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
           </div>
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-md p-3 text-sm text-blue-700">
+        <div className="bg-orange-50 border border-orange-200 rounded-md p-3 text-sm text-orange-700">
           <strong>Albanian Dividend Tax (8%)</strong> will be automatically calculated and applied.
         </div>
 
@@ -133,7 +133,7 @@ export default function DividendForm({ accountId, onSuccess, onCancel }: Dividen
           <button
             type="submit"
             disabled={loading || !symbol || !amountPerShare}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 transition-colors"
           >
             {loading ? 'Adding...' : 'Add Dividend'}
           </button>

@@ -84,7 +84,7 @@ export default function CategoriesPage() {
         <h1 className="text-2xl font-bold text-gray-900">Categories</h1>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700"
         >
           {showAddForm ? 'Cancel' : 'Add Category'}
         </button>
@@ -113,7 +113,7 @@ export default function CategoriesPage() {
             </select>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700"
             >
               Add
             </button>
@@ -164,7 +164,7 @@ export default function CategoriesPage() {
                             setEditingId(category.id);
                             setEditName(category.name);
                           }}
-                          className="text-blue-600 hover:text-blue-800 text-sm"
+                          className="text-orange-600 hover:text-orange-800 text-sm"
                         >
                           Edit
                         </button>
@@ -225,7 +225,7 @@ export default function CategoriesPage() {
                             setEditingId(category.id);
                             setEditName(category.name);
                           }}
-                          className="text-blue-600 hover:text-blue-800 text-sm"
+                          className="text-orange-600 hover:text-orange-800 text-sm"
                         >
                           Edit
                         </button>

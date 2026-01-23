@@ -449,7 +449,7 @@ export default function AccountPage() {
         <div className="mt-4 flex gap-2">
           <button
             onClick={() => setShowEditAccount(true)}
-            className="text-sm text-blue-600 hover:text-blue-800"
+            className="text-sm text-orange-600 hover:text-orange-800"
           >
             Edit Account
           </button>
@@ -508,7 +508,7 @@ export default function AccountPage() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md"
+                  className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-md"
                 >
                   Save
                 </button>
@@ -536,7 +536,7 @@ export default function AccountPage() {
                 onClick={() => handleTabChange('holdings')}
                 className={`px-6 py-3 text-sm font-medium border-b-2 ${
                   stockTab === 'holdings'
-                    ? 'border-blue-500 text-blue-600'
+                    ? 'border-orange-500 text-orange-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -546,7 +546,7 @@ export default function AccountPage() {
                 onClick={() => handleTabChange('dividends')}
                 className={`px-6 py-3 text-sm font-medium border-b-2 ${
                   stockTab === 'dividends'
-                    ? 'border-blue-500 text-blue-600'
+                    ? 'border-orange-500 text-orange-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -556,7 +556,7 @@ export default function AccountPage() {
                 onClick={() => handleTabChange('transactions')}
                 className={`px-6 py-3 text-sm font-medium border-b-2 ${
                   stockTab === 'transactions'
-                    ? 'border-blue-500 text-blue-600'
+                    ? 'border-orange-500 text-orange-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -571,7 +571,7 @@ export default function AccountPage() {
               <div className="flex justify-end">
                 <button
                   onClick={() => setShowAddHolding(!showAddHolding)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700"
                 >
                   {showAddHolding ? 'Cancel' : 'Add Holding'}
                 </button>
@@ -602,7 +602,7 @@ export default function AccountPage() {
                 <button
                   onClick={handleCheckDividends}
                   disabled={checkingDividends}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                  className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50"
                 >
                   {checkingDividends ? 'Checking...' : 'Check Dividends'}
                 </button>
@@ -629,7 +629,7 @@ export default function AccountPage() {
                   <h2 className="text-lg font-semibold text-gray-700">Recurring Transactions</h2>
                   <button
                     onClick={() => setShowAddRecurring(true)}
-                    className="text-sm text-blue-600 hover:text-blue-800"
+                    className="text-sm text-orange-600 hover:text-orange-800"
                   >
                     + Add Recurring
                   </button>
@@ -664,13 +664,13 @@ export default function AccountPage() {
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <button
                             onClick={() => handleApplyRecurring(rec.id)}
-                            className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                            className="px-2 py-1 text-xs bg-orange-600 text-white rounded hover:bg-orange-700"
                           >
                             Apply
                           </button>
                           <button
                             onClick={() => setEditingRecurring(rec)}
-                            className="text-xs text-blue-600 hover:text-blue-800"
+                            className="text-xs text-orange-600 hover:text-orange-800"
                           >
                             Edit
                           </button>
@@ -693,7 +693,7 @@ export default function AccountPage() {
                   <h2 className="text-lg font-semibold text-gray-700">Transactions</h2>
                   <button
                     onClick={() => setShowAddTransaction(!showAddTransaction)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                    className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700"
                   >
                     {showAddTransaction ? 'Cancel' : '+ Add Transaction'}
                   </button>
@@ -766,7 +766,7 @@ export default function AccountPage() {
                         </button>
                         <button
                           type="submit"
-                          className="px-4 py-2 bg-blue-600 text-white rounded-md"
+                          className="px-4 py-2 bg-orange-600 text-white rounded-md"
                         >
                           Add Transaction
                         </button>
@@ -809,7 +809,7 @@ export default function AccountPage() {
                             <>
                               <button
                                 onClick={() => setEditingTransaction(tx)}
-                                className="text-xs text-blue-600 hover:text-blue-800"
+                                className="text-xs text-orange-600 hover:text-orange-800"
                               >
                                 Edit
                               </button>
@@ -847,7 +847,7 @@ export default function AccountPage() {
               <h2 className="text-lg font-semibold text-gray-700">Recurring Transactions</h2>
               <button
                 onClick={() => setShowAddRecurring(true)}
-                className="text-sm text-blue-600 hover:text-blue-800"
+                className="text-sm text-orange-600 hover:text-orange-800"
               >
                 + Add Recurring
               </button>
@@ -882,13 +882,13 @@ export default function AccountPage() {
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <button
                         onClick={() => handleApplyRecurring(rec.id)}
-                        className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                        className="px-2 py-1 text-xs bg-orange-600 text-white rounded hover:bg-orange-700"
                       >
                         Apply
                       </button>
                       <button
                         onClick={() => setEditingRecurring(rec)}
-                        className="text-xs text-blue-600 hover:text-blue-800"
+                        className="text-xs text-orange-600 hover:text-orange-800"
                       >
                         Edit
                       </button>
@@ -911,7 +911,7 @@ export default function AccountPage() {
               <h2 className="text-lg font-semibold text-gray-700">Transactions</h2>
               <button
                 onClick={() => setShowAddTransaction(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700"
               >
                 + Add Transaction
               </button>
@@ -1017,7 +1017,7 @@ export default function AccountPage() {
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md"
+                      className="px-4 py-2 bg-orange-600 text-white rounded-md"
                     >
                       Add Transaction
                     </button>
@@ -1061,7 +1061,7 @@ export default function AccountPage() {
                         <>
                           <button
                             onClick={() => setEditingTransaction(tx)}
-                            className="text-xs text-blue-600 hover:text-blue-800"
+                            className="text-xs text-orange-600 hover:text-orange-800"
                           >
                             Edit
                           </button>
@@ -1213,7 +1213,7 @@ export default function AccountPage() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md"
+                  className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-md"
                 >
                   Add
                 </button>
@@ -1348,7 +1348,7 @@ export default function AccountPage() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md"
+                  className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-md"
                 >
                   Save
                 </button>
@@ -1462,7 +1462,7 @@ export default function AccountPage() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md"
+                  className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-md"
                 >
                   Save
                 </button>

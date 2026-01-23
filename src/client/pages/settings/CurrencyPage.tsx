@@ -74,7 +74,7 @@ export default function CurrencyPage() {
               disabled={saving}
               className={`p-4 rounded-lg border-2 text-left transition-colors ${
                 mainCurrency === currency.code
-                  ? 'border-blue-500 bg-blue-50'
+                  ? 'border-orange-500 bg-orange-50'
                   : 'border-gray-200 hover:border-gray-300'
               }`}
             >
@@ -83,7 +83,7 @@ export default function CurrencyPage() {
                   {getCurrencySymbol(currency.code)}
                 </span>
                 {mainCurrency === currency.code && (
-                  <span className="text-xs text-blue-600 font-medium">Selected</span>
+                  <span className="text-xs text-orange-600 font-medium">Selected</span>
                 )}
               </div>
               <p className="font-medium text-gray-900 mt-2">{currency.code}</p>

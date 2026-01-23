@@ -129,7 +129,7 @@ export default function PayeesPage() {
               setShowAddForm(!showAddForm);
               setMergeMode(false);
             }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700"
           >
             {showAddForm ? 'Cancel' : 'Add Payee'}
           </button>
@@ -149,7 +149,7 @@ export default function PayeesPage() {
             />
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700"
             >
               Add
             </button>
@@ -259,7 +259,7 @@ export default function PayeesPage() {
                           setEditingId(payee.id);
                           setEditName(payee.name);
                         }}
-                        className="text-blue-600 hover:text-blue-800 text-sm"
+                        className="text-orange-600 hover:text-orange-800 text-sm"
                       >
                         Edit
                       </button>

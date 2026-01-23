@@ -147,7 +147,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           className={({ isActive }) =>
             `flex items-center px-4 py-2 mx-2 rounded-lg transition-colors ${
               isActive
-                ? 'bg-blue-50 text-blue-700'
+                ? 'bg-orange-50 text-orange-700'
                 : 'text-gray-700 hover:bg-gray-100'
             }`
           }
@@ -169,7 +169,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           className={({ isActive }) =>
             `flex items-center px-4 py-2 mx-2 rounded-lg transition-colors ${
               isActive
-                ? 'bg-blue-50 text-blue-700'
+                ? 'bg-orange-50 text-orange-700'
                 : 'text-gray-700 hover:bg-gray-100'
             }`
           }
@@ -191,7 +191,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           className={({ isActive }) =>
             `flex items-center px-4 py-2 mx-2 rounded-lg transition-colors ${
               isActive
-                ? 'bg-blue-50 text-blue-700'
+                ? 'bg-orange-50 text-orange-700'
                 : 'text-gray-700 hover:bg-gray-100'
             }`
           }
@@ -246,7 +246,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                       className={({ isActive }) =>
                         `flex items-center justify-between px-4 py-2 mx-2 rounded-lg text-sm transition-colors ${
                           isActive
-                            ? 'bg-blue-50 text-blue-700'
+                            ? 'bg-orange-50 text-orange-700'
                             : 'text-gray-600 hover:bg-gray-100'
                         }`
                       }
@@ -322,7 +322,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                           className={({ isActive }) =>
                             `flex items-center justify-between px-4 py-2 mx-2 rounded-lg text-sm transition-colors ${
                               isActive
-                                ? 'bg-blue-50 text-blue-700'
+                                ? 'bg-orange-50 text-orange-700'
                                 : 'text-gray-600 hover:bg-gray-100'
                             }`
                           }
@@ -379,7 +379,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   className={({ isActive }) =>
                     `flex items-center justify-center px-4 py-2 mx-2 rounded-lg transition-colors ${
                       isActive
-                        ? 'bg-blue-50 text-blue-700'
+                        ? 'bg-orange-50 text-orange-700'
                         : 'text-gray-600 hover:bg-gray-100'
                     }`
                   }
@@ -400,7 +400,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         <div className="mt-4 px-2">
           <button
             onClick={() => navigate('/accounts/new')}
-            className="flex items-center justify-center w-full px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-lg shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-[1.02] transition-all"
+            className="flex items-center justify-center w-full px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 rounded-lg shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 hover:scale-[1.02] transition-all"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -424,7 +424,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           className={({ isActive }) =>
             `flex items-center px-4 py-2 mx-2 rounded-lg text-sm transition-colors ${
               isActive
-                ? 'bg-blue-50 text-blue-700'
+                ? 'bg-orange-50 text-orange-700'
                 : 'text-gray-600 hover:bg-gray-100'
             } ${collapsed ? 'justify-center' : ''}`
           }
@@ -445,7 +445,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           className={({ isActive }) =>
             `flex items-center px-4 py-2 mx-2 rounded-lg text-sm transition-colors ${
               isActive
-                ? 'bg-blue-50 text-blue-700'
+                ? 'bg-orange-50 text-orange-700'
                 : 'text-gray-600 hover:bg-gray-100'
             } ${collapsed ? 'justify-center' : ''}`
           }
@@ -466,7 +466,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           className={({ isActive }) =>
             `flex items-center px-4 py-2 mx-2 rounded-lg text-sm transition-colors ${
               isActive
-                ? 'bg-blue-50 text-blue-700'
+                ? 'bg-orange-50 text-orange-700'
                 : 'text-gray-600 hover:bg-gray-100'
             } ${collapsed ? 'justify-center' : ''}`
           }
@@ -487,7 +487,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           className={({ isActive }) =>
             `flex items-center px-4 py-2 mx-2 rounded-lg text-sm transition-colors ${
               isActive
-                ? 'bg-blue-50 text-blue-700'
+                ? 'bg-orange-50 text-orange-700'
                 : 'text-gray-600 hover:bg-gray-100'
             } ${collapsed ? 'justify-center' : ''}`
           }
