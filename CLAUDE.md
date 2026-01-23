@@ -935,6 +935,131 @@ Use Heroicons (outline style) via inline SVG:
 </NavLink>
 ```
 
+### Top Navbar
+```tsx
+<header className="h-16 bg-white border-b border-gray-100 shadow-sm sticky top-0 z-40">
+  <div className="h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+    {/* Logo */}
+    <div className="flex items-center gap-3">
+      <div className="w-9 h-9 bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/25">
+        <svg className="w-5 h-5 text-white">...</svg>
+      </div>
+      <span className="text-xl font-bold text-gray-900">Finance Manager</span>
+    </div>
+
+    {/* Navigation Links */}
+    <nav className="hidden md:flex items-center gap-1">
+      <NavLink className={({ isActive }) => `px-4 py-2 rounded-xl font-medium transition-all duration-200 ${
+        isActive
+          ? 'bg-orange-100 text-orange-700'
+          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+      }`}>
+        Dashboard
+      </NavLink>
+      <NavLink className={({ isActive }) => `px-4 py-2 rounded-xl font-medium transition-all duration-200 ${
+        isActive
+          ? 'bg-orange-100 text-orange-700'
+          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+      }`}>
+        Projection
+      </NavLink>
+    </nav>
+
+    {/* Right side: Actions + User */}
+    <div className="flex items-center gap-3">
+      {/* Notification bell (optional) */}
+      <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-all duration-200">
+        <svg className="w-5 h-5">...</svg>
+      </button>
+
+      {/* User dropdown */}
+      <div className="flex items-center gap-3 pl-3 border-l border-gray-200">
+        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white font-semibold text-sm">
+          U
+        </div>
+        <div className="hidden sm:block">
+          <p className="text-sm font-medium text-gray-900">user@email.com</p>
+          <p className="text-xs text-gray-400">Personal Account</p>
+        </div>
+        <button className="p-1 text-gray-400 hover:text-gray-600">
+          <svg className="w-4 h-4">...</svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+```
+
+### Top Navbar with Gradient
+```tsx
+<header className="h-16 bg-gradient-to-r from-orange-500 to-amber-500 shadow-lg sticky top-0 z-40">
+  <div className="h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+    {/* Logo */}
+    <div className="flex items-center gap-3">
+      <div className="w-9 h-9 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center">
+        <svg className="w-5 h-5 text-white">...</svg>
+      </div>
+      <span className="text-xl font-bold text-white">Finance Manager</span>
+    </div>
+
+    {/* Navigation Links */}
+    <nav className="hidden md:flex items-center gap-1">
+      <NavLink className={({ isActive }) => `px-4 py-2 rounded-xl font-medium transition-all duration-200 ${
+        isActive
+          ? 'bg-white/20 text-white'
+          : 'text-orange-100 hover:bg-white/10 hover:text-white'
+      }`}>
+        Dashboard
+      </NavLink>
+    </nav>
+
+    {/* User */}
+    <div className="flex items-center gap-3">
+      <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center text-white font-semibold text-sm">
+        U
+      </div>
+      <button className="p-2 text-orange-100 hover:text-white hover:bg-white/10 rounded-xl transition-all duration-200">
+        <svg className="w-5 h-5">...</svg>
+      </button>
+    </div>
+  </div>
+</header>
+```
+
+### Mobile Menu Button (for Top Navbar)
+```tsx
+<button className="md:hidden p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-all duration-200">
+  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+  </svg>
+</button>
+```
+
+### Mobile Slide-out Menu
+```tsx
+{/* Overlay */}
+<div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 md:hidden" onClick={onClose} />
+
+{/* Menu Panel */}
+<div className="fixed inset-y-0 left-0 w-72 bg-white shadow-2xl z-50 md:hidden">
+  {/* Header */}
+  <div className="h-16 px-4 flex items-center justify-between border-b border-gray-100">
+    <span className="font-bold text-gray-900">Menu</span>
+    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
+      <svg className="w-5 h-5 text-gray-500">...</svg>
+    </button>
+  </div>
+
+  {/* Navigation */}
+  <nav className="p-4 space-y-1">
+    <NavLink className="flex items-center px-4 py-3 rounded-xl text-gray-700 hover:bg-orange-50 hover:text-orange-700 transition-all duration-200">
+      <svg className="w-5 h-5 mr-3">...</svg>
+      Dashboard
+    </NavLink>
+  </nav>
+</div>
+```
+
 ### Sortable Table Header
 ```tsx
 <th

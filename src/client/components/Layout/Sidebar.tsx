@@ -1,7 +1,6 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Account, accountsApi, Currency } from '../../lib/api';
-import { useAuth } from '../../contexts/AuthContext';
 
 // Compact currency formatter for sidebar (e.g., 494k L, 1.5M €)
 function formatCompactCurrency(amount: number, currency: Currency): string {
@@ -44,12 +43,6 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   });
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, signOut } = useAuth();
-
-  const handleSignOut = async () => {
-    await signOut();
-    navigate('/login');
-  };
 
   // Reload accounts on route change (e.g., after creating/deleting an account)
   useEffect(() => {
@@ -118,19 +111,19 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
   return (
     <aside
-      className={`bg-white border-r border-gray-100 flex flex-col h-full transition-all duration-300 shadow-lg ${
+      className={`bg-white border-r border-gray-100 flex flex-col h-full transition-all duration-300 shadow-sm ${
         collapsed ? 'w-16' : 'w-64'
       }`}
     >
-      {/* Header with gradient */}
-      <div className="h-16 flex items-center px-4 bg-gradient-to-r from-orange-500 to-amber-500">
+      {/* Header */}
+      <div className="h-14 flex items-center px-4 border-b border-gray-100">
         <button
           onClick={onToggle}
-          className="p-2 hover:bg-white/20 rounded-xl transition-all duration-200"
+          className="p-2 hover:bg-gray-100 rounded-xl transition-all duration-200"
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           <svg
-            className="w-5 h-5 text-white"
+            className="w-5 h-5 text-gray-500"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -139,86 +132,20 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth={2}
-              d="M4 6h16M4 12h16M4 18h16"
+              d={collapsed ? "M13 5l7 7-7 7M5 5l7 7-7 7" : "M11 19l-7-7 7-7M19 19l-7-7 7-7"}
             />
           </svg>
         </button>
         {!collapsed && (
-          <span className="ml-3 font-bold text-white tracking-tight">Finance Manager</span>
+          <span className="ml-3 font-semibold text-gray-700 text-sm uppercase tracking-wider">Accounts</span>
         )}
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4">
-        {/* Main Navigation Links */}
-        <div className="px-2 space-y-1">
-          <NavLink
-            to="/"
-            className={({ isActive }) =>
-              `flex items-center px-4 py-2.5 rounded-xl transition-all duration-200 ${
-                isActive
-                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/25'
-                  : 'text-gray-700 hover:bg-orange-50 hover:text-orange-700'
-              }`
-            }
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-              />
-            </svg>
-            {!collapsed && <span className="ml-3 font-medium">Dashboard</span>}
-          </NavLink>
-
-          <NavLink
-            to="/projection"
-            className={({ isActive }) =>
-              `flex items-center px-4 py-2.5 rounded-xl transition-all duration-200 ${
-                isActive
-                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/25'
-                  : 'text-gray-700 hover:bg-orange-50 hover:text-orange-700'
-              }`
-            }
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-              />
-            </svg>
-            {!collapsed && <span className="ml-3 font-medium">Projection</span>}
-          </NavLink>
-
-          <NavLink
-            to="/pnl"
-            className={({ isActive }) =>
-              `flex items-center px-4 py-2.5 rounded-xl transition-all duration-200 ${
-                isActive
-                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/25'
-                  : 'text-gray-700 hover:bg-orange-50 hover:text-orange-700'
-              }`
-            }
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-              />
-            </svg>
-            {!collapsed && <span className="ml-3 font-medium">P&L</span>}
-          </NavLink>
-        </div>
-
         {/* Favorites Section */}
         {!collapsed && (
-          <div className="mt-6">
+          <div>
             <button
               onClick={() => toggleGroup('favorites')}
               className="w-full flex items-center justify-between px-4 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider hover:text-orange-500 transition-colors"
@@ -292,7 +219,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
         {/* Account Groups */}
         {!collapsed && (
-          <div className="mt-4">
+          <div className="mt-2">
             {accountGroups.map((group) => (
               <div key={group.key} className="mb-1">
                 <button
@@ -379,7 +306,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
         {/* Collapsed view - just icons */}
         {collapsed && (
-          <div className="mt-4 space-y-1 px-2">
+          <div className="space-y-1 px-2">
             {accountGroups.map((group) =>
               group.accounts.map((account) => (
                 <NavLink
@@ -406,10 +333,10 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         )}
 
         {/* Add Account Button */}
-        <div className="mt-6 px-3">
+        <div className="mt-4 px-3">
           <button
             onClick={() => navigate('/accounts/new')}
-            className="flex items-center justify-center w-full px-4 py-3 text-sm font-semibold text-white bg-gradient-to-r from-orange-500 to-amber-500 rounded-xl shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 hover:scale-[1.02] transition-all duration-200"
+            className="flex items-center justify-center w-full px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-orange-500 to-amber-500 rounded-xl shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 hover:scale-[1.02] transition-all duration-200"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -419,7 +346,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         </div>
 
         {/* Divider */}
-        <div className="my-6 mx-4 border-t border-gray-100" />
+        <div className="my-4 mx-4 border-t border-gray-100" />
 
         {/* Settings Section */}
         {!collapsed && (
@@ -491,77 +418,8 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
             </svg>
             {!collapsed && <span className="ml-3">Currency</span>}
           </NavLink>
-
-          <NavLink
-            to="/transfers"
-            className={({ isActive }) =>
-              `flex items-center px-4 py-2.5 rounded-xl text-sm transition-all duration-200 ${
-                isActive
-                  ? 'bg-orange-100 text-orange-700 font-medium'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              } ${collapsed ? 'justify-center' : ''}`
-            }
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-              />
-            </svg>
-            {!collapsed && <span className="ml-3">Transfers</span>}
-          </NavLink>
         </div>
       </nav>
-
-      {/* User Info & Logout */}
-      <div className="border-t border-gray-100 p-4 bg-gray-50/50">
-        {!collapsed ? (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white font-semibold text-sm shadow-lg shadow-orange-500/25">
-                {user?.email?.charAt(0).toUpperCase() || 'U'}
-              </div>
-              <div className="ml-3 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {user?.email || 'User'}
-                </p>
-                <p className="text-xs text-gray-400">Personal Account</p>
-              </div>
-            </div>
-            <button
-              onClick={handleSignOut}
-              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all duration-200"
-              title="Sign out"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                />
-              </svg>
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={handleSignOut}
-            className="w-full flex items-center justify-center p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all duration-200"
-            title="Sign out"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-              />
-            </svg>
-          </button>
-        )}
-      </div>
     </aside>
   );
 }

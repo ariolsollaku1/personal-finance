@@ -1,5 +1,6 @@
 import { ReactNode, useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
+import TopNavbar from './TopNavbar';
 import { dashboardApi } from '../../lib/api';
 
 interface SidebarLayoutProps {
@@ -32,53 +33,33 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
   };
 
   return (
-    <div className="h-screen bg-gray-100 flex overflow-hidden">
-      {/* Mobile overlay */}
-      {mobileOpen && (
+    <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
+      {/* Top Navbar */}
+      <TopNavbar onMobileMenuClick={() => setMobileOpen(true)} />
+
+      {/* Main content area with sidebar */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Mobile overlay */}
+        {mobileOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-20 lg:hidden"
+            onClick={() => setMobileOpen(false)}
+          />
+        )}
+
+        {/* Mobile sidebar */}
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
+          className={`fixed inset-y-0 left-0 z-30 transform lg:hidden transition-transform duration-300 ${
+            mobileOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        >
+          <Sidebar collapsed={false} onToggle={() => setMobileOpen(false)} />
+        </div>
 
-      {/* Mobile sidebar */}
-      <div
-        className={`fixed inset-y-0 left-0 z-30 transform lg:hidden transition-transform duration-300 ${
-          mobileOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        <Sidebar collapsed={false} onToggle={() => setMobileOpen(false)} />
-      </div>
-
-      {/* Desktop sidebar */}
-      <div className="hidden lg:flex h-full">
-        <Sidebar collapsed={collapsed} onToggle={handleToggle} />
-      </div>
-
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        {/* Mobile header */}
-        <header className="lg:hidden bg-white shadow-sm h-16 flex items-center px-4">
-          <button
-            onClick={() => setMobileOpen(true)}
-            className="p-2 hover:bg-gray-100 rounded-lg"
-          >
-            <svg
-              className="w-6 h-6 text-gray-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-            </svg>
-          </button>
-          <span className="ml-4 font-semibold text-gray-900">Finance Manager</span>
-        </header>
+        {/* Desktop sidebar */}
+        <div className="hidden lg:flex h-full">
+          <Sidebar collapsed={collapsed} onToggle={handleToggle} />
+        </div>
 
         {/* Page content */}
         <main className="flex-1 p-4 lg:p-8 overflow-auto">
