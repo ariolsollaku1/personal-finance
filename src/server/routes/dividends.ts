@@ -6,27 +6,27 @@ import { getDividendHistory } from '../services/yahoo.js';
 const router = Router();
 
 // GET /api/dividends - List all dividends (with optional filters)
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { symbol, year, accountId } = req.query;
     const parsedAccountId = accountId ? parseInt(accountId as string) : undefined;
 
     if (year) {
-      const dividends = dividendQueries.getByYear(parseInt(year as string), parsedAccountId);
+      const dividends = await dividendQueries.getByYear(parseInt(year as string), parsedAccountId);
       return res.json(dividends);
     }
 
     if (symbol) {
-      const dividends = dividendQueries.getBySymbol(symbol as string, parsedAccountId);
+      const dividends = await dividendQueries.getBySymbol(symbol as string, parsedAccountId);
       return res.json(dividends);
     }
 
     if (parsedAccountId) {
-      const dividends = dividendQueries.getByAccount(parsedAccountId);
+      const dividends = await dividendQueries.getByAccount(parsedAccountId);
       return res.json(dividends);
     }
 
-    const dividends = dividendQueries.getAll();
+    const dividends = await dividendQueries.getAll();
     res.json(dividends);
   } catch (error) {
     console.error('Error fetching dividends:', error);
@@ -35,10 +35,10 @@ router.get('/', (req, res) => {
 });
 
 // GET /api/dividends/account/:accountId - List dividends for specific account
-router.get('/account/:accountId', (req, res) => {
+router.get('/account/:accountId', async (req, res) => {
   try {
     const accountId = parseInt(req.params.accountId);
-    const dividends = dividendQueries.getByAccount(accountId);
+    const dividends = await dividendQueries.getByAccount(accountId);
     res.json(dividends);
   } catch (error) {
     console.error('Error fetching dividends:', error);
@@ -47,11 +47,11 @@ router.get('/account/:accountId', (req, res) => {
 });
 
 // GET /api/dividends/tax - Get tax summary (with optional accountId filter)
-router.get('/tax', (req, res) => {
+router.get('/tax', async (req, res) => {
   try {
     const accountId = req.query.accountId ? parseInt(req.query.accountId as string) : undefined;
-    const summary = dividendQueries.getTaxSummary(undefined, accountId);
-    const currentTaxRate = getCurrentTaxRate();
+    const summary = await dividendQueries.getTaxSummary(undefined, accountId);
+    const currentTaxRate = await getCurrentTaxRate();
 
     res.json({
       currentTaxRate,
@@ -64,7 +64,7 @@ router.get('/tax', (req, res) => {
 });
 
 // POST /api/dividends - Record a dividend payment (requires accountId)
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { symbol, amountPerShare, sharesHeld, exDate, payDate, accountId } = req.body;
 
@@ -83,9 +83,9 @@ router.post('/', (req, res) => {
     // If sharesHeld not provided, try to get from current holdings for this account
     let shares = sharesHeld;
     if (!shares) {
-      const holding = holdingsQueries.getBySymbol(symbol.toUpperCase(), accountId);
+      const holding = await holdingsQueries.getBySymbol(symbol.toUpperCase(), accountId);
       if (holding) {
-        shares = holding.shares;
+        shares = Number(holding.shares);
       } else {
         return res.status(400).json({
           error: 'Shares held is required when no holding exists for this symbol in this account',
@@ -94,9 +94,9 @@ router.post('/', (req, res) => {
     }
 
     // Calculate tax
-    const taxCalc = calculateDividendTax(amountPerShare, shares);
+    const taxCalc = await calculateDividendTax(amountPerShare, shares);
 
-    const id = dividendQueries.create(
+    const id = await dividendQueries.create(
       symbol.toUpperCase(),
       taxCalc.grossAmount,
       shares,
@@ -127,15 +127,10 @@ router.post('/', (req, res) => {
 });
 
 // DELETE /api/dividends/:id - Delete a dividend record
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const result = dividendQueries.delete(id);
-
-    if (result.changes === 0) {
-      return res.status(404).json({ error: 'Dividend not found' });
-    }
-
+    await dividendQueries.delete(id);
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting dividend:', error);
@@ -144,7 +139,7 @@ router.delete('/:id', (req, res) => {
 });
 
 // PUT /api/dividends/tax-rate - Update dividend tax rate
-router.put('/tax-rate', (req, res) => {
+router.put('/tax-rate', async (req, res) => {
   try {
     const { rate } = req.body;
 
@@ -154,7 +149,7 @@ router.put('/tax-rate', (req, res) => {
       });
     }
 
-    setTaxRate(rate);
+    await setTaxRate(rate);
     res.json({ success: true, rate });
   } catch (error) {
     console.error('Error updating tax rate:', error);
@@ -168,7 +163,7 @@ router.post('/check/:accountId', async (req, res) => {
     const accountId = parseInt(req.params.accountId);
 
     // Get all holdings for this account
-    const holdings = holdingsQueries.getByAccount(accountId);
+    const holdings = await holdingsQueries.getByAccount(accountId);
 
     if (holdings.length === 0) {
       return res.json({ message: 'No holdings found', dividendsFound: 0, dividendsCreated: 0, transactionsCreated: 0 });
@@ -181,7 +176,7 @@ router.post('/check/:accountId', async (req, res) => {
     const newDividends: any[] = [];
 
     // Get existing dividends for this account to avoid duplicates
-    const existingDividends = dividendQueries.getByAccount(accountId);
+    const existingDividends = await dividendQueries.getByAccount(accountId);
     const existingDividendKeys = new Set(
       existingDividends.map(d => `${d.symbol}-${d.ex_date}`)
     );
@@ -191,7 +186,7 @@ router.post('/check/:accountId', async (req, res) => {
       const dividendHistory = await getDividendHistory(holding.symbol);
 
       // Get stock transactions for this symbol to determine ownership history
-      const stockTransactions = transactionQueries.getBySymbol(holding.symbol, accountId);
+      const stockTransactions = await transactionQueries.getBySymbol(holding.symbol, accountId);
 
       for (const dividend of dividendHistory) {
         dividendsFound++;
@@ -210,9 +205,9 @@ router.post('/check/:accountId', async (req, res) => {
         for (const tx of [...stockTransactions].reverse()) { // oldest first
           if (tx.date <= exDate) {
             if (tx.type === 'buy') {
-              sharesHeldOnExDate += tx.shares;
+              sharesHeldOnExDate += Number(tx.shares);
             } else if (tx.type === 'sell') {
-              sharesHeldOnExDate -= tx.shares;
+              sharesHeldOnExDate -= Number(tx.shares);
             }
           }
         }
@@ -223,7 +218,7 @@ router.post('/check/:accountId', async (req, res) => {
         }
 
         // Calculate dividend amount and tax
-        const taxCalc = calculateDividendTax(dividend.dividends, sharesHeldOnExDate);
+        const taxCalc = await calculateDividendTax(dividend.dividends, sharesHeldOnExDate);
 
         // Estimate payment date (typically 2-4 weeks after ex-date)
         const payDate = new Date(dividend.date);
@@ -231,7 +226,7 @@ router.post('/check/:accountId', async (req, res) => {
         const payDateStr = payDate.toISOString().split('T')[0];
 
         // Create dividend record
-        const dividendId = dividendQueries.create(
+        const dividendId = await dividendQueries.create(
           holding.symbol,
           taxCalc.grossAmount,
           sharesHeldOnExDate,
@@ -247,7 +242,7 @@ router.post('/check/:accountId', async (req, res) => {
 
         // If payment date has passed, create an account transaction for the net dividend
         if (payDateStr <= today) {
-          accountTransactionQueries.create(
+          await accountTransactionQueries.create(
             accountId,
             'inflow',
             taxCalc.netAmount,

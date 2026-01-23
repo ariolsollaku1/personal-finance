@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { db } from '../db/schema.js';
+import { query, queryOne } from '../db/schema.js';
 import { settingsQueries } from '../db/queries.js';
 
 const router = Router();
@@ -40,12 +40,26 @@ interface TransactionDetail {
 }
 
 // GET /api/pnl - Get monthly P&L summaries
-router.get('/', (_req: Request, res: Response) => {
+router.get('/', async (_req: Request, res: Response) => {
   try {
-    const mainCurrency = settingsQueries.get('main_currency') || 'ALL';
+    const mainCurrency = await settingsQueries.get('main_currency') || 'ALL';
 
     // Get all transactions with account info, starting from Jan 2026
-    const transactions = db.prepare(`
+    const transactions = await query<{
+      id: number;
+      account_id: number;
+      type: string;
+      amount: number;
+      date: string;
+      payee_id: number | null;
+      category_id: number | null;
+      notes: string | null;
+      transfer_id: number | null;
+      payee_name: string | null;
+      category_name: string | null;
+      account_name: string;
+      account_currency: string;
+    }>(`
       SELECT
         at.id,
         at.account_id,
@@ -66,21 +80,7 @@ router.get('/', (_req: Request, res: Response) => {
       LEFT JOIN accounts a ON at.account_id = a.id
       WHERE at.date >= '2026-01-01'
       ORDER BY at.date ASC
-    `).all() as Array<{
-      id: number;
-      account_id: number;
-      type: string;
-      amount: number;
-      date: string;
-      payee_id: number | null;
-      category_id: number | null;
-      notes: string | null;
-      transfer_id: number | null;
-      payee_name: string | null;
-      category_name: string | null;
-      account_name: string;
-      account_currency: string;
-    }>;
+    `);
 
     // Group by month
     const monthlyData: Map<string, { income: number; expenses: number; count: number }> = new Map();
@@ -89,14 +89,14 @@ router.get('/', (_req: Request, res: Response) => {
       // Skip transfers to avoid double counting
       if (tx.transfer_id) continue;
 
-      const monthKey = tx.date.substring(0, 7); // YYYY-MM
+      const monthKey = tx.date.toString().substring(0, 7); // YYYY-MM
 
       if (!monthlyData.has(monthKey)) {
         monthlyData.set(monthKey, { income: 0, expenses: 0, count: 0 });
       }
 
       const data = monthlyData.get(monthKey)!;
-      const amountInMain = convertToMainCurrency(tx.amount, tx.account_currency, mainCurrency);
+      const amountInMain = convertToMainCurrency(Number(tx.amount), tx.account_currency, mainCurrency);
 
       if (tx.type === 'inflow') {
         data.income += amountInMain;
@@ -148,10 +148,10 @@ router.get('/', (_req: Request, res: Response) => {
 });
 
 // GET /api/pnl/:month - Get transaction details for a specific month
-router.get('/:month', (req: Request, res: Response) => {
+router.get('/:month', async (req: Request, res: Response) => {
   try {
     const { month } = req.params; // Format: YYYY-MM
-    const mainCurrency = settingsQueries.get('main_currency') || 'ALL';
+    const mainCurrency = await settingsQueries.get('main_currency') || 'ALL';
 
     // Validate month format
     if (!/^\d{4}-\d{2}$/.test(month)) {
@@ -163,7 +163,19 @@ router.get('/:month', (req: Request, res: Response) => {
     const [year, monthNum] = month.split('-').map(Number);
     const endDate = new Date(year, monthNum, 0).toISOString().split('T')[0]; // Last day of month
 
-    const transactions = db.prepare(`
+    const transactions = await query<{
+      id: number;
+      account_id: number;
+      type: string;
+      amount: number;
+      date: string;
+      notes: string | null;
+      transfer_id: number | null;
+      payee_name: string | null;
+      category_name: string | null;
+      account_name: string;
+      account_currency: string;
+    }>(`
       SELECT
         at.id,
         at.account_id,
@@ -180,21 +192,9 @@ router.get('/:month', (req: Request, res: Response) => {
       LEFT JOIN payees p ON at.payee_id = p.id
       LEFT JOIN categories c ON at.category_id = c.id
       LEFT JOIN accounts a ON at.account_id = a.id
-      WHERE at.date >= ? AND at.date <= ?
+      WHERE at.date >= $1 AND at.date <= $2
       ORDER BY at.date DESC, at.id DESC
-    `).all(startDate, endDate) as Array<{
-      id: number;
-      account_id: number;
-      type: string;
-      amount: number;
-      date: string;
-      notes: string | null;
-      transfer_id: number | null;
-      payee_name: string | null;
-      category_name: string | null;
-      account_name: string;
-      account_currency: string;
-    }>;
+    `, [startDate, endDate]);
 
     // Calculate totals and format transactions
     let totalIncome = 0;
@@ -206,7 +206,7 @@ router.get('/:month', (req: Request, res: Response) => {
       // Skip transfers
       if (tx.transfer_id) continue;
 
-      const amountInMain = convertToMainCurrency(tx.amount, tx.account_currency, mainCurrency);
+      const amountInMain = convertToMainCurrency(Number(tx.amount), tx.account_currency, mainCurrency);
 
       if (tx.type === 'inflow') {
         totalIncome += amountInMain;
@@ -216,9 +216,9 @@ router.get('/:month', (req: Request, res: Response) => {
 
       details.push({
         id: tx.id,
-        date: tx.date,
+        date: tx.date.toString(),
         type: tx.type as 'inflow' | 'outflow',
-        amount: tx.amount,
+        amount: Number(tx.amount),
         amountInMainCurrency: Math.round(amountInMain * 100) / 100,
         payee: tx.payee_name,
         category: tx.category_name,

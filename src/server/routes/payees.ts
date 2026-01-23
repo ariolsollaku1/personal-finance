@@ -4,9 +4,9 @@ import { payeeQueries } from '../db/queries.js';
 const router = Router();
 
 // GET /api/payees - List all payees
-router.get('/', (_req: Request, res: Response) => {
+router.get('/', async (_req: Request, res: Response) => {
   try {
-    const payees = payeeQueries.getAll();
+    const payees = await payeeQueries.getAll();
     res.json(payees);
   } catch (error) {
     console.error('Error fetching payees:', error);
@@ -15,7 +15,7 @@ router.get('/', (_req: Request, res: Response) => {
 });
 
 // GET /api/payees/search - Search payees (autocomplete)
-router.get('/search', (req: Request, res: Response) => {
+router.get('/search', async (req: Request, res: Response) => {
   try {
     const { q } = req.query;
 
@@ -23,7 +23,7 @@ router.get('/search', (req: Request, res: Response) => {
       return res.json([]);
     }
 
-    const payees = payeeQueries.search(q, 10);
+    const payees = await payeeQueries.search(q, 10);
     res.json(payees);
   } catch (error) {
     console.error('Error searching payees:', error);
@@ -32,7 +32,7 @@ router.get('/search', (req: Request, res: Response) => {
 });
 
 // POST /api/payees - Create payee
-router.post('/', (req: Request, res: Response) => {
+router.post('/', async (req: Request, res: Response) => {
   try {
     const { name } = req.body;
 
@@ -41,13 +41,13 @@ router.post('/', (req: Request, res: Response) => {
     }
 
     // Check if payee already exists
-    const existing = payeeQueries.getByName(name);
+    const existing = await payeeQueries.getByName(name);
     if (existing) {
       return res.status(409).json({ error: 'Payee already exists', payee: existing });
     }
 
-    const id = payeeQueries.create(name);
-    const payee = payeeQueries.getById(id as number);
+    const id = await payeeQueries.create(name);
+    const payee = await payeeQueries.getById(id as number);
 
     res.status(201).json(payee);
   } catch (error) {
@@ -57,7 +57,7 @@ router.post('/', (req: Request, res: Response) => {
 });
 
 // PUT /api/payees/:id - Rename payee
-router.put('/:id', (req: Request, res: Response) => {
+router.put('/:id', async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
     const { name } = req.body;
@@ -66,19 +66,19 @@ router.put('/:id', (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Name is required' });
     }
 
-    const payee = payeeQueries.getById(id);
+    const payee = await payeeQueries.getById(id);
     if (!payee) {
       return res.status(404).json({ error: 'Payee not found' });
     }
 
     // Check if new name already exists
-    const existing = payeeQueries.getByName(name);
+    const existing = await payeeQueries.getByName(name);
     if (existing && existing.id !== id) {
       return res.status(409).json({ error: 'Payee with this name already exists' });
     }
 
-    payeeQueries.update(id, name);
-    const updatedPayee = payeeQueries.getById(id);
+    await payeeQueries.update(id, name);
+    const updatedPayee = await payeeQueries.getById(id);
 
     res.json(updatedPayee);
   } catch (error) {
@@ -88,16 +88,16 @@ router.put('/:id', (req: Request, res: Response) => {
 });
 
 // DELETE /api/payees/:id - Delete payee
-router.delete('/:id', (req: Request, res: Response) => {
+router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
-    const payee = payeeQueries.getById(id);
+    const payee = await payeeQueries.getById(id);
 
     if (!payee) {
       return res.status(404).json({ error: 'Payee not found' });
     }
 
-    payeeQueries.delete(id);
+    await payeeQueries.delete(id);
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting payee:', error);
@@ -106,7 +106,7 @@ router.delete('/:id', (req: Request, res: Response) => {
 });
 
 // POST /api/payees/merge - Merge duplicate payees
-router.post('/merge', (req: Request, res: Response) => {
+router.post('/merge', async (req: Request, res: Response) => {
   try {
     const { sourceId, targetId } = req.body;
 
@@ -114,8 +114,8 @@ router.post('/merge', (req: Request, res: Response) => {
       return res.status(400).json({ error: 'sourceId and targetId are required' });
     }
 
-    const source = payeeQueries.getById(sourceId);
-    const target = payeeQueries.getById(targetId);
+    const source = await payeeQueries.getById(sourceId);
+    const target = await payeeQueries.getById(targetId);
 
     if (!source) {
       return res.status(404).json({ error: 'Source payee not found' });
@@ -129,7 +129,7 @@ router.post('/merge', (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Cannot merge payee with itself' });
     }
 
-    payeeQueries.merge(sourceId, targetId);
+    await payeeQueries.merge(sourceId, targetId);
     res.json({ success: true, message: `Merged "${source.name}" into "${target.name}"` });
   } catch (error) {
     console.error('Error merging payees:', error);

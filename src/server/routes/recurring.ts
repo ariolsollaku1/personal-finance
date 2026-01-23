@@ -34,16 +34,16 @@ function calculateNextDueDate(currentDate: string, frequency: Frequency): string
 }
 
 // GET /api/accounts/:id/recurring - List recurring transactions for an account
-router.get('/accounts/:id/recurring', (req: Request, res: Response) => {
+router.get('/accounts/:id/recurring', async (req: Request, res: Response) => {
   try {
     const accountId = parseInt(req.params.id);
-    const account = accountQueries.getById(accountId);
+    const account = await accountQueries.getById(accountId);
 
     if (!account) {
       return res.status(404).json({ error: 'Account not found' });
     }
 
-    const recurring = recurringQueries.getByAccount(accountId);
+    const recurring = await recurringQueries.getByAccount(accountId);
     res.json(recurring);
   } catch (error) {
     console.error('Error fetching recurring transactions:', error);
@@ -52,10 +52,10 @@ router.get('/accounts/:id/recurring', (req: Request, res: Response) => {
 });
 
 // GET /api/recurring/due - Get all due recurring transactions
-router.get('/due', (_req: Request, res: Response) => {
+router.get('/due', async (_req: Request, res: Response) => {
   try {
     const today = new Date().toISOString().split('T')[0];
-    const dueRecurring = recurringQueries.getDue(today);
+    const dueRecurring = await recurringQueries.getDue(today);
     res.json(dueRecurring);
   } catch (error) {
     console.error('Error fetching due recurring transactions:', error);
@@ -64,12 +64,12 @@ router.get('/due', (_req: Request, res: Response) => {
 });
 
 // POST /api/accounts/:id/recurring - Create recurring transaction
-router.post('/accounts/:id/recurring', (req: Request, res: Response) => {
+router.post('/accounts/:id/recurring', async (req: Request, res: Response) => {
   try {
     const accountId = parseInt(req.params.id);
     const { type, amount, payee, payeeId, category, categoryId, notes, frequency, nextDueDate } = req.body;
 
-    const account = accountQueries.getById(accountId);
+    const account = await accountQueries.getById(accountId);
     if (!account) {
       return res.status(404).json({ error: 'Account not found' });
     }
@@ -89,17 +89,17 @@ router.post('/accounts/:id/recurring', (req: Request, res: Response) => {
     // Handle payee - get or create
     let finalPayeeId = payeeId || null;
     if (!finalPayeeId && payee) {
-      finalPayeeId = payeeQueries.getOrCreate(payee);
+      finalPayeeId = await payeeQueries.getOrCreate(payee);
     }
 
     // Handle category - get or create
     let finalCategoryId = categoryId || null;
     if (!finalCategoryId && category) {
       const categoryType = type === 'inflow' ? 'income' : 'expense';
-      finalCategoryId = categoryQueries.getOrCreate(category, categoryType);
+      finalCategoryId = await categoryQueries.getOrCreate(category, categoryType);
     }
 
-    const id = recurringQueries.create(
+    const id = await recurringQueries.create(
       accountId,
       type as TransactionType,
       amount,
@@ -110,7 +110,7 @@ router.post('/accounts/:id/recurring', (req: Request, res: Response) => {
       nextDueDate
     );
 
-    const recurring = recurringQueries.getById(id as number);
+    const recurring = await recurringQueries.getById(id as number);
     res.status(201).json(recurring);
   } catch (error) {
     console.error('Error creating recurring transaction:', error);
@@ -119,12 +119,12 @@ router.post('/accounts/:id/recurring', (req: Request, res: Response) => {
 });
 
 // PUT /api/recurring/:id - Update recurring transaction
-router.put('/:id', (req: Request, res: Response) => {
+router.put('/:id', async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
     const { type, amount, payee, payeeId, category, categoryId, notes, frequency, nextDueDate, isActive } = req.body;
 
-    const recurring = recurringQueries.getById(id);
+    const recurring = await recurringQueries.getById(id);
     if (!recurring) {
       return res.status(404).json({ error: 'Recurring transaction not found' });
     }
@@ -142,17 +142,17 @@ router.put('/:id', (req: Request, res: Response) => {
     // Handle payee - get or create
     let finalPayeeId = payeeId !== undefined ? payeeId : recurring.payee_id;
     if (payeeId === undefined && payee) {
-      finalPayeeId = payeeQueries.getOrCreate(payee);
+      finalPayeeId = await payeeQueries.getOrCreate(payee);
     }
 
     // Handle category - get or create
     let finalCategoryId = categoryId !== undefined ? categoryId : recurring.category_id;
     if (categoryId === undefined && category) {
       const categoryType = txType === 'inflow' ? 'income' : 'expense';
-      finalCategoryId = categoryQueries.getOrCreate(category, categoryType);
+      finalCategoryId = await categoryQueries.getOrCreate(category, categoryType);
     }
 
-    recurringQueries.update(
+    await recurringQueries.update(
       id,
       txType as TransactionType,
       amount !== undefined ? amount : recurring.amount,
@@ -161,10 +161,10 @@ router.put('/:id', (req: Request, res: Response) => {
       notes !== undefined ? notes : recurring.notes,
       freq as Frequency,
       nextDueDate || recurring.next_due_date,
-      isActive !== undefined ? (isActive ? 1 : 0) : recurring.is_active
+      isActive !== undefined ? isActive : recurring.is_active
     );
 
-    const updatedRecurring = recurringQueries.getById(id);
+    const updatedRecurring = await recurringQueries.getById(id);
     res.json(updatedRecurring);
   } catch (error) {
     console.error('Error updating recurring transaction:', error);
@@ -173,16 +173,16 @@ router.put('/:id', (req: Request, res: Response) => {
 });
 
 // DELETE /api/recurring/:id - Delete recurring transaction
-router.delete('/:id', (req: Request, res: Response) => {
+router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
-    const recurring = recurringQueries.getById(id);
+    const recurring = await recurringQueries.getById(id);
 
     if (!recurring) {
       return res.status(404).json({ error: 'Recurring transaction not found' });
     }
 
-    recurringQueries.delete(id);
+    await recurringQueries.delete(id);
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting recurring transaction:', error);
@@ -191,12 +191,12 @@ router.delete('/:id', (req: Request, res: Response) => {
 });
 
 // POST /api/recurring/:id/apply - Apply recurring transaction (create real transaction)
-router.post('/:id/apply', (req: Request, res: Response) => {
+router.post('/:id/apply', async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
     const { date } = req.body;
 
-    const recurring = recurringQueries.getById(id);
+    const recurring = await recurringQueries.getById(id);
     if (!recurring) {
       return res.status(404).json({ error: 'Recurring transaction not found' });
     }
@@ -205,7 +205,7 @@ router.post('/:id/apply', (req: Request, res: Response) => {
     const transactionDate = date || recurring.next_due_date;
 
     // Create the actual transaction
-    const txId = accountTransactionQueries.create(
+    const txId = await accountTransactionQueries.create(
       recurring.account_id,
       recurring.type as TransactionType,
       recurring.amount,
@@ -217,10 +217,10 @@ router.post('/:id/apply', (req: Request, res: Response) => {
 
     // Update the next due date
     const nextDueDate = calculateNextDueDate(transactionDate, recurring.frequency as Frequency);
-    recurringQueries.updateNextDueDate(id, nextDueDate);
+    await recurringQueries.updateNextDueDate(id, nextDueDate);
 
-    const transaction = accountTransactionQueries.getById(txId as number);
-    const updatedRecurring = recurringQueries.getById(id);
+    const transaction = await accountTransactionQueries.getById(txId as number);
+    const updatedRecurring = await recurringQueries.getById(id);
 
     res.status(201).json({
       transaction,

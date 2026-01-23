@@ -30,8 +30,8 @@ function convertToMainCurrency(amount: number, fromCurrency: Currency, mainCurre
 // GET /api/dashboard - Aggregated dashboard data
 router.get('/', async (_req: Request, res: Response) => {
   try {
-    const mainCurrency = settingsQueries.getMainCurrency();
-    const accounts = accountQueries.getAll();
+    const mainCurrency = await settingsQueries.getMainCurrency();
+    const accounts = await accountQueries.getAll();
 
     let totalNetWorth = 0;
     const accountSummaries: {
@@ -68,12 +68,12 @@ router.get('/', async (_req: Request, res: Response) => {
     const stockAccounts = accounts.filter(a => a.type === 'stock');
 
     for (const account of stockAccounts) {
-      const holdings = holdingsQueries.getByAccount(account.id);
+      const holdings = await holdingsQueries.getByAccount(account.id);
       for (const holding of holdings) {
         allStockHoldings.push({
           symbol: holding.symbol,
-          shares: holding.shares,
-          avg_cost: holding.avg_cost,
+          shares: Number(holding.shares),
+          avg_cost: Number(holding.avg_cost),
           accountId: account.id,
         });
       }
@@ -107,39 +107,39 @@ router.get('/', async (_req: Request, res: Response) => {
 
     // Calculate balance for each account
     for (const account of accounts) {
-      let balance = account.initial_balance;
+      let balance = Number(account.initial_balance);
 
       if (account.type === 'stock') {
         // For stock accounts, calculate total value from holdings + cash balance
-        const holdings = holdingsQueries.getByAccount(account.id);
+        const holdings = await holdingsQueries.getByAccount(account.id);
         let stockValue = 0;
         for (const holding of holdings) {
           const quote = quotes.get(holding.symbol);
           if (quote) {
-            stockValue += holding.shares * quote.regularMarketPrice;
+            stockValue += Number(holding.shares) * quote.regularMarketPrice;
           } else {
-            stockValue += holding.shares * holding.avg_cost;
+            stockValue += Number(holding.shares) * Number(holding.avg_cost);
           }
         }
         // Also include cash balance from transactions
-        let cashBalance = account.initial_balance;
-        const transactions = accountTransactionQueries.getByAccount(account.id);
+        let cashBalance = Number(account.initial_balance);
+        const transactions = await accountTransactionQueries.getByAccount(account.id);
         for (const tx of transactions) {
           if (tx.type === 'inflow') {
-            cashBalance += tx.amount;
+            cashBalance += Number(tx.amount);
           } else {
-            cashBalance -= tx.amount;
+            cashBalance -= Number(tx.amount);
           }
         }
         balance = stockValue + cashBalance;
       } else {
         // For bank/cash accounts, calculate from transactions
-        const transactions = accountTransactionQueries.getByAccount(account.id);
+        const transactions = await accountTransactionQueries.getByAccount(account.id);
         for (const tx of transactions) {
           if (tx.type === 'inflow') {
-            balance += tx.amount;
+            balance += Number(tx.amount);
           } else {
-            balance -= tx.amount;
+            balance -= Number(tx.amount);
           }
         }
       }
@@ -165,7 +165,7 @@ router.get('/', async (_req: Request, res: Response) => {
       } else if (account.type === 'credit') {
         // For credit cards: initial_balance is the limit, balance is available credit
         // Amount owed = limit - balance, net worth contribution = balance - limit (negative when owed)
-        const limitInMainCurrency = convertToMainCurrency(account.initial_balance, account.currency, mainCurrency);
+        const limitInMainCurrency = convertToMainCurrency(Number(account.initial_balance), account.currency, mainCurrency);
         const amountOwed = limitInMainCurrency - balanceInMainCurrency;
         totalNetWorth -= amountOwed; // Subtract what's owed
         byType.credit.count++;
@@ -173,7 +173,7 @@ router.get('/', async (_req: Request, res: Response) => {
         byType.credit.owed += amountOwed; // Total amount owed
       } else if (account.type === 'asset') {
         // Asset accounts add to net worth (value stored in initial_balance)
-        const assetValue = convertToMainCurrency(account.initial_balance, account.currency, mainCurrency);
+        const assetValue = convertToMainCurrency(Number(account.initial_balance), account.currency, mainCurrency);
         totalNetWorth += assetValue;
         byType.asset.count++;
         byType.asset.total += assetValue;
@@ -186,7 +186,7 @@ router.get('/', async (_req: Request, res: Response) => {
 
     // Get due recurring transactions
     const today = new Date().toISOString().split('T')[0];
-    const dueRecurring = recurringQueries.getDue(today);
+    const dueRecurring = await recurringQueries.getDue(today);
 
     // Get recent transactions (last 10 across all accounts)
     const recentTransactions: {
@@ -203,14 +203,14 @@ router.get('/', async (_req: Request, res: Response) => {
 
     for (const account of accounts) {
       if (account.type !== 'stock') {
-        const transactions = accountTransactionQueries.getByAccount(account.id);
+        const transactions = await accountTransactionQueries.getByAccount(account.id);
         for (const tx of transactions.slice(0, 5)) {
           recentTransactions.push({
             id: tx.id,
             accountId: account.id,
             accountName: account.name,
             type: tx.type,
-            amount: tx.amount,
+            amount: Number(tx.amount),
             currency: account.currency,
             date: tx.date,
             payee: tx.payee_name || null,
@@ -243,7 +243,7 @@ router.get('/', async (_req: Request, res: Response) => {
         accountId: r.account_id,
         accountName: r.account_name,
         type: r.type,
-        amount: r.amount,
+        amount: Number(r.amount),
         currency: r.account_currency,
         payee: r.payee_name,
         category: r.category_name,
@@ -260,9 +260,9 @@ router.get('/', async (_req: Request, res: Response) => {
 });
 
 // GET /api/settings/currency - Get main currency setting
-router.get('/settings/currency', (_req: Request, res: Response) => {
+router.get('/settings/currency', async (_req: Request, res: Response) => {
   try {
-    const mainCurrency = settingsQueries.getMainCurrency();
+    const mainCurrency = await settingsQueries.getMainCurrency();
     res.json({ mainCurrency, exchangeRates: EXCHANGE_RATES });
   } catch (error) {
     console.error('Error fetching currency settings:', error);
@@ -271,7 +271,7 @@ router.get('/settings/currency', (_req: Request, res: Response) => {
 });
 
 // PUT /api/settings/currency - Update main currency
-router.put('/settings/currency', (req: Request, res: Response) => {
+router.put('/settings/currency', async (req: Request, res: Response) => {
   try {
     const { currency } = req.body;
 
@@ -279,7 +279,7 @@ router.put('/settings/currency', (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid currency' });
     }
 
-    settingsQueries.set('main_currency', currency);
+    await settingsQueries.set('main_currency', currency);
     res.json({ mainCurrency: currency });
   } catch (error) {
     console.error('Error updating currency settings:', error);
@@ -288,9 +288,9 @@ router.put('/settings/currency', (req: Request, res: Response) => {
 });
 
 // GET /api/settings/sidebar - Get sidebar collapsed state
-router.get('/settings/sidebar', (_req: Request, res: Response) => {
+router.get('/settings/sidebar', async (_req: Request, res: Response) => {
   try {
-    const collapsed = settingsQueries.getSidebarCollapsed();
+    const collapsed = await settingsQueries.getSidebarCollapsed();
     res.json({ collapsed });
   } catch (error) {
     console.error('Error fetching sidebar settings:', error);
@@ -299,7 +299,7 @@ router.get('/settings/sidebar', (_req: Request, res: Response) => {
 });
 
 // PUT /api/settings/sidebar - Update sidebar collapsed state
-router.put('/settings/sidebar', (req: Request, res: Response) => {
+router.put('/settings/sidebar', async (req: Request, res: Response) => {
   try {
     const { collapsed } = req.body;
 
@@ -307,7 +307,7 @@ router.put('/settings/sidebar', (req: Request, res: Response) => {
       return res.status(400).json({ error: 'collapsed must be a boolean' });
     }
 
-    settingsQueries.set('sidebar_collapsed', collapsed ? '1' : '0');
+    await settingsQueries.set('sidebar_collapsed', collapsed ? '1' : '0');
     res.json({ collapsed });
   } catch (error) {
     console.error('Error updating sidebar settings:', error);

@@ -4,16 +4,16 @@ import { transactionQueries } from '../db/queries.js';
 const router = Router();
 
 // GET /api/transactions - List all transactions
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { symbol } = req.query;
 
     if (symbol) {
-      const transactions = transactionQueries.getBySymbol(symbol as string);
+      const transactions = await transactionQueries.getBySymbol(symbol as string);
       return res.json(transactions);
     }
 
-    const transactions = transactionQueries.getAll();
+    const transactions = await transactionQueries.getAll();
     res.json(transactions);
   } catch (error) {
     console.error('Error fetching transactions:', error);
@@ -22,7 +22,7 @@ router.get('/', (req, res) => {
 });
 
 // POST /api/transactions - Record a transaction (standalone, doesn't affect holdings)
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { symbol, type, shares, price, fees = 0, date } = req.body;
 
@@ -36,7 +36,7 @@ router.post('/', (req, res) => {
       return res.status(400).json({ error: 'Type must be "buy" or "sell"' });
     }
 
-    const id = transactionQueries.create(
+    const id = await transactionQueries.create(
       symbol.toUpperCase(),
       type,
       shares,
@@ -53,15 +53,10 @@ router.post('/', (req, res) => {
 });
 
 // DELETE /api/transactions/:id - Delete a transaction
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const result = transactionQueries.delete(id);
-
-    if (result.changes === 0) {
-      return res.status(404).json({ error: 'Transaction not found' });
-    }
-
+    await transactionQueries.delete(id);
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting transaction:', error);

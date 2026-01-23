@@ -1,4 +1,4 @@
-import { db } from './schema.js';
+import { query, queryOne, insert, pool } from './schema.js';
 
 // Types
 export type AccountType = 'stock' | 'bank' | 'cash' | 'loan' | 'credit' | 'asset';
@@ -12,7 +12,7 @@ export interface Account {
   type: AccountType;
   currency: Currency;
   initial_balance: number;
-  is_favorite: number;
+  is_favorite: boolean;
   created_at: string;
 }
 
@@ -55,7 +55,7 @@ export interface RecurringTransaction {
   notes: string | null;
   frequency: Frequency;
   next_due_date: string;
-  is_active: number;
+  is_active: boolean;
   created_at: string;
   // Joined fields
   payee_name?: string;
@@ -115,182 +115,187 @@ export interface Dividend {
 
 // Account queries
 export const accountQueries = {
-  getAll: () => {
-    return db.prepare('SELECT * FROM accounts ORDER BY type, name').all() as Account[];
+  getAll: async () => {
+    return query<Account>('SELECT * FROM accounts ORDER BY type, name');
   },
 
-  getById: (id: number) => {
-    return db.prepare('SELECT * FROM accounts WHERE id = ?').get(id) as Account | undefined;
+  getById: async (id: number) => {
+    return queryOne<Account>('SELECT * FROM accounts WHERE id = $1', [id]);
   },
 
-  getByType: (type: AccountType) => {
-    return db.prepare('SELECT * FROM accounts WHERE type = ? ORDER BY name').all(type) as Account[];
+  getByType: async (type: AccountType) => {
+    return query<Account>('SELECT * FROM accounts WHERE type = $1 ORDER BY name', [type]);
   },
 
-  create: (name: string, type: AccountType, currency: Currency, initialBalance: number = 0) => {
-    const stmt = db.prepare('INSERT INTO accounts (name, type, currency, initial_balance) VALUES (?, ?, ?, ?)');
-    const result = stmt.run(name, type, currency, initialBalance);
-    return result.lastInsertRowid;
+  create: async (name: string, type: AccountType, currency: Currency, initialBalance: number = 0) => {
+    const result = await insert<Account>(
+      'INSERT INTO accounts (name, type, currency, initial_balance) VALUES ($1, $2, $3, $4) RETURNING *',
+      [name, type, currency, initialBalance]
+    );
+    return result.id;
   },
 
-  update: (id: number, name: string, currency: Currency, initialBalance: number) => {
-    const stmt = db.prepare('UPDATE accounts SET name = ?, currency = ?, initial_balance = ? WHERE id = ?');
-    return stmt.run(name, currency, initialBalance, id);
+  update: async (id: number, name: string, currency: Currency, initialBalance: number) => {
+    await query(
+      'UPDATE accounts SET name = $1, currency = $2, initial_balance = $3 WHERE id = $4',
+      [name, currency, initialBalance, id]
+    );
   },
 
-  delete: (id: number) => {
-    const stmt = db.prepare('DELETE FROM accounts WHERE id = ?');
-    return stmt.run(id);
+  delete: async (id: number) => {
+    await query('DELETE FROM accounts WHERE id = $1', [id]);
   },
 
-  getBalance: (id: number) => {
-    const account = db.prepare('SELECT * FROM accounts WHERE id = ?').get(id) as Account | undefined;
+  getBalance: async (id: number) => {
+    const account = await queryOne<Account>('SELECT * FROM accounts WHERE id = $1', [id]);
     if (!account) return null;
 
-    // Calculate cash balance from transactions (for all account types including stock)
-    const result = db.prepare(`
-      SELECT
+    const result = await queryOne<{ transaction_total: string }>(
+      `SELECT
         COALESCE(SUM(CASE WHEN type = 'inflow' THEN amount ELSE -amount END), 0) as transaction_total
       FROM account_transactions
-      WHERE account_id = ?
-    `).get(id) as { transaction_total: number };
+      WHERE account_id = $1`,
+      [id]
+    );
 
     return {
       account,
-      balance: account.initial_balance + result.transaction_total
+      balance: Number(account.initial_balance) + Number(result?.transaction_total || 0)
     };
   },
 
-  setFavorite: (id: number, isFavorite: boolean) => {
-    const stmt = db.prepare('UPDATE accounts SET is_favorite = ? WHERE id = ?');
-    return stmt.run(isFavorite ? 1 : 0, id);
+  setFavorite: async (id: number, isFavorite: boolean) => {
+    await query('UPDATE accounts SET is_favorite = $1 WHERE id = $2', [isFavorite, id]);
   },
 
-  getFavorites: () => {
-    return db.prepare('SELECT * FROM accounts WHERE is_favorite = 1 ORDER BY type, name').all() as Account[];
+  getFavorites: async () => {
+    return query<Account>('SELECT * FROM accounts WHERE is_favorite = true ORDER BY type, name');
   },
 };
 
 // Category queries
 export const categoryQueries = {
-  getAll: () => {
-    return db.prepare('SELECT * FROM categories ORDER BY type, name').all() as Category[];
+  getAll: async () => {
+    return query<Category>('SELECT * FROM categories ORDER BY type, name');
   },
 
-  getById: (id: number) => {
-    return db.prepare('SELECT * FROM categories WHERE id = ?').get(id) as Category | undefined;
+  getById: async (id: number) => {
+    return queryOne<Category>('SELECT * FROM categories WHERE id = $1', [id]);
   },
 
-  getByType: (type: 'income' | 'expense') => {
-    return db.prepare('SELECT * FROM categories WHERE type = ? ORDER BY name').all(type) as Category[];
+  getByType: async (type: 'income' | 'expense') => {
+    return query<Category>('SELECT * FROM categories WHERE type = $1 ORDER BY name', [type]);
   },
 
-  getByName: (name: string) => {
-    return db.prepare('SELECT * FROM categories WHERE name = ?').get(name) as Category | undefined;
+  getByName: async (name: string) => {
+    return queryOne<Category>('SELECT * FROM categories WHERE name = $1', [name]);
   },
 
-  create: (name: string, type: 'income' | 'expense' = 'expense') => {
-    const stmt = db.prepare('INSERT INTO categories (name, type) VALUES (?, ?)');
-    const result = stmt.run(name, type);
-    return result.lastInsertRowid;
+  create: async (name: string, type: 'income' | 'expense' = 'expense') => {
+    const result = await insert<Category>(
+      'INSERT INTO categories (name, type) VALUES ($1, $2) RETURNING *',
+      [name, type]
+    );
+    return result.id;
   },
 
-  getOrCreate: (name: string, type: 'income' | 'expense' = 'expense') => {
-    const existing = categoryQueries.getByName(name);
+  getOrCreate: async (name: string, type: 'income' | 'expense' = 'expense') => {
+    const existing = await categoryQueries.getByName(name);
     if (existing) return existing.id;
     return categoryQueries.create(name, type);
   },
 
-  update: (id: number, name: string) => {
-    const stmt = db.prepare('UPDATE categories SET name = ? WHERE id = ?');
-    return stmt.run(name, id);
+  update: async (id: number, name: string) => {
+    await query('UPDATE categories SET name = $1 WHERE id = $2', [name, id]);
   },
 
-  delete: (id: number) => {
-    const stmt = db.prepare('DELETE FROM categories WHERE id = ?');
-    return stmt.run(id);
+  delete: async (id: number) => {
+    await query('DELETE FROM categories WHERE id = $1', [id]);
   },
 };
 
 // Payee queries
 export const payeeQueries = {
-  getAll: () => {
-    return db.prepare('SELECT * FROM payees ORDER BY name').all() as Payee[];
+  getAll: async () => {
+    return query<Payee>('SELECT * FROM payees ORDER BY name');
   },
 
-  getById: (id: number) => {
-    return db.prepare('SELECT * FROM payees WHERE id = ?').get(id) as Payee | undefined;
+  getById: async (id: number) => {
+    return queryOne<Payee>('SELECT * FROM payees WHERE id = $1', [id]);
   },
 
-  getByName: (name: string) => {
-    return db.prepare('SELECT * FROM payees WHERE name = ?').get(name) as Payee | undefined;
+  getByName: async (name: string) => {
+    return queryOne<Payee>('SELECT * FROM payees WHERE name = $1', [name]);
   },
 
-  search: (query: string, limit: number = 10) => {
-    return db.prepare('SELECT * FROM payees WHERE name LIKE ? ORDER BY name LIMIT ?').all(`%${query}%`, limit) as Payee[];
+  search: async (searchQuery: string, limit: number = 10) => {
+    return query<Payee>(
+      'SELECT * FROM payees WHERE name ILIKE $1 ORDER BY name LIMIT $2',
+      [`%${searchQuery}%`, limit]
+    );
   },
 
-  create: (name: string) => {
-    const stmt = db.prepare('INSERT INTO payees (name) VALUES (?)');
-    const result = stmt.run(name);
-    return result.lastInsertRowid;
+  create: async (name: string) => {
+    const result = await insert<Payee>(
+      'INSERT INTO payees (name) VALUES ($1) RETURNING *',
+      [name]
+    );
+    return result.id;
   },
 
-  getOrCreate: (name: string) => {
-    const existing = payeeQueries.getByName(name);
+  getOrCreate: async (name: string) => {
+    const existing = await payeeQueries.getByName(name);
     if (existing) return existing.id;
     return payeeQueries.create(name);
   },
 
-  update: (id: number, name: string) => {
-    const stmt = db.prepare('UPDATE payees SET name = ? WHERE id = ?');
-    return stmt.run(name, id);
+  update: async (id: number, name: string) => {
+    await query('UPDATE payees SET name = $1 WHERE id = $2', [name, id]);
   },
 
-  delete: (id: number) => {
-    const stmt = db.prepare('DELETE FROM payees WHERE id = ?');
-    return stmt.run(id);
+  delete: async (id: number) => {
+    await query('DELETE FROM payees WHERE id = $1', [id]);
   },
 
-  merge: (sourceId: number, targetId: number) => {
-    // Update all references to use target payee
-    db.prepare('UPDATE account_transactions SET payee_id = ? WHERE payee_id = ?').run(targetId, sourceId);
-    db.prepare('UPDATE recurring_transactions SET payee_id = ? WHERE payee_id = ?').run(targetId, sourceId);
-    // Delete the source payee
-    return db.prepare('DELETE FROM payees WHERE id = ?').run(sourceId);
+  merge: async (sourceId: number, targetId: number) => {
+    await query('UPDATE account_transactions SET payee_id = $1 WHERE payee_id = $2', [targetId, sourceId]);
+    await query('UPDATE recurring_transactions SET payee_id = $1 WHERE payee_id = $2', [targetId, sourceId]);
+    await query('DELETE FROM payees WHERE id = $1', [sourceId]);
   },
 };
 
 // Account Transaction queries (bank/cash transactions)
 export const accountTransactionQueries = {
-  getByAccount: (accountId: number) => {
-    return db.prepare(`
-      SELECT
+  getByAccount: async (accountId: number) => {
+    return query<AccountTransaction>(
+      `SELECT
         at.*,
         p.name as payee_name,
         c.name as category_name
       FROM account_transactions at
       LEFT JOIN payees p ON at.payee_id = p.id
       LEFT JOIN categories c ON at.category_id = c.id
-      WHERE at.account_id = ?
-      ORDER BY at.date DESC, at.id DESC
-    `).all(accountId) as AccountTransaction[];
+      WHERE at.account_id = $1
+      ORDER BY at.date DESC, at.id DESC`,
+      [accountId]
+    );
   },
 
-  getById: (id: number) => {
-    return db.prepare(`
-      SELECT
+  getById: async (id: number) => {
+    return queryOne<AccountTransaction>(
+      `SELECT
         at.*,
         p.name as payee_name,
         c.name as category_name
       FROM account_transactions at
       LEFT JOIN payees p ON at.payee_id = p.id
       LEFT JOIN categories c ON at.category_id = c.id
-      WHERE at.id = ?
-    `).get(id) as AccountTransaction | undefined;
+      WHERE at.id = $1`,
+      [id]
+    );
   },
 
-  create: (
+  create: async (
     accountId: number,
     type: TransactionType,
     amount: number,
@@ -300,15 +305,15 @@ export const accountTransactionQueries = {
     notes: string | null = null,
     transferId: number | null = null
   ) => {
-    const stmt = db.prepare(`
-      INSERT INTO account_transactions (account_id, type, amount, date, payee_id, category_id, notes, transfer_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    const result = stmt.run(accountId, type, amount, date, payeeId, categoryId, notes, transferId);
-    return result.lastInsertRowid;
+    const result = await insert<AccountTransaction>(
+      `INSERT INTO account_transactions (account_id, type, amount, date, payee_id, category_id, notes, transfer_id)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [accountId, type, amount, date, payeeId, categoryId, notes, transferId]
+    );
+    return result.id;
   },
 
-  update: (
+  update: async (
     id: number,
     type: TransactionType,
     amount: number,
@@ -317,66 +322,71 @@ export const accountTransactionQueries = {
     categoryId: number | null,
     notes: string | null
   ) => {
-    const stmt = db.prepare(`
-      UPDATE account_transactions
-      SET type = ?, amount = ?, date = ?, payee_id = ?, category_id = ?, notes = ?
-      WHERE id = ?
-    `);
-    return stmt.run(type, amount, date, payeeId, categoryId, notes, id);
+    await query(
+      `UPDATE account_transactions
+      SET type = $1, amount = $2, date = $3, payee_id = $4, category_id = $5, notes = $6
+      WHERE id = $7`,
+      [type, amount, date, payeeId, categoryId, notes, id]
+    );
   },
 
-  delete: (id: number) => {
-    const stmt = db.prepare('DELETE FROM account_transactions WHERE id = ?');
-    return stmt.run(id);
+  delete: async (id: number) => {
+    await query('DELETE FROM account_transactions WHERE id = $1', [id]);
   },
 
-  getByTransferId: (transferId: number) => {
-    return db.prepare('SELECT * FROM account_transactions WHERE transfer_id = ?').all(transferId) as AccountTransaction[];
+  getByTransferId: async (transferId: number) => {
+    return query<AccountTransaction>(
+      'SELECT * FROM account_transactions WHERE transfer_id = $1',
+      [transferId]
+    );
   },
 };
 
 // Recurring Transaction queries
 export const recurringQueries = {
-  getByAccount: (accountId: number) => {
-    return db.prepare(`
-      SELECT
+  getByAccount: async (accountId: number) => {
+    return query<RecurringTransaction>(
+      `SELECT
         rt.*,
         p.name as payee_name,
         c.name as category_name
       FROM recurring_transactions rt
       LEFT JOIN payees p ON rt.payee_id = p.id
       LEFT JOIN categories c ON rt.category_id = c.id
-      WHERE rt.account_id = ?
-      ORDER BY rt.next_due_date ASC
-    `).all(accountId) as RecurringTransaction[];
+      WHERE rt.account_id = $1
+      ORDER BY rt.next_due_date ASC`,
+      [accountId]
+    );
   },
 
-  getActiveCountsByAccount: (accountId: number) => {
-    return db.prepare(`
-      SELECT
+  getActiveCountsByAccount: async (accountId: number) => {
+    return queryOne<{ inflow_count: string; outflow_count: string }>(
+      `SELECT
         SUM(CASE WHEN type = 'inflow' THEN 1 ELSE 0 END) as inflow_count,
         SUM(CASE WHEN type = 'outflow' THEN 1 ELSE 0 END) as outflow_count
       FROM recurring_transactions
-      WHERE account_id = ? AND is_active = 1
-    `).get(accountId) as { inflow_count: number; outflow_count: number };
+      WHERE account_id = $1 AND is_active = true`,
+      [accountId]
+    );
   },
 
-  getById: (id: number) => {
-    return db.prepare(`
-      SELECT
+  getById: async (id: number) => {
+    return queryOne<RecurringTransaction>(
+      `SELECT
         rt.*,
         p.name as payee_name,
         c.name as category_name
       FROM recurring_transactions rt
       LEFT JOIN payees p ON rt.payee_id = p.id
       LEFT JOIN categories c ON rt.category_id = c.id
-      WHERE rt.id = ?
-    `).get(id) as RecurringTransaction | undefined;
+      WHERE rt.id = $1`,
+      [id]
+    );
   },
 
-  getDue: (beforeDate: string) => {
-    return db.prepare(`
-      SELECT
+  getDue: async (beforeDate: string) => {
+    return query<RecurringTransaction & { account_name: string; account_currency: Currency }>(
+      `SELECT
         rt.*,
         p.name as payee_name,
         c.name as category_name,
@@ -386,12 +396,13 @@ export const recurringQueries = {
       LEFT JOIN payees p ON rt.payee_id = p.id
       LEFT JOIN categories c ON rt.category_id = c.id
       LEFT JOIN accounts a ON rt.account_id = a.id
-      WHERE rt.is_active = 1 AND rt.next_due_date <= ?
-      ORDER BY rt.next_due_date ASC
-    `).all(beforeDate) as (RecurringTransaction & { account_name: string; account_currency: Currency })[];
+      WHERE rt.is_active = true AND rt.next_due_date <= $1
+      ORDER BY rt.next_due_date ASC`,
+      [beforeDate]
+    );
   },
 
-  create: (
+  create: async (
     accountId: number,
     type: TransactionType,
     amount: number,
@@ -401,15 +412,15 @@ export const recurringQueries = {
     frequency: Frequency,
     nextDueDate: string
   ) => {
-    const stmt = db.prepare(`
-      INSERT INTO recurring_transactions (account_id, type, amount, payee_id, category_id, notes, frequency, next_due_date)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    const result = stmt.run(accountId, type, amount, payeeId, categoryId, notes, frequency, nextDueDate);
-    return result.lastInsertRowid;
+    const result = await insert<RecurringTransaction>(
+      `INSERT INTO recurring_transactions (account_id, type, amount, payee_id, category_id, notes, frequency, next_due_date)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [accountId, type, amount, payeeId, categoryId, notes, frequency, nextDueDate]
+    );
+    return result.id;
   },
 
-  update: (
+  update: async (
     id: number,
     type: TransactionType,
     amount: number,
@@ -418,32 +429,30 @@ export const recurringQueries = {
     notes: string | null,
     frequency: Frequency,
     nextDueDate: string,
-    isActive: number
+    isActive: boolean
   ) => {
-    const stmt = db.prepare(`
-      UPDATE recurring_transactions
-      SET type = ?, amount = ?, payee_id = ?, category_id = ?, notes = ?, frequency = ?, next_due_date = ?, is_active = ?
-      WHERE id = ?
-    `);
-    return stmt.run(type, amount, payeeId, categoryId, notes, frequency, nextDueDate, isActive, id);
+    await query(
+      `UPDATE recurring_transactions
+      SET type = $1, amount = $2, payee_id = $3, category_id = $4, notes = $5, frequency = $6, next_due_date = $7, is_active = $8
+      WHERE id = $9`,
+      [type, amount, payeeId, categoryId, notes, frequency, nextDueDate, isActive, id]
+    );
   },
 
-  updateNextDueDate: (id: number, nextDueDate: string) => {
-    const stmt = db.prepare('UPDATE recurring_transactions SET next_due_date = ? WHERE id = ?');
-    return stmt.run(nextDueDate, id);
+  updateNextDueDate: async (id: number, nextDueDate: string) => {
+    await query('UPDATE recurring_transactions SET next_due_date = $1 WHERE id = $2', [nextDueDate, id]);
   },
 
-  delete: (id: number) => {
-    const stmt = db.prepare('DELETE FROM recurring_transactions WHERE id = ?');
-    return stmt.run(id);
+  delete: async (id: number) => {
+    await query('DELETE FROM recurring_transactions WHERE id = $1', [id]);
   },
 };
 
 // Transfer queries
 export const transferQueries = {
-  getAll: () => {
-    return db.prepare(`
-      SELECT
+  getAll: async () => {
+    return query<Transfer>(
+      `SELECT
         t.*,
         fa.name as from_account_name,
         ta.name as to_account_name,
@@ -452,13 +461,13 @@ export const transferQueries = {
       FROM transfers t
       JOIN accounts fa ON t.from_account_id = fa.id
       JOIN accounts ta ON t.to_account_id = ta.id
-      ORDER BY t.date DESC, t.id DESC
-    `).all() as Transfer[];
+      ORDER BY t.date DESC, t.id DESC`
+    );
   },
 
-  getById: (id: number) => {
-    return db.prepare(`
-      SELECT
+  getById: async (id: number) => {
+    return queryOne<Transfer>(
+      `SELECT
         t.*,
         fa.name as from_account_name,
         ta.name as to_account_name,
@@ -467,11 +476,12 @@ export const transferQueries = {
       FROM transfers t
       JOIN accounts fa ON t.from_account_id = fa.id
       JOIN accounts ta ON t.to_account_id = ta.id
-      WHERE t.id = ?
-    `).get(id) as Transfer | undefined;
+      WHERE t.id = $1`,
+      [id]
+    );
   },
 
-  create: (
+  create: async (
     fromAccountId: number,
     toAccountId: number,
     fromAmount: number,
@@ -480,128 +490,152 @@ export const transferQueries = {
     notes: string | null = null
   ) => {
     // Create the transfer record
-    const stmt = db.prepare(`
-      INSERT INTO transfers (from_account_id, to_account_id, from_amount, to_amount, date, notes)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `);
-    const result = stmt.run(fromAccountId, toAccountId, fromAmount, toAmount, date, notes);
-    const transferId = result.lastInsertRowid as number;
+    const result = await insert<Transfer>(
+      `INSERT INTO transfers (from_account_id, to_account_id, from_amount, to_amount, date, notes)
+      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [fromAccountId, toAccountId, fromAmount, toAmount, date, notes]
+    );
+    const transferId = result.id;
 
     // Create the linked account transactions
-    accountTransactionQueries.create(fromAccountId, 'outflow', fromAmount, date, null, null, notes ? `Transfer: ${notes}` : 'Transfer', transferId);
-    accountTransactionQueries.create(toAccountId, 'inflow', toAmount, date, null, null, notes ? `Transfer: ${notes}` : 'Transfer', transferId);
+    await accountTransactionQueries.create(fromAccountId, 'outflow', fromAmount, date, null, null, notes ? `Transfer: ${notes}` : 'Transfer', transferId);
+    await accountTransactionQueries.create(toAccountId, 'inflow', toAmount, date, null, null, notes ? `Transfer: ${notes}` : 'Transfer', transferId);
 
     return transferId;
   },
 
-  delete: (id: number) => {
+  delete: async (id: number) => {
     // Delete linked transactions first
-    db.prepare('DELETE FROM account_transactions WHERE transfer_id = ?').run(id);
+    await query('DELETE FROM account_transactions WHERE transfer_id = $1', [id]);
     // Delete the transfer
-    const stmt = db.prepare('DELETE FROM transfers WHERE id = ?');
-    return stmt.run(id);
+    await query('DELETE FROM transfers WHERE id = $1', [id]);
   },
 };
 
 // Holdings queries
 export const holdingsQueries = {
-  getAll: () => {
-    return db.prepare('SELECT * FROM holdings ORDER BY symbol').all() as Holding[];
+  getAll: async () => {
+    return query<Holding>('SELECT * FROM holdings ORDER BY symbol');
   },
 
-  getByAccount: (accountId: number) => {
-    return db.prepare('SELECT * FROM holdings WHERE account_id = ? ORDER BY symbol').all(accountId) as Holding[];
+  getByAccount: async (accountId: number) => {
+    return query<Holding>('SELECT * FROM holdings WHERE account_id = $1 ORDER BY symbol', [accountId]);
   },
 
-  getBySymbol: (symbol: string, accountId?: number) => {
+  getBySymbol: async (symbol: string, accountId?: number) => {
     if (accountId) {
-      return db.prepare('SELECT * FROM holdings WHERE symbol = ? AND account_id = ?').get(symbol.toUpperCase(), accountId) as Holding | undefined;
+      return queryOne<Holding>(
+        'SELECT * FROM holdings WHERE symbol = $1 AND account_id = $2',
+        [symbol.toUpperCase(), accountId]
+      );
     }
-    return db.prepare('SELECT * FROM holdings WHERE symbol = ?').get(symbol.toUpperCase()) as Holding | undefined;
+    return queryOne<Holding>('SELECT * FROM holdings WHERE symbol = $1', [symbol.toUpperCase()]);
   },
 
-  create: (symbol: string, shares: number, avgCost: number, accountId?: number) => {
-    const stmt = db.prepare('INSERT INTO holdings (symbol, shares, avg_cost, account_id) VALUES (?, ?, ?, ?)');
-    const result = stmt.run(symbol.toUpperCase(), shares, avgCost, accountId || null);
-    return result.lastInsertRowid;
+  create: async (symbol: string, shares: number, avgCost: number, accountId?: number) => {
+    const result = await insert<Holding>(
+      'INSERT INTO holdings (symbol, shares, avg_cost, account_id) VALUES ($1, $2, $3, $4) RETURNING *',
+      [symbol.toUpperCase(), shares, avgCost, accountId || null]
+    );
+    return result.id;
   },
 
-  update: (id: number, shares: number, avgCost: number) => {
-    const stmt = db.prepare('UPDATE holdings SET shares = ?, avg_cost = ? WHERE id = ?');
-    return stmt.run(shares, avgCost, id);
+  update: async (id: number, shares: number, avgCost: number) => {
+    await query('UPDATE holdings SET shares = $1, avg_cost = $2 WHERE id = $3', [shares, avgCost, id]);
   },
 
-  delete: (id: number) => {
-    const stmt = db.prepare('DELETE FROM holdings WHERE id = ?');
-    return stmt.run(id);
+  delete: async (id: number) => {
+    await query('DELETE FROM holdings WHERE id = $1', [id]);
   },
 
-  deleteBySymbol: (symbol: string, accountId?: number) => {
+  deleteBySymbol: async (symbol: string, accountId?: number) => {
     if (accountId) {
-      const stmt = db.prepare('DELETE FROM holdings WHERE symbol = ? AND account_id = ?');
-      return stmt.run(symbol.toUpperCase(), accountId);
+      await query('DELETE FROM holdings WHERE symbol = $1 AND account_id = $2', [symbol.toUpperCase(), accountId]);
+    } else {
+      await query('DELETE FROM holdings WHERE symbol = $1', [symbol.toUpperCase()]);
     }
-    const stmt = db.prepare('DELETE FROM holdings WHERE symbol = ?');
-    return stmt.run(symbol.toUpperCase());
   },
 };
 
 // Transaction queries (stock transactions)
 export const transactionQueries = {
-  getAll: () => {
-    return db.prepare('SELECT * FROM transactions ORDER BY date DESC, id DESC').all() as Transaction[];
+  getAll: async () => {
+    return query<Transaction>('SELECT * FROM transactions ORDER BY date DESC, id DESC');
   },
 
-  getByAccount: (accountId: number) => {
-    return db.prepare('SELECT * FROM transactions WHERE account_id = ? ORDER BY date DESC, id DESC').all(accountId) as Transaction[];
-  },
-
-  getBySymbol: (symbol: string, accountId?: number) => {
-    if (accountId) {
-      return db.prepare('SELECT * FROM transactions WHERE symbol = ? AND account_id = ? ORDER BY date DESC').all(symbol.toUpperCase(), accountId) as Transaction[];
-    }
-    return db.prepare('SELECT * FROM transactions WHERE symbol = ? ORDER BY date DESC').all(symbol.toUpperCase()) as Transaction[];
-  },
-
-  create: (symbol: string, type: 'buy' | 'sell', shares: number, price: number, fees: number, date: string, accountId?: number) => {
-    const stmt = db.prepare(
-      'INSERT INTO transactions (symbol, type, shares, price, fees, date, account_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  getByAccount: async (accountId: number) => {
+    return query<Transaction>(
+      'SELECT * FROM transactions WHERE account_id = $1 ORDER BY date DESC, id DESC',
+      [accountId]
     );
-    const result = stmt.run(symbol.toUpperCase(), type, shares, price, fees, date, accountId || null);
-    return result.lastInsertRowid;
   },
 
-  delete: (id: number) => {
-    const stmt = db.prepare('DELETE FROM transactions WHERE id = ?');
-    return stmt.run(id);
+  getBySymbol: async (symbol: string, accountId?: number) => {
+    if (accountId) {
+      return query<Transaction>(
+        'SELECT * FROM transactions WHERE symbol = $1 AND account_id = $2 ORDER BY date DESC',
+        [symbol.toUpperCase(), accountId]
+      );
+    }
+    return query<Transaction>(
+      'SELECT * FROM transactions WHERE symbol = $1 ORDER BY date DESC',
+      [symbol.toUpperCase()]
+    );
+  },
+
+  create: async (symbol: string, type: 'buy' | 'sell', shares: number, price: number, fees: number, date: string, accountId?: number) => {
+    const result = await insert<Transaction>(
+      'INSERT INTO transactions (symbol, type, shares, price, fees, date, account_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+      [symbol.toUpperCase(), type, shares, price, fees, date, accountId || null]
+    );
+    return result.id;
+  },
+
+  delete: async (id: number) => {
+    await query('DELETE FROM transactions WHERE id = $1', [id]);
   },
 };
 
 // Dividend queries
 export const dividendQueries = {
-  getAll: () => {
-    return db.prepare('SELECT * FROM dividends ORDER BY ex_date DESC, id DESC').all() as Dividend[];
+  getAll: async () => {
+    return query<Dividend>('SELECT * FROM dividends ORDER BY ex_date DESC, id DESC');
   },
 
-  getByAccount: (accountId: number) => {
-    return db.prepare('SELECT * FROM dividends WHERE account_id = ? ORDER BY ex_date DESC, id DESC').all(accountId) as Dividend[];
+  getByAccount: async (accountId: number) => {
+    return query<Dividend>(
+      'SELECT * FROM dividends WHERE account_id = $1 ORDER BY ex_date DESC, id DESC',
+      [accountId]
+    );
   },
 
-  getBySymbol: (symbol: string, accountId?: number) => {
+  getBySymbol: async (symbol: string, accountId?: number) => {
     if (accountId) {
-      return db.prepare('SELECT * FROM dividends WHERE symbol = ? AND account_id = ? ORDER BY ex_date DESC').all(symbol.toUpperCase(), accountId) as Dividend[];
+      return query<Dividend>(
+        'SELECT * FROM dividends WHERE symbol = $1 AND account_id = $2 ORDER BY ex_date DESC',
+        [symbol.toUpperCase(), accountId]
+      );
     }
-    return db.prepare('SELECT * FROM dividends WHERE symbol = ? ORDER BY ex_date DESC').all(symbol.toUpperCase()) as Dividend[];
+    return query<Dividend>(
+      'SELECT * FROM dividends WHERE symbol = $1 ORDER BY ex_date DESC',
+      [symbol.toUpperCase()]
+    );
   },
 
-  getByYear: (year: number, accountId?: number) => {
+  getByYear: async (year: number, accountId?: number) => {
     if (accountId) {
-      return db.prepare('SELECT * FROM dividends WHERE strftime("%Y", ex_date) = ? AND account_id = ? ORDER BY ex_date DESC').all(year.toString(), accountId) as Dividend[];
+      return query<Dividend>(
+        "SELECT * FROM dividends WHERE EXTRACT(YEAR FROM ex_date) = $1 AND account_id = $2 ORDER BY ex_date DESC",
+        [year, accountId]
+      );
     }
-    return db.prepare('SELECT * FROM dividends WHERE strftime("%Y", ex_date) = ? ORDER BY ex_date DESC').all(year.toString()) as Dividend[];
+    return query<Dividend>(
+      "SELECT * FROM dividends WHERE EXTRACT(YEAR FROM ex_date) = $1 ORDER BY ex_date DESC",
+      [year]
+    );
   },
 
-  create: (
+  create: async (
     symbol: string,
     amount: number,
     sharesHeld: number,
@@ -612,81 +646,82 @@ export const dividendQueries = {
     netAmount: number,
     accountId?: number
   ) => {
-    const stmt = db.prepare(
-      'INSERT INTO dividends (symbol, amount, shares_held, ex_date, pay_date, tax_rate, tax_amount, net_amount, account_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    const result = await insert<Dividend>(
+      'INSERT INTO dividends (symbol, amount, shares_held, ex_date, pay_date, tax_rate, tax_amount, net_amount, account_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
+      [symbol.toUpperCase(), amount, sharesHeld, exDate, payDate, taxRate, taxAmount, netAmount, accountId || null]
     );
-    const result = stmt.run(symbol.toUpperCase(), amount, sharesHeld, exDate, payDate, taxRate, taxAmount, netAmount, accountId || null);
-    return result.lastInsertRowid;
+    return result.id;
   },
 
-  delete: (id: number) => {
-    const stmt = db.prepare('DELETE FROM dividends WHERE id = ?');
-    return stmt.run(id);
+  delete: async (id: number) => {
+    await query('DELETE FROM dividends WHERE id = $1', [id]);
   },
 
-  getTaxSummary: (year?: number, accountId?: number) => {
+  getTaxSummary: async (year?: number, accountId?: number) => {
     let whereClause = '';
-    const params: (string | number)[] = [];
+    const params: (number)[] = [];
+    let paramIndex = 1;
 
-    // Use pay_date for yearly grouping (fall back to ex_date if pay_date is null)
     if (year && accountId) {
-      whereClause = "WHERE strftime('%Y', COALESCE(pay_date, ex_date)) = ? AND account_id = ?";
-      params.push(year.toString(), accountId);
+      whereClause = `WHERE EXTRACT(YEAR FROM COALESCE(pay_date, ex_date)) = $${paramIndex++} AND account_id = $${paramIndex++}`;
+      params.push(year, accountId);
     } else if (year) {
-      whereClause = "WHERE strftime('%Y', COALESCE(pay_date, ex_date)) = ?";
-      params.push(year.toString());
+      whereClause = `WHERE EXTRACT(YEAR FROM COALESCE(pay_date, ex_date)) = $${paramIndex++}`;
+      params.push(year);
     } else if (accountId) {
-      whereClause = 'WHERE account_id = ?';
+      whereClause = `WHERE account_id = $${paramIndex++}`;
       params.push(accountId);
     }
 
-    const query = `
+    const sql = `
       SELECT
-        strftime('%Y', COALESCE(pay_date, ex_date)) as year,
+        EXTRACT(YEAR FROM COALESCE(pay_date, ex_date))::text as year,
         SUM(amount) as total_gross,
         SUM(tax_amount) as total_tax,
         SUM(net_amount) as total_net,
         COUNT(*) as dividend_count
       FROM dividends
       ${whereClause}
-      GROUP BY strftime('%Y', COALESCE(pay_date, ex_date))
+      GROUP BY EXTRACT(YEAR FROM COALESCE(pay_date, ex_date))
       ORDER BY year DESC
     `;
 
-    return db.prepare(query).all(...params) as {
+    return query<{
       year: string;
       total_gross: number;
       total_tax: number;
       total_net: number;
       dividend_count: number;
-    }[];
+    }>(sql, params);
   },
 };
 
 // Settings queries
 export const settingsQueries = {
-  get: (key: string) => {
-    const result = db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as { value: string } | undefined;
+  get: async (key: string) => {
+    const result = await queryOne<{ value: string }>('SELECT value FROM settings WHERE key = $1', [key]);
     return result?.value;
   },
 
-  set: (key: string, value: string) => {
-    const stmt = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
-    return stmt.run(key, value);
+  set: async (key: string, value: string) => {
+    await query(
+      'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2',
+      [key, value]
+    );
   },
 
-  getDividendTaxRate: () => {
-    const rate = settingsQueries.get('dividend_tax_rate');
-    return rate ? parseFloat(rate) : 0.08; // Default 8% Albanian dividend tax
+  getDividendTaxRate: async () => {
+    const rate = await settingsQueries.get('dividend_tax_rate');
+    return rate ? parseFloat(rate) : 0.08;
   },
 
-  getMainCurrency: (): Currency => {
-    const currency = settingsQueries.get('main_currency');
+  getMainCurrency: async (): Promise<Currency> => {
+    const currency = await settingsQueries.get('main_currency');
     return (currency as Currency) || 'ALL';
   },
 
-  getSidebarCollapsed: () => {
-    const collapsed = settingsQueries.get('sidebar_collapsed');
+  getSidebarCollapsed: async () => {
+    const collapsed = await settingsQueries.get('sidebar_collapsed');
     return collapsed === '1';
   },
 };

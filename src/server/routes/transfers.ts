@@ -4,9 +4,9 @@ import { accountQueries, transferQueries } from '../db/queries.js';
 const router = Router();
 
 // GET /api/transfers - List all transfers
-router.get('/', (_req: Request, res: Response) => {
+router.get('/', async (_req: Request, res: Response) => {
   try {
-    const transfers = transferQueries.getAll();
+    const transfers = await transferQueries.getAll();
     res.json(transfers);
   } catch (error) {
     console.error('Error fetching transfers:', error);
@@ -15,10 +15,10 @@ router.get('/', (_req: Request, res: Response) => {
 });
 
 // GET /api/transfers/:id - Get single transfer
-router.get('/:id', (req: Request, res: Response) => {
+router.get('/:id', async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
-    const transfer = transferQueries.getById(id);
+    const transfer = await transferQueries.getById(id);
 
     if (!transfer) {
       return res.status(404).json({ error: 'Transfer not found' });
@@ -32,7 +32,7 @@ router.get('/:id', (req: Request, res: Response) => {
 });
 
 // POST /api/transfers - Create transfer
-router.post('/', (req: Request, res: Response) => {
+router.post('/', async (req: Request, res: Response) => {
   try {
     const { fromAccountId, toAccountId, fromAmount, toAmount, date, notes } = req.body;
 
@@ -40,8 +40,8 @@ router.post('/', (req: Request, res: Response) => {
       return res.status(400).json({ error: 'fromAccountId, toAccountId, fromAmount, and date are required' });
     }
 
-    const fromAccount = accountQueries.getById(fromAccountId);
-    const toAccount = accountQueries.getById(toAccountId);
+    const fromAccount = await accountQueries.getById(fromAccountId);
+    const toAccount = await accountQueries.getById(toAccountId);
 
     if (!fromAccount) {
       return res.status(404).json({ error: 'Source account not found' });
@@ -68,7 +68,7 @@ router.post('/', (req: Request, res: Response) => {
       return res.status(400).json({ error: 'toAmount is required for cross-currency transfers' });
     }
 
-    const id = transferQueries.create(
+    const id = await transferQueries.create(
       fromAccountId,
       toAccountId,
       fromAmount,
@@ -77,7 +77,7 @@ router.post('/', (req: Request, res: Response) => {
       notes || null
     );
 
-    const transfer = transferQueries.getById(id as number);
+    const transfer = await transferQueries.getById(id as number);
     res.status(201).json(transfer);
   } catch (error) {
     console.error('Error creating transfer:', error);
@@ -86,16 +86,16 @@ router.post('/', (req: Request, res: Response) => {
 });
 
 // DELETE /api/transfers/:id - Delete transfer (removes both linked transactions)
-router.delete('/:id', (req: Request, res: Response) => {
+router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
-    const transfer = transferQueries.getById(id);
+    const transfer = await transferQueries.getById(id);
 
     if (!transfer) {
       return res.status(404).json({ error: 'Transfer not found' });
     }
 
-    transferQueries.delete(id);
+    await transferQueries.delete(id);
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting transfer:', error);

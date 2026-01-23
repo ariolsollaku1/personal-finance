@@ -27,35 +27,45 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Initialize database
-initDatabase();
+// Initialize database and start server
+async function start() {
+  try {
+    await initDatabase();
+    console.log('Database initialized');
 
-// API routes - New finance manager routes
-app.use('/api/accounts', accountsRoutes);
-app.use('/api/accounts', accountTransactionsRoutes); // Nested under accounts
-app.use('/api/categories', categoriesRoutes);
-app.use('/api/payees', payeesRoutes);
-app.use('/api/recurring', recurringRoutes);
-app.use('/api/transfers', transfersRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/projection', projectionRoutes);
-app.use('/api/pnl', pnlRoutes);
+    // API routes - New finance manager routes
+    app.use('/api/accounts', accountsRoutes);
+    app.use('/api/accounts', accountTransactionsRoutes); // Nested under accounts
+    app.use('/api/categories', categoriesRoutes);
+    app.use('/api/payees', payeesRoutes);
+    app.use('/api/recurring', recurringRoutes);
+    app.use('/api/transfers', transfersRoutes);
+    app.use('/api/dashboard', dashboardRoutes);
+    app.use('/api/projection', projectionRoutes);
+    app.use('/api/pnl', pnlRoutes);
 
-// API routes - Legacy portfolio routes (still supported)
-app.use('/api/portfolio', portfolioRoutes);
-app.use('/api/holdings', holdingsRoutes);
-app.use('/api/transactions', transactionsRoutes);
-app.use('/api/quotes', quotesRoutes);
-app.use('/api/dividends', dividendsRoutes);
+    // API routes - Legacy portfolio routes (still supported)
+    app.use('/api/portfolio', portfolioRoutes);
+    app.use('/api/holdings', holdingsRoutes);
+    app.use('/api/transactions', transactionsRoutes);
+    app.use('/api/quotes', quotesRoutes);
+    app.use('/api/dividends', dividendsRoutes);
 
-// Serve static files in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../../dist/client')));
-  app.get('*', (_req, res) => {
-    res.sendFile(path.join(__dirname, '../../dist/client/index.html'));
-  });
+    // Serve static files in production
+    if (process.env.NODE_ENV === 'production') {
+      app.use(express.static(path.join(__dirname, '../../dist/client')));
+      app.get('*', (_req, res) => {
+        res.sendFile(path.join(__dirname, '../../dist/client/index.html'));
+      });
+    }
+
+    app.listen(PORT, () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
 }
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+start();

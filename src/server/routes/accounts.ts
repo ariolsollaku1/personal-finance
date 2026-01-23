@@ -5,26 +5,26 @@ import { getMultipleQuotes } from '../services/yahoo.js';
 const router = Router();
 
 // GET /api/accounts - List all accounts with balances
-router.get('/', (_req: Request, res: Response) => {
+router.get('/', async (_req: Request, res: Response) => {
   try {
-    const accounts = accountQueries.getAll();
+    const accounts = await accountQueries.getAll();
 
     // Calculate balances for each account
-    const accountsWithBalances = accounts.map((account) => {
-      const balanceInfo = accountQueries.getBalance(account.id);
+    const accountsWithBalances = await Promise.all(accounts.map(async (account) => {
+      const balanceInfo = await accountQueries.getBalance(account.id);
       const cashBalance = balanceInfo?.balance || 0;
 
       // Get recurring transaction counts
-      const recurringCounts = recurringQueries.getActiveCountsByAccount(account.id);
-      const recurringInflow = recurringCounts?.inflow_count || 0;
-      const recurringOutflow = recurringCounts?.outflow_count || 0;
+      const recurringCounts = await recurringQueries.getActiveCountsByAccount(account.id);
+      const recurringInflow = Number(recurringCounts?.inflow_count) || 0;
+      const recurringOutflow = Number(recurringCounts?.outflow_count) || 0;
 
       if (account.type === 'stock') {
         // For stock accounts, calculate cost basis from holdings
-        const holdings = holdingsQueries.getByAccount(account.id);
+        const holdings = await holdingsQueries.getByAccount(account.id);
         let costBasis = 0;
         for (const holding of holdings) {
-          costBasis += holding.shares * holding.avg_cost;
+          costBasis += Number(holding.shares) * Number(holding.avg_cost);
         }
 
         return {
@@ -42,7 +42,7 @@ router.get('/', (_req: Request, res: Response) => {
         recurringInflow,
         recurringOutflow,
       };
-    });
+    }));
 
     res.json(accountsWithBalances);
   } catch (error) {
@@ -52,7 +52,7 @@ router.get('/', (_req: Request, res: Response) => {
 });
 
 // POST /api/accounts - Create account
-router.post('/', (req: Request, res: Response) => {
+router.post('/', async (req: Request, res: Response) => {
   try {
     const { name, type, currency, initialBalance } = req.body;
 
@@ -68,8 +68,8 @@ router.post('/', (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid currency' });
     }
 
-    const id = accountQueries.create(name, type as AccountType, currency as Currency, initialBalance || 0);
-    const account = accountQueries.getById(id as number);
+    const id = await accountQueries.create(name, type as AccountType, currency as Currency, initialBalance || 0);
+    const account = await accountQueries.getById(id as number);
 
     res.status(201).json(account);
   } catch (error) {
@@ -79,23 +79,23 @@ router.post('/', (req: Request, res: Response) => {
 });
 
 // GET /api/accounts/:id - Get account with balance
-router.get('/:id', (req: Request, res: Response) => {
+router.get('/:id', async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
-    const account = accountQueries.getById(id);
+    const account = await accountQueries.getById(id);
 
     if (!account) {
       return res.status(404).json({ error: 'Account not found' });
     }
 
-    const balanceInfo = accountQueries.getBalance(id);
+    const balanceInfo = await accountQueries.getBalance(id);
     const cashBalance = balanceInfo?.balance || 0;
 
     if (account.type === 'stock') {
-      const holdings = holdingsQueries.getByAccount(id);
+      const holdings = await holdingsQueries.getByAccount(id);
       let costBasis = 0;
       for (const holding of holdings) {
-        costBasis += holding.shares * holding.avg_cost;
+        costBasis += Number(holding.shares) * Number(holding.avg_cost);
       }
 
       return res.json({
@@ -119,7 +119,7 @@ router.get('/:id', (req: Request, res: Response) => {
 router.get('/:id/portfolio', async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
-    const account = accountQueries.getById(id);
+    const account = await accountQueries.getById(id);
 
     if (!account) {
       return res.status(404).json({ error: 'Account not found' });
@@ -130,10 +130,10 @@ router.get('/:id/portfolio', async (req: Request, res: Response) => {
     }
 
     // Get cash balance
-    const balanceInfo = accountQueries.getBalance(id);
+    const balanceInfo = await accountQueries.getBalance(id);
     const cashBalance = balanceInfo?.balance || 0;
 
-    const holdings = holdingsQueries.getByAccount(id);
+    const holdings = await holdingsQueries.getByAccount(id);
 
     if (holdings.length === 0) {
       return res.json({
@@ -158,11 +158,13 @@ router.get('/:id/portfolio', async (req: Request, res: Response) => {
     const holdingsWithQuotes = holdings.map((holding) => {
       const quote = quotes.get(holding.symbol);
       const currentPrice = quote?.regularMarketPrice || 0;
-      const marketValue = holding.shares * currentPrice;
-      const costBasis = holding.shares * holding.avg_cost;
+      const shares = Number(holding.shares);
+      const avgCost = Number(holding.avg_cost);
+      const marketValue = shares * currentPrice;
+      const costBasis = shares * avgCost;
       const gain = marketValue - costBasis;
       const gainPercent = costBasis > 0 ? (gain / costBasis) * 100 : 0;
-      const dayChange = (quote?.regularMarketChange || 0) * holding.shares;
+      const dayChange = (quote?.regularMarketChange || 0) * shares;
       const dayChangePercent = quote?.regularMarketChangePercent || 0;
 
       totalValue += marketValue;
@@ -172,8 +174,8 @@ router.get('/:id/portfolio', async (req: Request, res: Response) => {
       return {
         id: holding.id,
         symbol: holding.symbol,
-        shares: holding.shares,
-        avgCost: holding.avg_cost,
+        shares: shares,
+        avgCost: avgCost,
         currentPrice,
         marketValue,
         costBasis,
@@ -206,12 +208,12 @@ router.get('/:id/portfolio', async (req: Request, res: Response) => {
 });
 
 // PUT /api/accounts/:id - Update account
-router.put('/:id', (req: Request, res: Response) => {
+router.put('/:id', async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
     const { name, currency, initialBalance } = req.body;
 
-    const account = accountQueries.getById(id);
+    const account = await accountQueries.getById(id);
     if (!account) {
       return res.status(404).json({ error: 'Account not found' });
     }
@@ -220,14 +222,14 @@ router.put('/:id', (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid currency' });
     }
 
-    accountQueries.update(
+    await accountQueries.update(
       id,
       name || account.name,
       (currency as Currency) || account.currency,
       initialBalance !== undefined ? initialBalance : account.initial_balance
     );
 
-    const updatedAccount = accountQueries.getById(id);
+    const updatedAccount = await accountQueries.getById(id);
     res.json(updatedAccount);
   } catch (error) {
     console.error('Error updating account:', error);
@@ -236,16 +238,16 @@ router.put('/:id', (req: Request, res: Response) => {
 });
 
 // DELETE /api/accounts/:id - Delete account
-router.delete('/:id', (req: Request, res: Response) => {
+router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
-    const account = accountQueries.getById(id);
+    const account = await accountQueries.getById(id);
 
     if (!account) {
       return res.status(404).json({ error: 'Account not found' });
     }
 
-    accountQueries.delete(id);
+    await accountQueries.delete(id);
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting account:', error);
@@ -254,17 +256,17 @@ router.delete('/:id', (req: Request, res: Response) => {
 });
 
 // PUT /api/accounts/:id/favorite - Toggle favorite status
-router.put('/:id/favorite', (req: Request, res: Response) => {
+router.put('/:id/favorite', async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
     const { isFavorite } = req.body;
 
-    const account = accountQueries.getById(id);
+    const account = await accountQueries.getById(id);
     if (!account) {
       return res.status(404).json({ error: 'Account not found' });
     }
 
-    accountQueries.setFavorite(id, isFavorite);
+    await accountQueries.setFavorite(id, isFavorite);
     res.json({ success: true, isFavorite });
   } catch (error) {
     console.error('Error toggling favorite:', error);

@@ -4,9 +4,9 @@ import { categoryQueries } from '../db/queries.js';
 const router = Router();
 
 // GET /api/categories - List all categories
-router.get('/', (_req: Request, res: Response) => {
+router.get('/', async (_req: Request, res: Response) => {
   try {
-    const categories = categoryQueries.getAll();
+    const categories = await categoryQueries.getAll();
     res.json(categories);
   } catch (error) {
     console.error('Error fetching categories:', error);
@@ -15,7 +15,7 @@ router.get('/', (_req: Request, res: Response) => {
 });
 
 // POST /api/categories - Create category
-router.post('/', (req: Request, res: Response) => {
+router.post('/', async (req: Request, res: Response) => {
   try {
     const { name, type } = req.body;
 
@@ -29,13 +29,13 @@ router.post('/', (req: Request, res: Response) => {
     }
 
     // Check if category already exists
-    const existing = categoryQueries.getByName(name);
+    const existing = await categoryQueries.getByName(name);
     if (existing) {
       return res.status(409).json({ error: 'Category already exists', category: existing });
     }
 
-    const id = categoryQueries.create(name, categoryType);
-    const category = categoryQueries.getById(id as number);
+    const id = await categoryQueries.create(name, categoryType);
+    const category = await categoryQueries.getById(id as number);
 
     res.status(201).json(category);
   } catch (error) {
@@ -45,7 +45,7 @@ router.post('/', (req: Request, res: Response) => {
 });
 
 // PUT /api/categories/:id - Rename category
-router.put('/:id', (req: Request, res: Response) => {
+router.put('/:id', async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
     const { name } = req.body;
@@ -54,19 +54,19 @@ router.put('/:id', (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Name is required' });
     }
 
-    const category = categoryQueries.getById(id);
+    const category = await categoryQueries.getById(id);
     if (!category) {
       return res.status(404).json({ error: 'Category not found' });
     }
 
     // Check if new name already exists
-    const existing = categoryQueries.getByName(name);
+    const existing = await categoryQueries.getByName(name);
     if (existing && existing.id !== id) {
       return res.status(409).json({ error: 'Category with this name already exists' });
     }
 
-    categoryQueries.update(id, name);
-    const updatedCategory = categoryQueries.getById(id);
+    await categoryQueries.update(id, name);
+    const updatedCategory = await categoryQueries.getById(id);
 
     res.json(updatedCategory);
   } catch (error) {
@@ -76,16 +76,16 @@ router.put('/:id', (req: Request, res: Response) => {
 });
 
 // DELETE /api/categories/:id - Delete category
-router.delete('/:id', (req: Request, res: Response) => {
+router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
-    const category = categoryQueries.getById(id);
+    const category = await categoryQueries.getById(id);
 
     if (!category) {
       return res.status(404).json({ error: 'Category not found' });
     }
 
-    categoryQueries.delete(id);
+    await categoryQueries.delete(id);
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting category:', error);

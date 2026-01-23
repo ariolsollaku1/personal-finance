@@ -7,7 +7,7 @@ const router = Router();
 // GET /api/portfolio - Get portfolio summary with live prices
 router.get('/', async (_req, res) => {
   try {
-    const holdings = holdingsQueries.getAll();
+    const holdings = await holdingsQueries.getAll();
 
     if (holdings.length === 0) {
       return res.json({
@@ -31,11 +31,13 @@ router.get('/', async (_req, res) => {
     const holdingsWithQuotes = holdings.map((holding) => {
       const quote = quotes.get(holding.symbol);
       const currentPrice = quote?.regularMarketPrice || 0;
-      const marketValue = holding.shares * currentPrice;
-      const costBasis = holding.shares * holding.avg_cost;
+      const shares = Number(holding.shares);
+      const avgCost = Number(holding.avg_cost);
+      const marketValue = shares * currentPrice;
+      const costBasis = shares * avgCost;
       const gain = marketValue - costBasis;
       const gainPercent = costBasis > 0 ? (gain / costBasis) * 100 : 0;
-      const dayChange = (quote?.regularMarketChange || 0) * holding.shares;
+      const dayChange = (quote?.regularMarketChange || 0) * shares;
       const dayChangePercent = quote?.regularMarketChangePercent || 0;
 
       totalValue += marketValue;
@@ -45,8 +47,8 @@ router.get('/', async (_req, res) => {
       return {
         id: holding.id,
         symbol: holding.symbol,
-        shares: holding.shares,
-        avgCost: holding.avg_cost,
+        shares: shares,
+        avgCost: avgCost,
         currentPrice,
         marketValue,
         costBasis,

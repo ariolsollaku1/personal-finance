@@ -74,10 +74,10 @@ function getMonthlyMultiplier(frequency: string): number {
 }
 
 // GET /api/projection - Get projection data
-router.get('/', (_req: Request, res: Response) => {
+router.get('/', async (_req: Request, res: Response) => {
   try {
-    const mainCurrency = settingsQueries.get('main_currency') || 'ALL';
-    const accounts = accountQueries.getAll();
+    const mainCurrency = await settingsQueries.get('main_currency') || 'ALL';
+    const accounts = await accountQueries.getAll();
 
     // Get all active recurring transactions
     const allRecurring: Array<{
@@ -92,14 +92,14 @@ router.get('/', (_req: Request, res: Response) => {
     }> = [];
 
     for (const account of accounts) {
-      const recurring = recurringQueries.getByAccount(account.id);
+      const recurring = await recurringQueries.getByAccount(account.id);
       for (const rec of recurring) {
         if (rec.is_active) {
           allRecurring.push({
             id: rec.id,
             account_id: rec.account_id,
             type: rec.type,
-            amount: rec.amount,
+            amount: Number(rec.amount),
             frequency: rec.frequency,
             payee_name: rec.payee_name,
             category_name: rec.category_name,
@@ -160,7 +160,7 @@ router.get('/', (_req: Request, res: Response) => {
 
     for (const account of accounts) {
       // Get the actual balance from the database
-      const balanceInfo = accountQueries.getBalance(account.id);
+      const balanceInfo = await accountQueries.getBalance(account.id);
       const balance = balanceInfo?.balance || 0;
       const balanceInMain = convertToMainCurrency(balance, account.currency, mainCurrency);
 
@@ -172,17 +172,17 @@ router.get('/', (_req: Request, res: Response) => {
         currentNetWorth += balanceInMain;
       } else if (account.type === 'stock') {
         // For stock accounts, calculate cost basis from holdings
-        const holdings = holdingsQueries.getByAccount(account.id);
+        const holdings = await holdingsQueries.getByAccount(account.id);
         let costBasis = 0;
         for (const holding of holdings) {
-          costBasis += holding.shares * holding.avg_cost;
+          costBasis += Number(holding.shares) * Number(holding.avg_cost);
         }
         const costInMain = convertToMainCurrency(costBasis, account.currency, mainCurrency);
         currentInvestments += costInMain;
         currentNetWorth += costInMain;
         currentByType.stock = costInMain;
       } else if (account.type === 'asset') {
-        const assetValue = convertToMainCurrency(account.initial_balance, account.currency, mainCurrency);
+        const assetValue = convertToMainCurrency(Number(account.initial_balance), account.currency, mainCurrency);
         currentAssets += assetValue;
         currentNetWorth += assetValue;
         currentByType.asset = assetValue;
@@ -191,7 +191,7 @@ router.get('/', (_req: Request, res: Response) => {
         currentTotalDebt += balanceInMain;
         currentNetWorth -= balanceInMain;
       } else if (account.type === 'credit') {
-        const limitInMain = convertToMainCurrency(account.initial_balance, account.currency, mainCurrency);
+        const limitInMain = convertToMainCurrency(Number(account.initial_balance), account.currency, mainCurrency);
         const amountOwed = limitInMain - balanceInMain;
         currentByType.credit = (currentByType.credit || 0) + amountOwed;
         currentTotalDebt += amountOwed;

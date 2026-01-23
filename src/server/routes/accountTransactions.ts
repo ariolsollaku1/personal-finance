@@ -10,24 +10,24 @@ import {
 const router = Router();
 
 // GET /api/accounts/:id/transactions - List transactions for an account
-router.get('/:id/transactions', (req: Request, res: Response) => {
+router.get('/:id/transactions', async (req: Request, res: Response) => {
   try {
     const accountId = parseInt(req.params.id);
-    const account = accountQueries.getById(accountId);
+    const account = await accountQueries.getById(accountId);
 
     if (!account) {
       return res.status(404).json({ error: 'Account not found' });
     }
 
-    const transactions = accountTransactionQueries.getByAccount(accountId);
+    const transactions = await accountTransactionQueries.getByAccount(accountId);
 
     // Calculate running balance
-    let runningBalance = account.initial_balance;
+    let runningBalance = Number(account.initial_balance);
     const transactionsWithBalance = [...transactions].reverse().map((tx) => {
       if (tx.type === 'inflow') {
-        runningBalance += tx.amount;
+        runningBalance += Number(tx.amount);
       } else {
-        runningBalance -= tx.amount;
+        runningBalance -= Number(tx.amount);
       }
       return { ...tx, balance: runningBalance };
     }).reverse();
@@ -40,12 +40,12 @@ router.get('/:id/transactions', (req: Request, res: Response) => {
 });
 
 // POST /api/accounts/:id/transactions - Create transaction
-router.post('/:id/transactions', (req: Request, res: Response) => {
+router.post('/:id/transactions', async (req: Request, res: Response) => {
   try {
     const accountId = parseInt(req.params.id);
     const { type, amount, date, payee, payeeId, category, categoryId, notes } = req.body;
 
-    const account = accountQueries.getById(accountId);
+    const account = await accountQueries.getById(accountId);
     if (!account) {
       return res.status(404).json({ error: 'Account not found' });
     }
@@ -61,17 +61,17 @@ router.post('/:id/transactions', (req: Request, res: Response) => {
     // Handle payee - get or create
     let finalPayeeId = payeeId || null;
     if (!finalPayeeId && payee) {
-      finalPayeeId = payeeQueries.getOrCreate(payee);
+      finalPayeeId = await payeeQueries.getOrCreate(payee);
     }
 
     // Handle category - get or create
     let finalCategoryId = categoryId || null;
     if (!finalCategoryId && category) {
       const categoryType = type === 'inflow' ? 'income' : 'expense';
-      finalCategoryId = categoryQueries.getOrCreate(category, categoryType);
+      finalCategoryId = await categoryQueries.getOrCreate(category, categoryType);
     }
 
-    const id = accountTransactionQueries.create(
+    const id = await accountTransactionQueries.create(
       accountId,
       type as TransactionType,
       amount,
@@ -81,7 +81,7 @@ router.post('/:id/transactions', (req: Request, res: Response) => {
       notes || null
     );
 
-    const transaction = accountTransactionQueries.getById(id as number);
+    const transaction = await accountTransactionQueries.getById(id as number);
     res.status(201).json(transaction);
   } catch (error) {
     console.error('Error creating account transaction:', error);
@@ -90,18 +90,18 @@ router.post('/:id/transactions', (req: Request, res: Response) => {
 });
 
 // PUT /api/accounts/:accountId/transactions/:txId - Update transaction
-router.put('/:accountId/transactions/:txId', (req: Request, res: Response) => {
+router.put('/:accountId/transactions/:txId', async (req: Request, res: Response) => {
   try {
     const accountId = parseInt(req.params.accountId);
     const txId = parseInt(req.params.txId);
     const { type, amount, date, payee, payeeId, category, categoryId, notes } = req.body;
 
-    const account = accountQueries.getById(accountId);
+    const account = await accountQueries.getById(accountId);
     if (!account) {
       return res.status(404).json({ error: 'Account not found' });
     }
 
-    const transaction = accountTransactionQueries.getById(txId);
+    const transaction = await accountTransactionQueries.getById(txId);
     if (!transaction) {
       return res.status(404).json({ error: 'Transaction not found' });
     }
@@ -122,17 +122,17 @@ router.put('/:accountId/transactions/:txId', (req: Request, res: Response) => {
     // Handle payee - get or create
     let finalPayeeId = payeeId !== undefined ? payeeId : transaction.payee_id;
     if (payeeId === undefined && payee) {
-      finalPayeeId = payeeQueries.getOrCreate(payee);
+      finalPayeeId = await payeeQueries.getOrCreate(payee);
     }
 
     // Handle category - get or create
     let finalCategoryId = categoryId !== undefined ? categoryId : transaction.category_id;
     if (categoryId === undefined && category) {
       const categoryType = txType === 'inflow' ? 'income' : 'expense';
-      finalCategoryId = categoryQueries.getOrCreate(category, categoryType);
+      finalCategoryId = await categoryQueries.getOrCreate(category, categoryType);
     }
 
-    accountTransactionQueries.update(
+    await accountTransactionQueries.update(
       txId,
       txType as TransactionType,
       amount !== undefined ? amount : transaction.amount,
@@ -142,7 +142,7 @@ router.put('/:accountId/transactions/:txId', (req: Request, res: Response) => {
       notes !== undefined ? notes : transaction.notes
     );
 
-    const updatedTransaction = accountTransactionQueries.getById(txId);
+    const updatedTransaction = await accountTransactionQueries.getById(txId);
     res.json(updatedTransaction);
   } catch (error) {
     console.error('Error updating account transaction:', error);
@@ -151,17 +151,17 @@ router.put('/:accountId/transactions/:txId', (req: Request, res: Response) => {
 });
 
 // DELETE /api/accounts/:accountId/transactions/:txId - Delete transaction
-router.delete('/:accountId/transactions/:txId', (req: Request, res: Response) => {
+router.delete('/:accountId/transactions/:txId', async (req: Request, res: Response) => {
   try {
     const accountId = parseInt(req.params.accountId);
     const txId = parseInt(req.params.txId);
 
-    const account = accountQueries.getById(accountId);
+    const account = await accountQueries.getById(accountId);
     if (!account) {
       return res.status(404).json({ error: 'Account not found' });
     }
 
-    const transaction = accountTransactionQueries.getById(txId);
+    const transaction = await accountTransactionQueries.getById(txId);
     if (!transaction) {
       return res.status(404).json({ error: 'Transaction not found' });
     }
@@ -174,7 +174,7 @@ router.delete('/:accountId/transactions/:txId', (req: Request, res: Response) =>
       return res.status(400).json({ error: 'Cannot delete transfer transactions directly. Delete the transfer instead.' });
     }
 
-    accountTransactionQueries.delete(txId);
+    await accountTransactionQueries.delete(txId);
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting account transaction:', error);

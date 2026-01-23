@@ -5,9 +5,9 @@ import { getQuote } from '../services/yahoo.js';
 const router = Router();
 
 // GET /api/holdings - List all holdings (global - for dashboard aggregation)
-router.get('/', (_req, res) => {
+router.get('/', async (_req, res) => {
   try {
-    const holdings = holdingsQueries.getAll();
+    const holdings = await holdingsQueries.getAll();
     res.json(holdings);
   } catch (error) {
     console.error('Error fetching holdings:', error);
@@ -16,10 +16,10 @@ router.get('/', (_req, res) => {
 });
 
 // GET /api/holdings/account/:accountId - List holdings for specific account
-router.get('/account/:accountId', (req, res) => {
+router.get('/account/:accountId', async (req, res) => {
   try {
     const accountId = parseInt(req.params.accountId);
-    const holdings = holdingsQueries.getByAccount(accountId);
+    const holdings = await holdingsQueries.getByAccount(accountId);
     res.json(holdings);
   } catch (error) {
     console.error('Error fetching holdings:', error);
@@ -28,10 +28,10 @@ router.get('/account/:accountId', (req, res) => {
 });
 
 // GET /api/holdings/:symbol - Get specific holding (optionally filtered by account)
-router.get('/:symbol', (req, res) => {
+router.get('/:symbol', async (req, res) => {
   try {
     const accountId = req.query.accountId ? parseInt(req.query.accountId as string) : undefined;
-    const holding = holdingsQueries.getBySymbol(req.params.symbol.toUpperCase(), accountId);
+    const holding = await holdingsQueries.getBySymbol(req.params.symbol.toUpperCase(), accountId);
     if (!holding) {
       return res.status(404).json({ error: 'Holding not found' });
     }
@@ -68,24 +68,24 @@ router.post('/', async (req, res) => {
     const avgCostPerShare = totalCost / shares;
 
     // Check if holding already exists for this account
-    const existingHolding = holdingsQueries.getBySymbol(upperSymbol, accountId);
+    const existingHolding = await holdingsQueries.getBySymbol(upperSymbol, accountId);
 
     if (existingHolding) {
       // Update existing holding with new average cost
-      const totalShares = existingHolding.shares + shares;
-      const totalValue = existingHolding.shares * existingHolding.avg_cost + totalCost;
+      const totalShares = Number(existingHolding.shares) + shares;
+      const totalValue = Number(existingHolding.shares) * Number(existingHolding.avg_cost) + totalCost;
       const newAvgCost = totalValue / totalShares;
 
-      holdingsQueries.update(existingHolding.id, totalShares, newAvgCost);
+      await holdingsQueries.update(existingHolding.id, totalShares, newAvgCost);
     } else {
       // Create new holding for this account
-      holdingsQueries.create(upperSymbol, shares, avgCostPerShare, accountId);
+      await holdingsQueries.create(upperSymbol, shares, avgCostPerShare, accountId);
     }
 
     const txDate = date || new Date().toISOString().split('T')[0];
 
     // Record stock transaction with accountId
-    transactionQueries.create(
+    await transactionQueries.create(
       upperSymbol,
       'buy',
       shares,
@@ -96,7 +96,7 @@ router.post('/', async (req, res) => {
     );
 
     // Create account transaction (outflow) to reduce cash balance
-    accountTransactionQueries.create(
+    await accountTransactionQueries.create(
       accountId,
       'outflow',
       totalCost,
@@ -106,7 +106,7 @@ router.post('/', async (req, res) => {
       `Buy ${shares} ${upperSymbol} @ $${price.toFixed(2)}`
     );
 
-    const updatedHolding = holdingsQueries.getBySymbol(upperSymbol, accountId);
+    const updatedHolding = await holdingsQueries.getBySymbol(upperSymbol, accountId);
     res.status(201).json(updatedHolding);
   } catch (error) {
     console.error('Error adding holding:', error);
@@ -115,15 +115,10 @@ router.post('/', async (req, res) => {
 });
 
 // DELETE /api/holdings/:id - Remove holding
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const result = holdingsQueries.delete(id);
-
-    if (result.changes === 0) {
-      return res.status(404).json({ error: 'Holding not found' });
-    }
-
+    await holdingsQueries.delete(id);
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting holding:', error);
@@ -132,7 +127,7 @@ router.delete('/:id', (req, res) => {
 });
 
 // POST /api/holdings/:symbol/sell - Sell shares (requires accountId in query or body)
-router.post('/:symbol/sell', (req, res) => {
+router.post('/:symbol/sell', async (req, res) => {
   try {
     const { shares, price, fees = 0, date, accountId } = req.body;
     const symbol = req.params.symbol.toUpperCase();
@@ -145,12 +140,12 @@ router.post('/:symbol/sell', (req, res) => {
       return res.status(400).json({ error: 'accountId is required' });
     }
 
-    const holding = holdingsQueries.getBySymbol(symbol, accountId);
+    const holding = await holdingsQueries.getBySymbol(symbol, accountId);
     if (!holding) {
       return res.status(404).json({ error: 'Holding not found' });
     }
 
-    if (shares > holding.shares) {
+    if (shares > Number(holding.shares)) {
       return res.status(400).json({ error: 'Cannot sell more shares than owned' });
     }
 
@@ -158,7 +153,7 @@ router.post('/:symbol/sell', (req, res) => {
     const proceeds = shares * price - (fees || 0);
 
     // Record sell transaction with accountId
-    transactionQueries.create(
+    await transactionQueries.create(
       symbol,
       'sell',
       shares,
@@ -169,7 +164,7 @@ router.post('/:symbol/sell', (req, res) => {
     );
 
     // Create account transaction (inflow) to increase cash balance
-    accountTransactionQueries.create(
+    await accountTransactionQueries.create(
       accountId,
       'inflow',
       proceeds,
@@ -179,16 +174,16 @@ router.post('/:symbol/sell', (req, res) => {
       `Sell ${shares} ${symbol} @ $${price.toFixed(2)}`
     );
 
-    const remainingShares = holding.shares - shares;
+    const remainingShares = Number(holding.shares) - shares;
 
     if (remainingShares <= 0) {
       // Remove holding if no shares remain
-      holdingsQueries.delete(holding.id);
+      await holdingsQueries.delete(holding.id);
       return res.json({ success: true, holding: null });
     } else {
       // Update holding with remaining shares (avg cost stays the same)
-      holdingsQueries.update(holding.id, remainingShares, holding.avg_cost);
-      const updatedHolding = holdingsQueries.getBySymbol(symbol, accountId);
+      await holdingsQueries.update(holding.id, remainingShares, Number(holding.avg_cost));
+      const updatedHolding = await holdingsQueries.getBySymbol(symbol, accountId);
       return res.json({ success: true, holding: updatedHolding });
     }
   } catch (error) {
