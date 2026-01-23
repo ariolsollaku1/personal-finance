@@ -3,7 +3,6 @@ import { SidebarLayout } from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import Dashboard from './pages/Dashboard';
 import AccountPage from './pages/AccountPage';
-import AddAccountPage from './pages/AddAccountPage';
 import TransfersPage from './pages/TransfersPage';
 import CategoriesPage from './pages/settings/CategoriesPage';
 import PayeesPage from './pages/settings/PayeesPage';
@@ -30,7 +29,6 @@ function App() {
             <SidebarLayout>
               <Routes>
                 <Route path="/" element={<Dashboard />} />
-                <Route path="/accounts/new" element={<AddAccountPage />} />
                 <Route path="/accounts/:id" element={<AccountPage />} />
                 <Route path="/transfers" element={<TransfersPage />} />
                 <Route path="/projection" element={<ProjectionPage />} />

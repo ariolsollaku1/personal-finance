@@ -24,6 +24,7 @@ import HoldingsList from '../components/Portfolio/HoldingsList';
 import Summary from '../components/Portfolio/Summary';
 import DividendList from '../components/Dividends/DividendList';
 import TaxSummary from '../components/Dividends/TaxSummary';
+import AddTransactionModal from '../components/AddTransactionModal';
 
 export default function AccountPage() {
   const { id } = useParams<{ id: string }>();
@@ -77,23 +78,14 @@ export default function AccountPage() {
   const [refreshing, setRefreshing] = useState(false);
   const refreshIntervalRef = useRef<number | null>(null);
 
-  const [showAddTransaction, setShowAddTransaction] = useState(false);
   const [showAddRecurring, setShowAddRecurring] = useState(false);
   const [showEditAccount, setShowEditAccount] = useState(false);
   const [showAddHolding, setShowAddHolding] = useState(false);
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [checkingDividends, setCheckingDividends] = useState(false);
   const [dividendCheckResult, setDividendCheckResult] = useState<string | null>(null);
   const [editingTransaction, setEditingTransaction] = useState<AccountTransaction | null>(null);
   const [editingRecurring, setEditingRecurring] = useState<RecurringTransaction | null>(null);
-
-  const [newTx, setNewTx] = useState({
-    type: 'outflow' as TransactionType,
-    amount: '',
-    date: new Date().toISOString().split('T')[0],
-    payee: '',
-    category: '',
-    notes: '',
-  });
 
   const [newRecurring, setNewRecurring] = useState({
     type: 'outflow' as TransactionType,
@@ -235,30 +227,35 @@ export default function AccountPage() {
     }
   };
 
-  const handleAddTransaction = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Light refresh - only updates transactions and balance without full loading state
+  const refreshData = async () => {
     try {
-      await accountTransactionsApi.create(accountId, {
-        type: newTx.type,
-        amount: parseFloat(newTx.amount),
-        date: newTx.date,
-        payee: newTx.payee || undefined,
-        category: newTx.category || undefined,
-        notes: newTx.notes || undefined,
+      const [accountData, txData, recurringData] = await Promise.all([
+        accountsApi.get(accountId),
+        accountTransactionsApi.getByAccount(accountId),
+        recurringApi.getByAccount(accountId),
+      ]);
+      setAccount(accountData);
+      setTransactions(txData);
+      setRecurring(recurringData);
+      setEditAccountData({
+        name: accountData.name,
+        initialBalance: accountData.initial_balance,
       });
-      setShowAddTransaction(false);
-      setNewTx({
-        type: 'outflow',
-        amount: '',
-        date: new Date().toISOString().split('T')[0],
-        payee: '',
-        category: '',
-        notes: '',
-      });
-      loadAccount();
-      window.dispatchEvent(new Event('accounts-changed'));
+
+      if (accountData.type === 'stock') {
+        const [portfolioData, dividendsData, taxSummaryData] = await Promise.all([
+          accountsApi.getPortfolio(accountId),
+          dividendsApi.getByAccount(accountId),
+          dividendsApi.getTaxSummary(undefined, accountId),
+        ]);
+        setPortfolio(portfolioData);
+        setDividends(dividendsData);
+        setTaxSummary(taxSummaryData);
+        setLastUpdated(new Date());
+      }
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to add transaction');
+      console.error('Failed to refresh data:', err);
     }
   };
 
@@ -266,7 +263,7 @@ export default function AccountPage() {
     if (!confirm('Delete this transaction?')) return;
     try {
       await accountTransactionsApi.delete(accountId, txId);
-      loadAccount();
+      refreshData();
       window.dispatchEvent(new Event('accounts-changed'));
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to delete transaction');
@@ -282,7 +279,7 @@ export default function AccountPage() {
         setDividendCheckResult(
           `Found ${result.dividendsCreated} new dividend(s). ${result.transactionsCreated} transaction(s) created.`
         );
-        loadAccount();
+        refreshData();
         window.dispatchEvent(new Event('accounts-changed'));
       } else {
         setDividendCheckResult('No new dividends found.');
@@ -316,7 +313,7 @@ export default function AccountPage() {
         frequency: 'monthly',
         nextDueDate: new Date().toISOString().split('T')[0],
       });
-      loadAccount();
+      refreshData();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to add recurring transaction');
     }
@@ -325,7 +322,7 @@ export default function AccountPage() {
   const handleApplyRecurring = async (recurringId: number) => {
     try {
       await recurringApi.apply(recurringId);
-      loadAccount();
+      refreshData();
       window.dispatchEvent(new Event('accounts-changed'));
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to apply recurring transaction');
@@ -336,7 +333,7 @@ export default function AccountPage() {
     if (!confirm('Delete this recurring transaction?')) return;
     try {
       await recurringApi.delete(recurringId);
-      loadAccount();
+      refreshData();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to delete recurring transaction');
     }
@@ -355,7 +352,7 @@ export default function AccountPage() {
         notes: editingTransaction.notes || undefined,
       });
       setEditingTransaction(null);
-      loadAccount();
+      refreshData();
       window.dispatchEvent(new Event('accounts-changed'));
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to update transaction');
@@ -376,7 +373,7 @@ export default function AccountPage() {
         nextDueDate: editingRecurring.next_due_date,
       });
       setEditingRecurring(null);
-      loadAccount();
+      refreshData();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to update recurring transaction');
     }
@@ -387,7 +384,7 @@ export default function AccountPage() {
     try {
       await accountsApi.update(accountId, editAccountData);
       setShowEditAccount(false);
-      loadAccount();
+      refreshData();
       // Notify sidebar to refresh
       window.dispatchEvent(new Event('accounts-changed'));
     } catch (err) {
@@ -582,13 +579,13 @@ export default function AccountPage() {
                   accountId={accountId}
                   onSuccess={() => {
                     setShowAddHolding(false);
-                    loadAccount();
+                    refreshData();
                   }}
                   onCancel={() => setShowAddHolding(false)}
                 />
               )}
 
-              <HoldingsList holdings={portfolio.holdings} accountId={accountId} onUpdate={loadAccount} />
+              <HoldingsList holdings={portfolio.holdings} accountId={accountId} onUpdate={refreshData} />
             </div>
           )}
 
@@ -614,9 +611,9 @@ export default function AccountPage() {
                 </div>
               )}
 
-              <TaxSummary taxSummary={taxSummary} onUpdate={loadAccount} />
+              <TaxSummary taxSummary={taxSummary} onUpdate={refreshData} />
 
-              <DividendList dividends={dividends} onDelete={loadAccount} />
+              <DividendList dividends={dividends} onDelete={refreshData} />
             </div>
           )}
 
@@ -692,88 +689,12 @@ export default function AccountPage() {
                 <div className="p-6 border-b border-gray-200 flex justify-between items-center">
                   <h2 className="text-lg font-semibold text-gray-700">Transactions</h2>
                   <button
-                    onClick={() => setShowAddTransaction(!showAddTransaction)}
+                    onClick={() => setShowTransactionModal(true)}
                     className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700"
                   >
-                    {showAddTransaction ? 'Cancel' : '+ Add Transaction'}
+                    + Add Transaction
                   </button>
                 </div>
-
-                {/* Add Transaction Form */}
-                {showAddTransaction && (
-                  <div className="p-6 border-b border-gray-200 bg-gray-50">
-                    <form onSubmit={handleAddTransaction} className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="col-span-2 flex gap-4">
-                          <label className="flex items-center">
-                            <input
-                              type="radio"
-                              checked={newTx.type === 'inflow'}
-                              onChange={() => setNewTx({ ...newTx, type: 'inflow' })}
-                              className="mr-2"
-                            />
-                            Deposit
-                          </label>
-                          <label className="flex items-center">
-                            <input
-                              type="radio"
-                              checked={newTx.type === 'outflow'}
-                              onChange={() => setNewTx({ ...newTx, type: 'outflow' })}
-                              className="mr-2"
-                            />
-                            Withdrawal
-                          </label>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={newTx.amount}
-                            onChange={(e) => setNewTx({ ...newTx, amount: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                          <input
-                            type="date"
-                            value={newTx.date}
-                            onChange={(e) => setNewTx({ ...newTx, date: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                            required
-                          />
-                        </div>
-                        <div className="col-span-2">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                          <input
-                            type="text"
-                            value={newTx.notes}
-                            onChange={(e) => setNewTx({ ...newTx, notes: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                            placeholder="e.g., Deposit for stock purchase"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setShowAddTransaction(false)}
-                          className="px-4 py-2 border border-gray-300 rounded-md"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="submit"
-                          className="px-4 py-2 bg-orange-600 text-white rounded-md"
-                        >
-                          Add Transaction
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                )}
 
                 {transactions.length === 0 ? (
                   <div className="p-4 text-center text-gray-500 text-sm">No transactions yet</div>
@@ -910,121 +831,12 @@ export default function AccountPage() {
             <div className="p-6 border-b border-gray-200 flex justify-between items-center">
               <h2 className="text-lg font-semibold text-gray-700">Transactions</h2>
               <button
-                onClick={() => setShowAddTransaction(true)}
+                onClick={() => setShowTransactionModal(true)}
                 className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700"
               >
                 + Add Transaction
               </button>
             </div>
-
-            {/* Add Transaction Form */}
-            {showAddTransaction && (
-              <div className="p-6 border-b border-gray-200 bg-gray-50">
-                <form onSubmit={handleAddTransaction} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="col-span-2 flex gap-4">
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          checked={newTx.type === 'inflow'}
-                          onChange={() => setNewTx({ ...newTx, type: 'inflow' })}
-                          className="mr-2"
-                        />
-                        Income
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          checked={newTx.type === 'outflow'}
-                          onChange={() => setNewTx({ ...newTx, type: 'outflow' })}
-                          className="mr-2"
-                        />
-                        Expense
-                      </label>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={newTx.amount}
-                        onChange={(e) => setNewTx({ ...newTx, amount: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                      <input
-                        type="date"
-                        value={newTx.date}
-                        onChange={(e) => setNewTx({ ...newTx, date: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Payee</label>
-                      <input
-                        type="text"
-                        value={newTx.payee}
-                        onChange={(e) => setNewTx({ ...newTx, payee: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                        list="payees-tx"
-                      />
-                      <datalist id="payees-tx">
-                        {payees.map((p) => (
-                          <option key={p.id} value={p.name} />
-                        ))}
-                      </datalist>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                      <select
-                        value={newTx.category}
-                        onChange={(e) => setNewTx({ ...newTx, category: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                      >
-                        <option value="">Select category</option>
-                        {categories
-                          .filter((c) =>
-                            newTx.type === 'inflow' ? c.type === 'income' : c.type === 'expense'
-                          )
-                          .map((c) => (
-                            <option key={c.id} value={c.name}>
-                              {c.name}
-                            </option>
-                          ))}
-                      </select>
-                    </div>
-                    <div className="col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                      <input
-                        type="text"
-                        value={newTx.notes}
-                        onChange={(e) => setNewTx({ ...newTx, notes: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setShowAddTransaction(false)}
-                      className="px-4 py-2 border border-gray-300 rounded-md"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-4 py-2 bg-orange-600 text-white rounded-md"
-                    >
-                      Add Transaction
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
 
             {/* Transaction List */}
             {transactions.length === 0 ? (
@@ -1471,6 +1283,19 @@ export default function AccountPage() {
           </div>
         </div>
       )}
+
+      {/* Add Transaction Modal */}
+      <AddTransactionModal
+        isOpen={showTransactionModal}
+        onClose={() => setShowTransactionModal(false)}
+        accountId={accountId}
+        accountCurrency={account.currency}
+        isStockAccount={isStockAccount}
+        onSuccess={() => {
+          refreshData();
+          window.dispatchEvent(new Event('accounts-changed'));
+        }}
+      />
     </div>
   );
 }

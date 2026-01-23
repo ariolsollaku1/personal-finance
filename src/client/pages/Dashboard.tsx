@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { DashboardData, dashboardApi, recurringApi } from '../lib/api';
 import { formatCurrency } from '../lib/currency';
+import AddAccountModal from '../components/AddAccountModal';
 
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAddAccount, setShowAddAccount] = useState(false);
 
   useEffect(() => {
     loadDashboard();
@@ -69,15 +71,15 @@ export default function Dashboard() {
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-gray-500 mt-1">Your financial overview</p>
         </div>
-        <Link
-          to="/accounts/new"
+        <button
+          onClick={() => setShowAddAccount(true)}
           className="flex items-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
           Add Account
-        </Link>
+        </button>
       </div>
 
       {/* Net Worth Card */}
@@ -217,9 +219,9 @@ export default function Dashboard() {
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
             <h2 className="text-lg font-semibold text-gray-900">All Accounts</h2>
-            <Link to="/accounts/new" className="text-sm font-medium text-orange-600 hover:text-orange-500 transition-colors">
+            <button onClick={() => setShowAddAccount(true)} className="text-sm font-medium text-orange-600 hover:text-orange-500 transition-colors">
               + Add Account
-            </Link>
+            </button>
           </div>
           <div className="divide-y divide-gray-100">
             {data.accounts.length === 0 ? (
@@ -230,9 +232,9 @@ export default function Dashboard() {
                   </svg>
                 </div>
                 <p className="text-gray-500 text-sm">No accounts yet</p>
-                <Link to="/accounts/new" className="text-orange-600 hover:text-orange-500 text-sm font-medium">
+                <button onClick={() => setShowAddAccount(true)} className="text-orange-600 hover:text-orange-500 text-sm font-medium">
                   Create your first account
-                </Link>
+                </button>
               </div>
             ) : (
               data.accounts.map((account) => (
@@ -313,6 +315,9 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Add Account Modal */}
+      <AddAccountModal isOpen={showAddAccount} onClose={() => setShowAddAccount(false)} />
     </div>
   );
 }

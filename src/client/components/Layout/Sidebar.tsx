@@ -1,6 +1,7 @@
-import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Account, accountsApi, Currency } from '../../lib/api';
+import AddAccountModal from '../AddAccountModal';
 
 // Compact currency formatter for sidebar (e.g., 494k L, 1.5M €)
 function formatCompactCurrency(amount: number, currency: Currency): string {
@@ -41,7 +42,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     credit: false,
     asset: false,
   });
-  const navigate = useNavigate();
+  const [showAddModal, setShowAddModal] = useState(false);
   const location = useLocation();
 
   // Reload accounts on route change (e.g., after creating/deleting an account)
@@ -110,6 +111,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   };
 
   return (
+    <>
     <aside
       className={`bg-white border-r border-gray-100 flex flex-col h-full transition-all duration-300 shadow-sm ${
         collapsed ? 'w-16' : 'w-64'
@@ -335,7 +337,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         {/* Add Account Button */}
         <div className="mt-4 px-3">
           <button
-            onClick={() => navigate('/accounts/new')}
+            onClick={() => setShowAddModal(true)}
             className="flex items-center justify-center w-full px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-orange-500 to-amber-500 rounded-xl shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 hover:scale-[1.02] transition-all duration-200"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -421,5 +423,9 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         </div>
       </nav>
     </aside>
+
+    {/* Add Account Modal */}
+    <AddAccountModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} />
+    </>
   );
 }
