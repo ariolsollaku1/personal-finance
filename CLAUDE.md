@@ -643,6 +643,22 @@ The app uses an **orange** color scheme as the primary brand color.
 
 ## UI Design System
 
+> **IMPORTANT**: When creating any new UI, always follow these principles and patterns. This ensures visual consistency across the entire application.
+
+### Quick Reference
+
+| Element | Key Classes |
+|---------|-------------|
+| Corners | `rounded-xl` (cards, buttons, inputs), `rounded-2xl` (hero cards, modals) |
+| Shadows | `shadow-sm` (cards), `shadow-lg shadow-orange-500/25` (primary buttons) |
+| Primary gradient | `bg-gradient-to-r from-orange-500 to-amber-500` |
+| Branding gradient | `bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600` |
+| Focus state | `focus:ring-2 focus:ring-orange-500 focus:border-transparent` |
+| Transitions | `transition-all duration-200` (always add to interactive elements) |
+| Page heading | `text-3xl font-bold text-gray-900` |
+| Card | `bg-white rounded-xl shadow-sm p-6` |
+| Primary button | `bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl shadow-lg shadow-orange-500/25` |
+
 ### Design Principles
 
 1. **Modern & Clean**: Use generous whitespace, rounded corners (xl), and subtle shadows
@@ -650,6 +666,10 @@ The app uses an **orange** color scheme as the primary brand color.
 3. **Mobile-First**: Responsive design, branding panels hidden on mobile (`hidden lg:flex`)
 4. **Smooth Transitions**: All interactive elements use `transition-all duration-200`
 5. **Visual Hierarchy**: Clear headings, supportive subtext, and grouped content
+6. **Orange as Primary**: All interactive elements, links, focus states use orange-500/600
+7. **Gradient Headers**: Section cards use colored gradients (green for income, red for expense, orange for primary)
+8. **Hover-Reveal Actions**: Edit/delete buttons appear on row hover with `group` and `group-hover:opacity-100`
+9. **Glass Effect**: Use `bg-white/20 backdrop-blur` for icons on gradient backgrounds
 
 ### Color Palette
 
@@ -829,10 +849,176 @@ Use Heroicons (outline style) via inline SVG:
 
 ---
 
-### Legacy Classes (for reference)
-- Layout: `max-w-7xl mx-auto px-4 sm:px-6 lg:px-8`
-- Cards: `bg-white rounded-lg shadow p-6`
-- Tables: `min-w-full divide-y divide-gray-200`
+### Page Header with Action Button
+```tsx
+<div className="flex justify-between items-center">
+  <div>
+    <h1 className="text-3xl font-bold text-gray-900">Page Title</h1>
+    <p className="text-gray-500 mt-1">Descriptive subtitle text</p>
+  </div>
+  <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold bg-orange-500 text-white hover:bg-orange-600 shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 transition-all duration-200">
+    <svg className="w-5 h-5">...</svg>
+    Action
+  </button>
+</div>
+```
+
+### Card with Gradient Header
+```tsx
+<div className="bg-white rounded-xl shadow-sm overflow-hidden">
+  <div className="px-6 py-4 bg-gradient-to-r from-green-500 to-emerald-600 flex items-center gap-3">
+    <div className="w-8 h-8 bg-white/20 backdrop-blur rounded-lg flex items-center justify-center">
+      <svg className="w-5 h-5 text-white">...</svg>
+    </div>
+    <div>
+      <h2 className="font-semibold text-white">Card Title</h2>
+      <p className="text-green-100 text-sm">Subtitle</p>
+    </div>
+  </div>
+  <div className="divide-y divide-gray-100">
+    {/* Content */}
+  </div>
+</div>
+```
+
+### Hero Card (Dashboard Net Worth)
+```tsx
+<div className="bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 rounded-2xl shadow-xl p-8 text-white">
+  <p className="text-orange-100 text-sm font-medium">Label</p>
+  <p className="text-4xl font-bold mt-1">$123,456</p>
+  <p className="text-orange-200 text-sm mt-2">Supporting text</p>
+</div>
+```
+
+### Stat Card
+```tsx
+<div className="bg-white rounded-xl shadow-sm p-5">
+  <div className="flex items-center gap-3">
+    <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+      <svg className="w-5 h-5 text-blue-600">...</svg>
+    </div>
+    <div>
+      <p className="text-sm text-gray-500">Label</p>
+      <p className="text-xl font-bold text-gray-900">Value</p>
+    </div>
+  </div>
+</div>
+```
+
+### List Item with Hover-Reveal Actions
+```tsx
+<div className="px-6 py-4 flex justify-between items-center hover:bg-gray-50 transition-colors group">
+  <span className="text-gray-900 font-medium">Item Name</span>
+  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+    <button className="p-2 text-orange-600 hover:bg-orange-100 rounded-lg transition-colors">
+      <svg className="w-4 h-4">...</svg>
+    </button>
+    <button className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors">
+      <svg className="w-4 h-4">...</svg>
+    </button>
+  </div>
+</div>
+```
+
+### Sidebar Active Navigation Item
+```tsx
+// Active state - gradient background
+<NavLink className="flex items-center px-4 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/25">
+  <svg className="w-5 h-5">...</svg>
+  <span className="ml-3 font-medium">Dashboard</span>
+</NavLink>
+
+// Inactive state
+<NavLink className="flex items-center px-4 py-2.5 rounded-xl text-gray-700 hover:bg-orange-50 hover:text-orange-700 transition-all duration-200">
+  <svg className="w-5 h-5">...</svg>
+  <span className="ml-3 font-medium">Settings</span>
+</NavLink>
+```
+
+### Sortable Table Header
+```tsx
+<th
+  className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-orange-600 transition-colors"
+  onClick={() => handleSort('column')}
+>
+  <div className="flex items-center gap-1">
+    Column Name
+    <svg className="w-4 h-4">{/* Sort indicator */}</svg>
+  </div>
+</th>
+```
+
+### Empty State
+```tsx
+<div className="p-6 text-center">
+  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+    <svg className="w-6 h-6 text-gray-400">...</svg>
+  </div>
+  <p className="text-gray-500 text-sm">No items found</p>
+</div>
+```
+
+### Badge/Pill
+```tsx
+// Green (income/success)
+<span className="px-1.5 py-0.5 text-[10px] font-semibold bg-green-100 text-green-700 rounded-full">3</span>
+
+// Red (expense/warning)
+<span className="px-1.5 py-0.5 text-[10px] font-semibold bg-red-100 text-red-700 rounded-full">5</span>
+
+// Gray (neutral)
+<span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">Label</span>
+```
+
+### Modal/Dialog
+```tsx
+<div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+  <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden">
+    <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+      <h3 className="text-xl font-bold text-gray-900">Modal Title</h3>
+      <button className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
+        <svg className="w-5 h-5 text-gray-500">...</svg>
+      </button>
+    </div>
+    <div className="p-6 overflow-y-auto">
+      {/* Content */}
+    </div>
+  </div>
+</div>
+```
+
+### Form in Card
+```tsx
+<div className="bg-white rounded-xl shadow-sm p-6">
+  <h3 className="font-semibold text-gray-900 mb-4">Form Title</h3>
+  <form className="flex gap-4">
+    <input className="flex-1 px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200" />
+    <button type="submit" className="px-6 py-3 bg-orange-500 text-white font-semibold rounded-xl hover:bg-orange-600 transition-all duration-200 shadow-lg shadow-orange-500/25">
+      Submit
+    </button>
+  </form>
+</div>
+```
+
+### User Avatar
+```tsx
+<div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white font-semibold text-sm shadow-lg shadow-orange-500/25">
+  {email.charAt(0).toUpperCase()}
+</div>
+```
+
+### Account Type Selector Card
+```tsx
+<button className={`p-4 rounded-xl border-2 text-left transition-all duration-200 ${
+  isSelected
+    ? 'border-orange-500 bg-orange-50 ring-2 ring-orange-500/20'
+    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+}`}>
+  <span className="text-2xl mb-2 block">🏦</span>
+  <p className={`font-medium ${isSelected ? 'text-orange-700' : 'text-gray-900'}`}>Bank Account</p>
+  <p className="text-xs text-gray-500 mt-1">Description text</p>
+</button>
+```
 
 ### Color Conventions
 - Positive/gains: `text-green-600`
