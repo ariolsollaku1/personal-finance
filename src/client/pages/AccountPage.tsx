@@ -25,6 +25,7 @@ import Summary from '../components/Portfolio/Summary';
 import DividendList from '../components/Dividends/DividendList';
 import TaxSummary from '../components/Dividends/TaxSummary';
 import AddTransactionModal from '../components/AddTransactionModal';
+import { AccountSkeleton } from '../components/Skeleton';
 
 export default function AccountPage() {
   const { id } = useParams<{ id: string }>();
@@ -403,11 +404,7 @@ export default function AccountPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-gray-500">Loading account...</div>
-      </div>
-    );
+    return <AccountSkeleton />;
   }
 
   if (error || !account) {

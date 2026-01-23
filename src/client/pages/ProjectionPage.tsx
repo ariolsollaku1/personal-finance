@@ -16,6 +16,7 @@ import {
 } from 'recharts';
 import { ProjectionData, projectionApi } from '../lib/api';
 import { formatCurrency } from '../lib/currency';
+import { ProjectionSkeleton } from '../components/Skeleton';
 
 export default function ProjectionPage() {
   const [data, setData] = useState<ProjectionData | null>(null);
@@ -40,11 +41,7 @@ export default function ProjectionPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-gray-500">Loading projections...</div>
-      </div>
-    );
+    return <ProjectionSkeleton />;
   }
 
   if (error) {
