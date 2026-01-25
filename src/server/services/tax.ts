@@ -11,11 +11,12 @@ export interface DividendTaxCalculation {
 const DEFAULT_DIVIDEND_TAX_RATE = 0.30;
 
 export async function calculateDividendTax(
+  userId: string,
   dividendPerShare: number,
   sharesHeld: number,
   taxRate?: number
 ): Promise<DividendTaxCalculation> {
-  const rate = taxRate ?? (await settingsQueries.getDividendTaxRate()) ?? DEFAULT_DIVIDEND_TAX_RATE;
+  const rate = taxRate ?? (await settingsQueries.getDividendTaxRate(userId)) ?? DEFAULT_DIVIDEND_TAX_RATE;
   const grossAmount = dividendPerShare * sharesHeld;
   const taxAmount = grossAmount * rate;
   const netAmount = grossAmount - taxAmount;
@@ -47,13 +48,13 @@ export function calculateAnnualTax(dividends: DividendTaxCalculation[]): {
   };
 }
 
-export async function getCurrentTaxRate(): Promise<number> {
-  return (await settingsQueries.getDividendTaxRate()) ?? DEFAULT_DIVIDEND_TAX_RATE;
+export async function getCurrentTaxRate(userId: string): Promise<number> {
+  return (await settingsQueries.getDividendTaxRate(userId)) ?? DEFAULT_DIVIDEND_TAX_RATE;
 }
 
-export async function setTaxRate(rate: number): Promise<void> {
+export async function setTaxRate(userId: string, rate: number): Promise<void> {
   if (rate < 0 || rate > 1) {
     throw new Error('Tax rate must be between 0 and 1');
   }
-  await settingsQueries.set('dividend_tax_rate', rate.toString());
+  await settingsQueries.set(userId, 'dividend_tax_rate', rate.toString());
 }

@@ -17,6 +17,10 @@ npm-debug.log*
 .env
 .env.local
 .env.*.local
+ansible/.env.production
+ansible/inventory.ini
+ansible/cert/
+ansible/ssh_key/
 
 # OS files
 .DS_Store

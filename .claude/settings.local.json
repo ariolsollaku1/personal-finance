@@ -42,7 +42,17 @@
       "Bash(ssh-keygen:*)",
       "Bash(npm run dev:client:*)",
       "Bash(npx vite build)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: Add production build scripts and CORS config for Render deployment\n\n- Add build:server and start scripts for production\n- Configure CORS to allow Cloudflare frontend domain\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(npm run deploy:server:*)",
+      "Bash(pip install:*)",
+      "Bash(ssh-copy-id:*)",
+      "Bash(npm run build:server:*)",
+      "Bash(VITE_API_URL=\"http://207.180.192.49:3000/api\" npm run deploy:*)",
+      "Bash(VITE_API_URL=\"https://sleeve-saturday-intersection-disposal.trycloudflare.com/api\" npm run deploy:*)",
+      "Bash(VITE_API_URL=\"https://apartments-florida-flooring-slightly.trycloudflare.com/api\" npm run deploy:*)",
+      "Bash(VITE_API_URL=\"https://api.0ec.ai/api\" npm run deploy:*)"
     ]
   }
 }
