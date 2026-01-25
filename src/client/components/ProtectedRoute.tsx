@@ -1,6 +1,7 @@
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { AUTH_EVENTS } from '../lib/api';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -9,6 +10,19 @@ interface ProtectedRouteProps {
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, loading, initializeUser, session } = useAuth();
   const navigate = useNavigate();
+
+  // Handle auth expiration events from API layer
+  const handleAuthExpired = useCallback(() => {
+    navigate('/login', { replace: true });
+  }, [navigate]);
+
+  useEffect(() => {
+    // Listen for auth expiration events dispatched by the API layer
+    window.addEventListener(AUTH_EVENTS.SESSION_EXPIRED, handleAuthExpired);
+    return () => {
+      window.removeEventListener(AUTH_EVENTS.SESSION_EXPIRED, handleAuthExpired);
+    };
+  }, [handleAuthExpired]);
 
   useEffect(() => {
     if (!loading && !user) {

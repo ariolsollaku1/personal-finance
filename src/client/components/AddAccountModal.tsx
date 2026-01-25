@@ -21,7 +21,7 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
   const [formData, setFormData] = useState({
     name: '',
     type: 'bank' as AccountType,
-    currency: 'ALL' as Currency,
+    currency: 'EUR' as Currency,
     initialBalance: 0,
   });
   const [loading, setLoading] = useState(false);

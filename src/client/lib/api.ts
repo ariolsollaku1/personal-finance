@@ -1,13 +1,79 @@
 import { supabase } from './supabase';
 
+// Import shared types and re-export for convenience
+export type {
+  AccountType,
+  Currency,
+  TransactionType,
+  Frequency,
+  CategoryType,
+  AccountWithBalance as Account,
+  Category,
+  Payee,
+  AccountTransaction,
+  RecurringTransaction,
+  Transfer,
+  Holding,
+  Dividend,
+  DashboardData,
+  TypeSummary,
+  PortfolioSummary as DashboardPortfolioSummary,
+  AccountSummary,
+  RecentTransaction,
+  DueRecurring,
+  ExchangeRates,
+  ProjectionData,
+  MonthlyData as MonthlyProjectionData,
+  RecurringItem,
+  ProjectionSummary,
+  PnLSummary,
+  PnLMonth as MonthlyPnL,
+  PnLDetail as PnLMonthDetail,
+  PnLTransaction,
+} from '../../shared/types';
+
+import type {
+  AccountType,
+  Currency,
+  TransactionType,
+  Frequency,
+  AccountWithBalance as Account,
+  Category,
+  Payee,
+  AccountTransaction,
+  RecurringTransaction,
+  Transfer,
+  Holding,
+  Dividend,
+  DashboardData,
+  ProjectionData,
+  PnLSummary,
+  PnLDetail as PnLMonthDetail,
+} from '../../shared/types';
+
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
+
+// Auth event types for session expiration handling
+export const AUTH_EVENTS = {
+  SESSION_EXPIRED: 'auth:session-expired',
+} as const;
+
+/**
+ * Dispatches an auth expiration event that can be caught by React components
+ * to handle navigation using React Router instead of hard redirects
+ */
+function dispatchAuthExpired(reason: string) {
+  window.dispatchEvent(
+    new CustomEvent(AUTH_EVENTS.SESSION_EXPIRED, { detail: { reason } })
+  );
+}
 
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const { data: { session } } = await supabase.auth.getSession();
 
   if (!session) {
-    // Redirect to login if not authenticated
-    window.location.href = '/login';
+    // Signal auth expiration - let React components handle navigation
+    dispatchAuthExpired('not_authenticated');
     throw new Error('Not authenticated');
   }
 
@@ -21,153 +87,29 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
   });
 
   if (response.status === 401) {
-    // Session expired or invalid - redirect to login
-    window.location.href = '/login';
+    // Session expired or invalid - signal auth expiration
+    dispatchAuthExpired('session_expired');
     throw new Error('Session expired');
   }
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new Error(error.error || 'Request failed');
+  const json = await response.json().catch(() => ({ error: 'Request failed' }));
+
+  // Handle new envelope format: { success: true/false, data/error }
+  if (typeof json === 'object' && json !== null && 'success' in json) {
+    if (json.success === false) {
+      throw new Error(json.error?.message || 'Request failed');
+    }
+    if (json.success === true && 'data' in json) {
+      return json.data as T;
+    }
   }
 
-  return response.json();
-}
+  // Handle legacy format (raw data or { error: 'message' })
+  if (!response.ok) {
+    throw new Error(json.error || 'Request failed');
+  }
 
-// Common Types
-export type AccountType = 'stock' | 'bank' | 'cash' | 'loan' | 'credit' | 'asset';
-export type Currency = 'EUR' | 'USD' | 'ALL';
-export type TransactionType = 'inflow' | 'outflow';
-export type Frequency = 'weekly' | 'biweekly' | 'monthly' | 'yearly';
-
-// Account Types
-export interface Account {
-  id: number;
-  name: string;
-  type: AccountType;
-  currency: Currency;
-  initial_balance: number;
-  is_favorite?: boolean;
-  created_at: string;
-  balance?: number;
-  costBasis?: number; // For stock accounts: total cost basis of all holdings
-  recurringInflow?: number; // Count of active recurring inflow transactions
-  recurringOutflow?: number; // Count of active recurring outflow transactions
-}
-
-export interface Category {
-  id: number;
-  name: string;
-  type: 'income' | 'expense';
-  created_at: string;
-}
-
-export interface Payee {
-  id: number;
-  name: string;
-  created_at: string;
-}
-
-export interface AccountTransaction {
-  id: number;
-  account_id: number;
-  type: TransactionType;
-  amount: number;
-  date: string;
-  payee_id: number | null;
-  category_id: number | null;
-  notes: string | null;
-  transfer_id: number | null;
-  created_at: string;
-  payee_name?: string;
-  category_name?: string;
-  balance?: number;
-}
-
-export interface RecurringTransaction {
-  id: number;
-  account_id: number;
-  type: TransactionType;
-  amount: number;
-  payee_id: number | null;
-  category_id: number | null;
-  notes: string | null;
-  frequency: Frequency;
-  next_due_date: string;
-  is_active: number;
-  created_at: string;
-  payee_name?: string;
-  category_name?: string;
-  account_name?: string;
-}
-
-export interface Transfer {
-  id: number;
-  from_account_id: number;
-  to_account_id: number;
-  from_amount: number;
-  to_amount: number;
-  date: string;
-  notes: string | null;
-  created_at: string;
-  from_account_name?: string;
-  to_account_name?: string;
-  from_account_currency?: Currency;
-  to_account_currency?: Currency;
-}
-
-export interface DashboardData {
-  mainCurrency: Currency;
-  totalNetWorth: number;
-  byType: {
-    bank: { count: number; total: number };
-    cash: { count: number; total: number };
-    stock: { count: number; total: number };
-    loan: { count: number; total: number };
-    credit: { count: number; total: number; owed: number };
-    asset: { count: number; total: number };
-  };
-  stockPortfolio: {
-    totalValue: number;
-    totalCost: number;
-    totalGain: number;
-    totalGainPercent: number;
-    dayChange: number;
-    dayChangePercent: number;
-    holdingsCount: number;
-  };
-  accounts: {
-    id: number;
-    name: string;
-    type: string;
-    currency: Currency;
-    balance: number;
-    balanceInMainCurrency: number;
-  }[];
-  dueRecurring: {
-    id: number;
-    accountId: number;
-    accountName: string;
-    type: string;
-    amount: number;
-    currency: Currency;
-    payee: string | null;
-    category: string | null;
-    frequency: string;
-    nextDueDate: string;
-  }[];
-  recentTransactions: {
-    id: number;
-    accountId: number;
-    accountName: string;
-    type: string;
-    amount: number;
-    currency: Currency;
-    date: string;
-    payee: string | null;
-    category: string | null;
-  }[];
-  exchangeRates: Record<Currency, number>;
+  return json as T;
 }
 
 // Accounts API
@@ -400,15 +342,7 @@ export const portfolioApi = {
   getSummary: () => fetchApi<PortfolioSummary>('/portfolio'),
 };
 
-// Holdings API
-export interface Holding {
-  id: number;
-  symbol: string;
-  shares: number;
-  avg_cost: number;
-  created_at: string;
-}
-
+// Holdings API (Holding type imported from shared)
 export const holdingsApi = {
   getAll: () => fetchApi<Holding[]>('/holdings'),
   getByAccount: (accountId: number) => fetchApi<Holding[]>(`/holdings/account/${accountId}`),
@@ -428,17 +362,9 @@ export const holdingsApi = {
     }),
 };
 
-// Transactions API
-export interface Transaction {
-  id: number;
-  symbol: string;
-  type: 'buy' | 'sell';
-  shares: number;
-  price: number;
-  fees: number;
-  date: string;
-  created_at: string;
-}
+// Transactions API (StockTransaction type)
+export type { StockTransaction as Transaction } from '../../shared/types';
+import type { StockTransaction as Transaction } from '../../shared/types';
 
 export const transactionsApi = {
   getAll: (symbol?: string) =>
@@ -459,20 +385,7 @@ export const transactionsApi = {
     fetchApi<{ success: boolean }>(`/transactions/${id}`, { method: 'DELETE' }),
 };
 
-// Dividends API
-export interface Dividend {
-  id: number;
-  symbol: string;
-  amount: number;
-  shares_held: number;
-  ex_date: string;
-  pay_date: string | null;
-  tax_rate: number;
-  tax_amount: number;
-  net_amount: number;
-  created_at: string;
-}
-
+// Dividends API (Dividend type imported from shared)
 export interface TaxSummaryYear {
   year: string;
   total_gross: number;
@@ -541,92 +454,12 @@ export const dividendsApi = {
     }>(`/dividends/check/${accountId}`, { method: 'POST' }),
 };
 
-// Projection Types
-export interface MonthlyProjectionData {
-  month: string;
-  label: string;
-  netWorth: number;
-  liquidAssets: number;
-  investments: number;
-  assets: number;
-  totalDebt: number;
-  income: number;
-  expenses: number;
-  netCashFlow: number;
-  savingsRate: number;
-  byType: {
-    bank: number;
-    cash: number;
-    stock: number;
-    asset: number;
-    loan: number;
-    credit: number;
-  };
-}
-
-export interface ProjectionData {
-  mainCurrency: Currency;
-  currentMonth: string;
-  ytd: MonthlyProjectionData[];
-  future: MonthlyProjectionData[];
-  summary: {
-    monthlyIncome: number;
-    monthlyExpenses: number;
-    monthlySavings: number;
-    savingsRate: number;
-    projectedYearEndNetWorth: number;
-    projectedNetWorthChange: number;
-  };
-  recurringBreakdown: {
-    income: Array<{ name: string; amount: number; frequency: string; monthlyAmount: number }>;
-    expenses: Array<{ name: string; amount: number; frequency: string; monthlyAmount: number; category: string }>;
-  };
-}
-
-// Projection API
+// Projection API (types imported from shared)
 export const projectionApi = {
   get: () => fetchApi<ProjectionData>('/projection'),
 };
 
-// P&L Types
-export interface MonthlyPnL {
-  month: string;
-  label: string;
-  income: number;
-  expenses: number;
-  net: number;
-  transactionCount: number;
-}
-
-export interface PnLSummary {
-  mainCurrency: Currency;
-  months: MonthlyPnL[];
-}
-
-export interface PnLTransactionDetail {
-  id: number;
-  date: string;
-  type: 'inflow' | 'outflow';
-  amount: number;
-  amountInMainCurrency: number;
-  payee: string | null;
-  category: string | null;
-  accountName: string;
-  accountCurrency: string;
-  notes: string | null;
-}
-
-export interface PnLMonthDetail {
-  month: string;
-  label: string;
-  mainCurrency: Currency;
-  income: number;
-  expenses: number;
-  net: number;
-  transactions: PnLTransactionDetail[];
-}
-
-// P&L API
+// P&L API (types imported from shared)
 export const pnlApi = {
   getSummary: () => fetchApi<PnLSummary>('/pnl'),
   getMonth: (month: string) => fetchApi<PnLMonthDetail>(`/pnl/${month}`),

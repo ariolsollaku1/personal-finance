@@ -1,13 +1,13 @@
 import {
-  accountQueries,
   holdingsQueries,
-  accountTransactionQueries,
   recurringQueries,
   settingsQueries,
+  batchQueries,
   Currency,
+  Holding,
 } from '../db/queries.js';
 import { getMultipleQuotes } from './yahoo.js';
-import { convertToMainCurrency, getExchangeRates, EXCHANGE_RATES } from './currency.js';
+import { convertToMainCurrency, getExchangeRates, ExchangeRates } from './currency.js';
 import { getAggregatedPortfolio, PortfolioSummary } from './portfolio.js';
 
 export interface AccountSummary {
@@ -65,15 +65,45 @@ export interface DashboardData {
   accounts: AccountSummary[];
   dueRecurring: DueRecurring[];
   recentTransactions: RecentTransaction[];
-  exchangeRates: typeof EXCHANGE_RATES;
+  exchangeRates: ExchangeRates;
 }
 
 /**
- * Get aggregated dashboard data
+ * Get aggregated dashboard data using batch queries (no N+1)
  */
 export async function getDashboardData(userId: string): Promise<DashboardData> {
-  const mainCurrency = await settingsQueries.getMainCurrency(userId);
-  const accounts = await accountQueries.getAll(userId);
+  // Fetch all data in parallel using batch queries
+  const [
+    mainCurrency,
+    accountsWithBalances,
+    allHoldings,
+    stockPortfolio,
+    dueRecurringRaw,
+    recentTxRaw,
+    exchangeRates,
+  ] = await Promise.all([
+    settingsQueries.getMainCurrency(userId),
+    batchQueries.getAllAccountsWithBalances(userId),
+    holdingsQueries.getAll(userId),
+    getAggregatedPortfolio(userId),
+    recurringQueries.getDue(userId, new Date().toISOString().split('T')[0]),
+    batchQueries.getRecentTransactions(userId, 10),
+    getExchangeRates(),
+  ]);
+
+  // Group holdings by account_id
+  const holdingsByAccount = new Map<number, Holding[]>();
+  for (const holding of allHoldings) {
+    const accountId = holding.account_id!;
+    if (!holdingsByAccount.has(accountId)) {
+      holdingsByAccount.set(accountId, []);
+    }
+    holdingsByAccount.get(accountId)!.push(holding);
+  }
+
+  // Get unique symbols for live quotes
+  const uniqueSymbols = [...new Set(allHoldings.map(h => h.symbol))];
+  const quotes = uniqueSymbols.length > 0 ? await getMultipleQuotes(uniqueSymbols) : new Map();
 
   let totalNetWorth = 0;
   const accountSummaries: AccountSummary[] = [];
@@ -87,35 +117,14 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     asset: { count: 0, total: 0 },
   };
 
-  // Get aggregated stock portfolio (with live prices)
-  const stockPortfolio = await getAggregatedPortfolio(userId);
-
-  // Get quotes for stock value calculations
-  const stockAccounts = accounts.filter(a => a.type === 'stock');
-  const allStockHoldings: Array<{ symbol: string; shares: number; avg_cost: number; accountId: number }> = [];
-
-  for (const account of stockAccounts) {
-    const holdings = await holdingsQueries.getByAccount(userId, account.id);
-    for (const holding of holdings) {
-      allStockHoldings.push({
-        symbol: holding.symbol,
-        shares: Number(holding.shares),
-        avg_cost: Number(holding.avg_cost),
-        accountId: account.id,
-      });
-    }
-  }
-
-  const uniqueSymbols = [...new Set(allStockHoldings.map(h => h.symbol))];
-  const quotes = uniqueSymbols.length > 0 ? await getMultipleQuotes(uniqueSymbols) : new Map();
-
   // Calculate balance for each account
-  for (const account of accounts) {
-    let balance = Number(account.initial_balance);
+  for (const account of accountsWithBalances) {
+    // Base balance from initial + transactions
+    let balance = Number(account.initial_balance) + Number(account.transaction_total);
 
     if (account.type === 'stock') {
       // For stock accounts, calculate total value from holdings + cash balance
-      const holdings = await holdingsQueries.getByAccount(userId, account.id);
+      const holdings = holdingsByAccount.get(account.id) || [];
       let stockValue = 0;
       for (const holding of holdings) {
         const quote = quotes.get(holding.symbol);
@@ -125,27 +134,8 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
           stockValue += Number(holding.shares) * Number(holding.avg_cost);
         }
       }
-      // Also include cash balance from transactions
-      let cashBalance = Number(account.initial_balance);
-      const transactions = await accountTransactionQueries.getByAccount(userId, account.id);
-      for (const tx of transactions) {
-        if (tx.type === 'inflow') {
-          cashBalance += Number(tx.amount);
-        } else {
-          cashBalance -= Number(tx.amount);
-        }
-      }
-      balance = stockValue + cashBalance;
-    } else {
-      // For bank/cash accounts, calculate from transactions
-      const transactions = await accountTransactionQueries.getByAccount(userId, account.id);
-      for (const tx of transactions) {
-        if (tx.type === 'inflow') {
-          balance += Number(tx.amount);
-        } else {
-          balance -= Number(tx.amount);
-        }
-      }
+      // Cash balance is already in transaction_total, so add stock value
+      balance = stockValue + balance;
     }
 
     const balanceInMainCurrency = convertToMainCurrency(balance, account.currency, mainCurrency);
@@ -183,9 +173,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     }
   }
 
-  // Get due recurring transactions
-  const today = new Date().toISOString().split('T')[0];
-  const dueRecurringRaw = await recurringQueries.getDue(userId, today);
+  // Transform due recurring transactions
   const dueRecurring: DueRecurring[] = dueRecurringRaw.map((r) => ({
     id: r.id,
     accountId: r.account_id,
@@ -199,8 +187,18 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     nextDueDate: r.next_due_date,
   }));
 
-  // Get recent transactions
-  const recentTransactions = await getRecentTransactions(userId, accounts, 10);
+  // Transform recent transactions (already fetched with batch query)
+  const recentTransactions: RecentTransaction[] = recentTxRaw.map((tx) => ({
+    id: tx.id,
+    accountId: tx.account_id,
+    accountName: tx.account_name,
+    type: tx.type,
+    amount: Number(tx.amount),
+    currency: tx.account_currency,
+    date: tx.date,
+    payee: tx.payee_name,
+    category: tx.category_name,
+  }));
 
   return {
     mainCurrency,
@@ -210,40 +208,6 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     accounts: accountSummaries,
     dueRecurring,
     recentTransactions,
-    exchangeRates: getExchangeRates(),
+    exchangeRates,
   };
-}
-
-/**
- * Get recent transactions across all accounts
- */
-export async function getRecentTransactions(
-  userId: string,
-  accounts: Awaited<ReturnType<typeof accountQueries.getAll>>,
-  limit: number = 10
-): Promise<RecentTransaction[]> {
-  const recentTransactions: RecentTransaction[] = [];
-
-  for (const account of accounts) {
-    if (account.type !== 'stock') {
-      const transactions = await accountTransactionQueries.getByAccount(userId, account.id);
-      for (const tx of transactions.slice(0, 5)) {
-        recentTransactions.push({
-          id: tx.id,
-          accountId: account.id,
-          accountName: account.name,
-          type: tx.type,
-          amount: Number(tx.amount),
-          currency: account.currency,
-          date: tx.date,
-          payee: tx.payee_name || null,
-          category: tx.category_name || null,
-        });
-      }
-    }
-  }
-
-  // Sort by date and take top N
-  recentTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  return recentTransactions.slice(0, limit);
 }

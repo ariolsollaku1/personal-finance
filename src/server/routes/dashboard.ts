@@ -2,6 +2,11 @@ import { Router, Request, Response } from 'express';
 import { settingsQueries } from '../db/queries.js';
 import { getDashboardData } from '../services/dashboard.js';
 import { getExchangeRates } from '../services/currency.js';
+import {
+  validateBody,
+  setCurrencySchema,
+  setSidebarCollapsedSchema,
+} from '../validation/index.js';
 
 const router = Router();
 
@@ -22,7 +27,8 @@ router.get('/settings/currency', async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
     const mainCurrency = await settingsQueries.getMainCurrency(userId);
-    res.json({ mainCurrency, exchangeRates: getExchangeRates() });
+    const exchangeRates = await getExchangeRates();
+    res.json({ mainCurrency, exchangeRates });
   } catch (error) {
     console.error('Error fetching currency settings:', error);
     res.status(500).json({ error: 'Failed to fetch currency settings' });
@@ -30,14 +36,10 @@ router.get('/settings/currency', async (req: Request, res: Response) => {
 });
 
 // PUT /api/settings/currency - Update main currency
-router.put('/settings/currency', async (req: Request, res: Response) => {
+router.put('/settings/currency', validateBody(setCurrencySchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
     const { currency } = req.body;
-
-    if (!currency || !['EUR', 'USD', 'ALL'].includes(currency)) {
-      return res.status(400).json({ error: 'Invalid currency' });
-    }
 
     await settingsQueries.set(userId, 'main_currency', currency);
     res.json({ mainCurrency: currency });
@@ -60,14 +62,10 @@ router.get('/settings/sidebar', async (req: Request, res: Response) => {
 });
 
 // PUT /api/settings/sidebar - Update sidebar collapsed state
-router.put('/settings/sidebar', async (req: Request, res: Response) => {
+router.put('/settings/sidebar', validateBody(setSidebarCollapsedSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
     const { collapsed } = req.body;
-
-    if (typeof collapsed !== 'boolean') {
-      return res.status(400).json({ error: 'collapsed must be a boolean' });
-    }
 
     await settingsQueries.set(userId, 'sidebar_collapsed', collapsed ? '1' : '0');
     res.json({ collapsed });

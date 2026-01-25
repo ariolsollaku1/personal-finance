@@ -1,7 +1,16 @@
 import { Router, Request, Response } from 'express';
-import { accountQueries, AccountType, Currency } from '../db/queries.js';
+import { accountQueries } from '../db/queries.js';
 import { getAccountBalance } from '../services/balance.js';
 import { getAccountPortfolio } from '../services/portfolio.js';
+import {
+  validateBody,
+  createAccountSchema,
+  updateAccountSchema,
+  setFavoriteSchema,
+  CreateAccountInput,
+  UpdateAccountInput,
+} from '../validation/index.js';
+import { sendSuccess, badRequest, notFound, internalError } from '../utils/response.js';
 
 const router = Router();
 
@@ -42,38 +51,26 @@ router.get('/', async (req: Request, res: Response) => {
       };
     }));
 
-    res.json(accountsWithBalances);
+    sendSuccess(res, accountsWithBalances);
   } catch (error) {
     console.error('Error fetching accounts:', error);
-    res.status(500).json({ error: 'Failed to fetch accounts' });
+    internalError(res, 'Failed to fetch accounts');
   }
 });
 
 // POST /api/accounts - Create account
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', validateBody(createAccountSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const { name, type, currency, initialBalance } = req.body;
+    const { name, type, currency, initialBalance } = req.body as CreateAccountInput;
 
-    if (!name || !type || !currency) {
-      return res.status(400).json({ error: 'Name, type, and currency are required' });
-    }
-
-    if (!['stock', 'bank', 'cash', 'loan', 'credit', 'asset'].includes(type)) {
-      return res.status(400).json({ error: 'Invalid account type' });
-    }
-
-    if (!['EUR', 'USD', 'ALL'].includes(currency)) {
-      return res.status(400).json({ error: 'Invalid currency' });
-    }
-
-    const id = await accountQueries.create(userId, name, type as AccountType, currency as Currency, initialBalance || 0);
+    const id = await accountQueries.create(userId, name, type, currency, initialBalance);
     const account = await accountQueries.getById(userId, id as number);
 
-    res.status(201).json(account);
+    sendSuccess(res, account, 201);
   } catch (error) {
     console.error('Error creating account:', error);
-    res.status(500).json({ error: 'Failed to create account' });
+    internalError(res, 'Failed to create account');
   }
 });
 
@@ -82,33 +79,38 @@ router.get('/:id', async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
     const id = parseInt(req.params.id);
+
+    if (isNaN(id)) {
+      return badRequest(res, 'Invalid account ID');
+    }
+
     const account = await accountQueries.getById(userId, id);
 
     if (!account) {
-      return res.status(404).json({ error: 'Account not found' });
+      return notFound(res, 'Account not found');
     }
 
     const balance = await getAccountBalance(userId, id);
 
     if (!balance) {
-      return res.status(404).json({ error: 'Account not found' });
+      return notFound(res, 'Account not found');
     }
 
     if (account.type === 'stock') {
-      return res.json({
+      return sendSuccess(res, {
         ...account,
         balance: balance.balance,
         costBasis: balance.costBasis,
       });
     }
 
-    res.json({
+    sendSuccess(res, {
       ...account,
       balance: balance.balance,
     });
   } catch (error) {
     console.error('Error fetching account:', error);
-    res.status(500).json({ error: 'Failed to fetch account' });
+    internalError(res, 'Failed to fetch account');
   }
 });
 
@@ -117,58 +119,64 @@ router.get('/:id/portfolio', async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
     const id = parseInt(req.params.id);
+
+    if (isNaN(id)) {
+      return badRequest(res, 'Invalid account ID');
+    }
+
     const account = await accountQueries.getById(userId, id);
 
     if (!account) {
-      return res.status(404).json({ error: 'Account not found' });
+      return notFound(res, 'Account not found');
     }
 
     if (account.type !== 'stock') {
-      return res.status(400).json({ error: 'Not a stock account' });
+      return badRequest(res, 'Not a stock account');
     }
 
     const portfolio = await getAccountPortfolio(userId, id);
 
     if (!portfolio) {
-      return res.status(404).json({ error: 'Portfolio not found' });
+      return notFound(res, 'Portfolio not found');
     }
 
-    res.json(portfolio);
+    sendSuccess(res, portfolio);
   } catch (error) {
     console.error('Error fetching account portfolio:', error);
-    res.status(500).json({ error: 'Failed to fetch portfolio' });
+    internalError(res, 'Failed to fetch portfolio');
   }
 });
 
 // PUT /api/accounts/:id - Update account
-router.put('/:id', async (req: Request, res: Response) => {
+router.put('/:id', validateBody(updateAccountSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
     const id = parseInt(req.params.id);
-    const { name, currency, initialBalance } = req.body;
+
+    if (isNaN(id)) {
+      return badRequest(res, 'Invalid account ID');
+    }
+
+    const { name, currency, initialBalance } = req.body as UpdateAccountInput;
 
     const account = await accountQueries.getById(userId, id);
     if (!account) {
-      return res.status(404).json({ error: 'Account not found' });
-    }
-
-    if (currency && !['EUR', 'USD', 'ALL'].includes(currency)) {
-      return res.status(400).json({ error: 'Invalid currency' });
+      return notFound(res, 'Account not found');
     }
 
     await accountQueries.update(
       userId,
       id,
-      name || account.name,
-      (currency as Currency) || account.currency,
-      initialBalance !== undefined ? initialBalance : account.initial_balance
+      name ?? account.name,
+      currency ?? account.currency,
+      initialBalance ?? account.initial_balance
     );
 
     const updatedAccount = await accountQueries.getById(userId, id);
-    res.json(updatedAccount);
+    sendSuccess(res, updatedAccount);
   } catch (error) {
     console.error('Error updating account:', error);
-    res.status(500).json({ error: 'Failed to update account' });
+    internalError(res, 'Failed to update account');
   }
 });
 
@@ -177,37 +185,47 @@ router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
     const id = parseInt(req.params.id);
+
+    if (isNaN(id)) {
+      return badRequest(res, 'Invalid account ID');
+    }
+
     const account = await accountQueries.getById(userId, id);
 
     if (!account) {
-      return res.status(404).json({ error: 'Account not found' });
+      return notFound(res, 'Account not found');
     }
 
     await accountQueries.delete(userId, id);
-    res.json({ success: true });
+    sendSuccess(res, { deleted: true });
   } catch (error) {
     console.error('Error deleting account:', error);
-    res.status(500).json({ error: 'Failed to delete account' });
+    internalError(res, 'Failed to delete account');
   }
 });
 
 // PUT /api/accounts/:id/favorite - Toggle favorite status
-router.put('/:id/favorite', async (req: Request, res: Response) => {
+router.put('/:id/favorite', validateBody(setFavoriteSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
     const id = parseInt(req.params.id);
+
+    if (isNaN(id)) {
+      return badRequest(res, 'Invalid account ID');
+    }
+
     const { isFavorite } = req.body;
 
     const account = await accountQueries.getById(userId, id);
     if (!account) {
-      return res.status(404).json({ error: 'Account not found' });
+      return notFound(res, 'Account not found');
     }
 
     await accountQueries.setFavorite(userId, id, isFavorite);
-    res.json({ success: true, isFavorite });
+    sendSuccess(res, { isFavorite });
   } catch (error) {
     console.error('Error toggling favorite:', error);
-    res.status(500).json({ error: 'Failed to toggle favorite' });
+    internalError(res, 'Failed to toggle favorite');
   }
 });
 

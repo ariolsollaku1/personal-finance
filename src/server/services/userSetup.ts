@@ -3,7 +3,7 @@ import { query, queryOne, DEFAULT_CATEGORIES } from '../db/schema.js';
 // Default settings for new users
 const DEFAULT_SETTINGS = [
   { key: 'dividend_tax_rate', value: '0.08' },
-  { key: 'main_currency', value: 'ALL' },
+  { key: 'main_currency', value: 'EUR' },
   { key: 'sidebar_collapsed', value: '0' },
 ];
 

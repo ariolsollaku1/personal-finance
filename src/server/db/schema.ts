@@ -300,6 +300,48 @@ export async function initDatabase() {
       )
     `);
 
+    // ===========================================
+    // Performance indexes for foreign keys
+    // ===========================================
+
+    // Index on account_transactions for fast lookups by account
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_account_transactions_account_id ON account_transactions(account_id);
+    `);
+
+    // Index on account_transactions for date-based queries (P&L, reports)
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_account_transactions_date ON account_transactions(date);
+    `);
+
+    // Index on holdings for fast lookups by account
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_holdings_account_id ON holdings(account_id);
+    `);
+
+    // Index on recurring_transactions for fast lookups by account
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_recurring_transactions_account_id ON recurring_transactions(account_id);
+    `);
+
+    // Index on dividends for fast lookups by account
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_dividends_account_id ON dividends(account_id);
+    `);
+
+    // Indexes on transfers for fast lookups by from/to account
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_transfers_from_account ON transfers(from_account_id);
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_transfers_to_account ON transfers(to_account_id);
+    `);
+
+    // Index on stock transactions for fast lookups by account
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_transactions_account_id ON transactions(account_id);
+    `);
+
     console.log('Database initialized successfully');
   } finally {
     client.release();

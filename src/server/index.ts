@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { initDatabase } from './db/schema.js';
 import { authMiddleware } from './middleware/auth.js';
+import { errorHandler } from './middleware/errorHandler.js';
 import authRoutes from './routes/auth.js';
 import portfolioRoutes from './routes/portfolio.js';
 import holdingsRoutes from './routes/holdings.js';
@@ -19,6 +20,7 @@ import transfersRoutes from './routes/transfers.js';
 import dashboardRoutes from './routes/dashboard.js';
 import projectionRoutes from './routes/projection.js';
 import pnlRoutes from './routes/pnl.js';
+import { getExchangeRates } from './services/currency.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,12 +28,12 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// CORS configuration
-const allowedOrigins: string[] = [
-  'http://localhost:5173',
-  'https://per-finance.pages.dev',
-  process.env.FRONTEND_URL,
-].filter((url): url is string => Boolean(url));
+// CORS configuration - use ALLOWED_ORIGINS env var (comma-separated)
+// Defaults to localhost for development
+const allowedOrigins: string[] = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173')
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
 
 app.use(cors({
   origin: allowedOrigins,
@@ -44,6 +46,10 @@ async function start() {
   try {
     await initDatabase();
     console.log('Database initialized');
+
+    // Pre-cache exchange rates on startup
+    const rates = await getExchangeRates();
+    console.log('Exchange rates cached:', rates);
 
     // Apply auth middleware to all /api routes
     app.use('/api', authMiddleware);
@@ -68,6 +74,9 @@ async function start() {
     app.use('/api/transactions', transactionsRoutes);
     app.use('/api/quotes', quotesRoutes);
     app.use('/api/dividends', dividendsRoutes);
+
+    // Global error handler - must be after all routes
+    app.use(errorHandler);
 
     // Serve static files in production
     if (process.env.NODE_ENV === 'production') {

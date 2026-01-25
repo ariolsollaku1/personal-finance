@@ -3,11 +3,11 @@ import { Currency, dashboardApi } from '../../lib/api';
 import { formatCurrency, getCurrencySymbol } from '../../lib/currency';
 
 export default function CurrencyPage() {
-  const [mainCurrency, setMainCurrency] = useState<Currency>('ALL');
+  const [mainCurrency, setMainCurrency] = useState<Currency>('EUR');
   const [exchangeRates, setExchangeRates] = useState<Record<Currency, number>>({
-    ALL: 1,
-    EUR: 102.5,
-    USD: 95.0,
+    EUR: 1,
+    USD: 1.08,
+    ALL: 100.0,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -56,9 +56,9 @@ export default function CurrencyPage() {
   }
 
   const currencies: { code: Currency; name: string; description: string; flag: string }[] = [
-    { code: 'ALL', name: 'Albanian Lek', description: 'The official currency of Albania', flag: '🇦🇱' },
     { code: 'EUR', name: 'Euro', description: 'Official currency of the Eurozone', flag: '🇪🇺' },
     { code: 'USD', name: 'US Dollar', description: 'Official currency of the United States', flag: '🇺🇸' },
+    { code: 'ALL', name: 'Albanian Lek', description: 'The official currency of Albania', flag: '🇦🇱' },
   ];
 
   return (
@@ -144,7 +144,7 @@ export default function CurrencyPage() {
                   Currency
                 </th>
                 <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Rate to ALL
+                  Rate (EUR = 1)
                 </th>
                 <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Example Conversion
@@ -168,7 +168,7 @@ export default function CurrencyPage() {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <span className="font-mono font-semibold text-gray-900">
-                      {currency.code === 'ALL' ? '1.00' : exchangeRates[currency.code].toFixed(2)}
+                      {exchangeRates[currency.code]?.toFixed(2) || '1.00'}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
@@ -180,7 +180,7 @@ export default function CurrencyPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                       </svg>
                       <span className="font-medium text-orange-600">
-                        {formatCurrency(100 * exchangeRates[currency.code], 'ALL')}
+                        {formatCurrency(100 / (exchangeRates[currency.code] || 1), 'EUR')}
                       </span>
                     </div>
                   </td>
@@ -194,7 +194,7 @@ export default function CurrencyPage() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            Exchange rates are hardcoded approximations. In production, these would be fetched from a live API.
+            Exchange rates are fetched daily from the European Central Bank via frankfurter.app API.
           </p>
         </div>
       </div>

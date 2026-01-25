@@ -1,9 +1,10 @@
 import {
-  accountQueries,
   recurringQueries,
   settingsQueries,
   holdingsQueries,
+  batchQueries,
   Currency,
+  Holding,
 } from '../db/queries.js';
 import { convertToMainCurrency } from './currency.js';
 
@@ -72,29 +73,28 @@ export function getMonthlyMultiplier(frequency: string): number {
 }
 
 /**
- * Get monthly recurring totals for a user
+ * Get monthly recurring totals for a user (using batch query)
  */
 export async function getMonthlyRecurringTotals(
   userId: string,
   mainCurrency: Currency
 ): Promise<{ income: number; expenses: number }> {
-  const accounts = await accountQueries.getAll(userId);
+  // Use the batch query that gets all recurring with account info
+  const allRecurring = await recurringQueries.getAll(userId);
+
   let monthlyIncome = 0;
   let monthlyExpenses = 0;
 
-  for (const account of accounts) {
-    const recurring = await recurringQueries.getByAccount(userId, account.id);
-    for (const rec of recurring) {
-      if (!rec.is_active) continue;
+  for (const rec of allRecurring) {
+    if (!rec.is_active) continue;
 
-      const monthlyAmount = Number(rec.amount) * getMonthlyMultiplier(rec.frequency);
-      const monthlyAmountInMain = convertToMainCurrency(monthlyAmount, account.currency, mainCurrency);
+    const monthlyAmount = Number(rec.amount) * getMonthlyMultiplier(rec.frequency);
+    const monthlyAmountInMain = convertToMainCurrency(monthlyAmount, rec.account_currency, mainCurrency);
 
-      if (rec.type === 'inflow') {
-        monthlyIncome += monthlyAmountInMain;
-      } else {
-        monthlyExpenses += monthlyAmountInMain;
-      }
+    if (rec.type === 'inflow') {
+      monthlyIncome += monthlyAmountInMain;
+    } else {
+      monthlyExpenses += monthlyAmountInMain;
     }
   }
 
@@ -102,40 +102,25 @@ export async function getMonthlyRecurringTotals(
 }
 
 /**
- * Generate financial projection data
+ * Generate financial projection data using batch queries (no N+1)
  */
 export async function generateProjection(userId: string): Promise<ProjectionData> {
-  const mainCurrency = await settingsQueries.getMainCurrency(userId);
-  const accounts = await accountQueries.getAll(userId);
+  // Fetch all data in parallel using batch queries
+  const [mainCurrency, accountsWithBalances, allRecurring, allHoldings] = await Promise.all([
+    settingsQueries.getMainCurrency(userId),
+    batchQueries.getAllAccountsWithBalances(userId),
+    recurringQueries.getAll(userId), // Already returns with account_currency
+    holdingsQueries.getAll(userId),
+  ]);
 
-  // Get all active recurring transactions with account info
-  const allRecurring: Array<{
-    id: number;
-    account_id: number;
-    type: string;
-    amount: number;
-    frequency: string;
-    payee_name: string | null | undefined;
-    category_name: string | null | undefined;
-    account_currency: Currency;
-  }> = [];
-
-  for (const account of accounts) {
-    const recurring = await recurringQueries.getByAccount(userId, account.id);
-    for (const rec of recurring) {
-      if (rec.is_active) {
-        allRecurring.push({
-          id: rec.id,
-          account_id: rec.account_id,
-          type: rec.type,
-          amount: Number(rec.amount),
-          frequency: rec.frequency,
-          payee_name: rec.payee_name,
-          category_name: rec.category_name,
-          account_currency: account.currency,
-        });
-      }
+  // Group holdings by account_id
+  const holdingsByAccount = new Map<number, Holding[]>();
+  for (const holding of allHoldings) {
+    const accountId = holding.account_id!;
+    if (!holdingsByAccount.has(accountId)) {
+      holdingsByAccount.set(accountId, []);
     }
+    holdingsByAccount.get(accountId)!.push(holding);
   }
 
   // Calculate monthly income and expenses from recurring transactions
@@ -145,14 +130,16 @@ export async function generateProjection(userId: string): Promise<ProjectionData
   const expenseBreakdown: (RecurringItem & { category: string })[] = [];
 
   for (const rec of allRecurring) {
-    const monthlyAmount = rec.amount * getMonthlyMultiplier(rec.frequency);
+    if (!rec.is_active) continue;
+
+    const monthlyAmount = Number(rec.amount) * getMonthlyMultiplier(rec.frequency);
     const monthlyAmountInMain = convertToMainCurrency(monthlyAmount, rec.account_currency, mainCurrency);
 
     if (rec.type === 'inflow') {
       monthlyIncome += monthlyAmountInMain;
       incomeBreakdown.push({
         name: rec.payee_name || 'Unknown',
-        amount: rec.amount,
+        amount: Number(rec.amount),
         frequency: rec.frequency,
         monthlyAmount: monthlyAmountInMain,
       });
@@ -160,7 +147,7 @@ export async function generateProjection(userId: string): Promise<ProjectionData
       monthlyExpenses += monthlyAmountInMain;
       expenseBreakdown.push({
         name: rec.payee_name || 'Unknown',
-        amount: rec.amount,
+        amount: Number(rec.amount),
         frequency: rec.frequency,
         monthlyAmount: monthlyAmountInMain,
         category: rec.category_name || 'Uncategorized',
@@ -187,9 +174,9 @@ export async function generateProjection(userId: string): Promise<ProjectionData
   let currentAssets = 0;
   let currentTotalDebt = 0;
 
-  for (const account of accounts) {
-    const balanceInfo = await accountQueries.getBalance(userId, account.id);
-    const balance = balanceInfo?.balance || 0;
+  for (const account of accountsWithBalances) {
+    // Calculate balance from initial + transaction_total
+    const balance = Number(account.initial_balance) + Number(account.transaction_total);
     const balanceInMain = convertToMainCurrency(balance, account.currency, mainCurrency);
 
     const accountType = account.type as keyof typeof currentByType;
@@ -199,8 +186,8 @@ export async function generateProjection(userId: string): Promise<ProjectionData
       currentLiquidAssets += balanceInMain;
       currentNetWorth += balanceInMain;
     } else if (account.type === 'stock') {
-      // For stock accounts, calculate cost basis from holdings
-      const holdings = await holdingsQueries.getByAccount(userId, account.id);
+      // For stock accounts, calculate cost basis from holdings (already fetched)
+      const holdings = holdingsByAccount.get(account.id) || [];
       let costBasis = 0;
       for (const holding of holdings) {
         costBasis += Number(holding.shares) * Number(holding.avg_cost);
@@ -208,12 +195,12 @@ export async function generateProjection(userId: string): Promise<ProjectionData
       const costInMain = convertToMainCurrency(costBasis, account.currency, mainCurrency);
       currentInvestments += costInMain;
       currentNetWorth += costInMain;
-      currentByType.stock = costInMain;
+      currentByType.stock += costInMain;
     } else if (account.type === 'asset') {
       const assetValue = convertToMainCurrency(Number(account.initial_balance), account.currency, mainCurrency);
       currentAssets += assetValue;
       currentNetWorth += assetValue;
-      currentByType.asset = assetValue;
+      currentByType.asset += assetValue;
     } else if (account.type === 'loan') {
       currentByType.loan = (currentByType.loan || 0) + balanceInMain;
       currentTotalDebt += balanceInMain;

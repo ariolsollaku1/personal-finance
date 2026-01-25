@@ -365,7 +365,7 @@ function MonthDetailModal({ detail, loading, currency, onClose }: MonthDetailMod
                           }`}>
                             {tx.type === 'inflow' ? '+' : '-'}
                             {formatCurrency(tx.amount, tx.accountCurrency as 'ALL' | 'EUR' | 'USD')}
-                            {tx.accountCurrency !== currency && (
+                            {tx.accountCurrency !== currency && tx.amountInMainCurrency != null && (
                               <span className="text-gray-400 text-xs ml-1 font-normal">
                                 ({formatCurrency(tx.amountInMainCurrency, currency as 'ALL' | 'EUR' | 'USD')})
                               </span>

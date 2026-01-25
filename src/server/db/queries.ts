@@ -1,12 +1,48 @@
 import { query, queryOne, insert } from './schema.js';
 
-// Types
-export type AccountType = 'stock' | 'bank' | 'cash' | 'loan' | 'credit' | 'asset';
-export type Currency = 'EUR' | 'USD' | 'ALL';
-export type TransactionType = 'inflow' | 'outflow';
-export type Frequency = 'weekly' | 'biweekly' | 'monthly' | 'yearly';
+// Import shared types and re-export for convenience
+export {
+  AccountType,
+  Currency,
+  TransactionType,
+  Frequency,
+  CategoryType,
+  StockTransactionType,
+  Account,
+  Category,
+  Payee,
+  AccountTransaction,
+  RecurringTransaction,
+  Transfer,
+  Holding,
+  Dividend,
+  StockTransaction,
+} from '../../shared/types.js';
 
-export interface Account {
+import type {
+  AccountType,
+  Currency,
+  TransactionType,
+  Frequency,
+  Account,
+  Category,
+  Payee,
+  AccountTransaction,
+  RecurringTransaction,
+  Transfer,
+  Holding,
+  Dividend,
+  StockTransaction,
+} from '../../shared/types.js';
+
+// Alias for backward compatibility (Transaction -> StockTransaction in shared)
+export type Transaction = StockTransaction;
+
+// =============================================================================
+// BATCH QUERY METHODS (to avoid N+1 problems)
+// =============================================================================
+
+export interface AccountBalanceRow {
   id: number;
   user_id: string;
   name: string;
@@ -14,108 +50,115 @@ export interface Account {
   currency: Currency;
   initial_balance: number;
   is_favorite: boolean;
-  created_at: string;
+  transaction_total: number;
 }
 
-export interface Category {
-  id: number;
-  user_id: string;
-  name: string;
-  type: 'income' | 'expense';
-  created_at: string;
-}
-
-export interface Payee {
-  id: number;
-  user_id: string;
-  name: string;
-  created_at: string;
-}
-
-export interface AccountTransaction {
-  id: number;
+export interface RecurringCountRow {
   account_id: number;
-  type: TransactionType;
-  amount: number;
-  date: string;
-  payee_id: number | null;
-  category_id: number | null;
-  notes: string | null;
-  transfer_id: number | null;
-  created_at: string;
-  // Joined fields
-  payee_name?: string;
-  category_name?: string;
+  inflow_count: number;
+  outflow_count: number;
 }
 
-export interface RecurringTransaction {
-  id: number;
-  account_id: number;
-  type: TransactionType;
-  amount: number;
-  payee_id: number | null;
-  category_id: number | null;
-  notes: string | null;
-  frequency: Frequency;
-  next_due_date: string;
-  is_active: boolean;
-  created_at: string;
-  // Joined fields
-  payee_name?: string;
-  category_name?: string;
-}
+export const batchQueries = {
+  /**
+   * Get all accounts with their transaction totals in a single query
+   * This replaces N+1 calls to accountQueries.getBalance
+   */
+  getAllAccountsWithBalances: async (userId: string): Promise<AccountBalanceRow[]> => {
+    return query<AccountBalanceRow>(
+      `SELECT
+        a.*,
+        COALESCE(SUM(CASE WHEN at.type = 'inflow' THEN at.amount ELSE -at.amount END), 0) as transaction_total
+      FROM accounts a
+      LEFT JOIN account_transactions at ON a.id = at.account_id
+      WHERE a.user_id = $1
+      GROUP BY a.id
+      ORDER BY a.type, a.name`,
+      [userId]
+    );
+  },
 
-export interface Transfer {
-  id: number;
-  user_id: string;
-  from_account_id: number;
-  to_account_id: number;
-  from_amount: number;
-  to_amount: number;
-  date: string;
-  notes: string | null;
-  created_at: string;
-  // Joined fields
-  from_account_name?: string;
-  to_account_name?: string;
-  from_account_currency?: Currency;
-  to_account_currency?: Currency;
-}
+  /**
+   * Get recurring transaction counts for all accounts in a single query
+   * This replaces N+1 calls to recurringQueries.getActiveCountsByAccount
+   */
+  getAllRecurringCounts: async (userId: string): Promise<RecurringCountRow[]> => {
+    return query<RecurringCountRow>(
+      `SELECT
+        rt.account_id,
+        SUM(CASE WHEN rt.type = 'inflow' THEN 1 ELSE 0 END)::int as inflow_count,
+        SUM(CASE WHEN rt.type = 'outflow' THEN 1 ELSE 0 END)::int as outflow_count
+      FROM recurring_transactions rt
+      JOIN accounts a ON rt.account_id = a.id
+      WHERE a.user_id = $1 AND rt.is_active = true
+      GROUP BY rt.account_id`,
+      [userId]
+    );
+  },
 
-export interface Holding {
-  id: number;
-  symbol: string;
-  shares: number;
-  avg_cost: number;
-  account_id: number | null;
-  created_at: string;
-}
+  /**
+   * Get all holdings for a user (already exists but documenting here for batch use)
+   * Use holdingsQueries.getAll(userId) and group by account_id in memory
+   */
 
-export interface Transaction {
-  id: number;
-  symbol: string;
-  type: 'buy' | 'sell';
-  shares: number;
-  price: number;
-  fees: number;
-  date: string;
-  account_id: number | null;
-  created_at: string;
-}
+  /**
+   * Get recent transactions across all accounts in a single query
+   * This replaces N+1 calls to accountTransactionQueries.getByAccount
+   */
+  getRecentTransactions: async (userId: string, limit: number = 10): Promise<Array<{
+    id: number;
+    account_id: number;
+    account_name: string;
+    account_currency: Currency;
+    type: TransactionType;
+    amount: number;
+    date: string;
+    payee_name: string | null;
+    category_name: string | null;
+  }>> => {
+    return query(
+      `SELECT
+        at.id,
+        at.account_id,
+        a.name as account_name,
+        a.currency as account_currency,
+        at.type,
+        at.amount,
+        at.date,
+        p.name as payee_name,
+        c.name as category_name
+      FROM account_transactions at
+      JOIN accounts a ON at.account_id = a.id
+      LEFT JOIN payees p ON at.payee_id = p.id
+      LEFT JOIN categories c ON at.category_id = c.id
+      WHERE a.user_id = $1 AND a.type != 'stock'
+      ORDER BY at.date DESC, at.id DESC
+      LIMIT $2`,
+      [userId, limit]
+    );
+  },
 
-export interface Dividend {
-  id: number;
-  symbol: string;
-  amount: number;
-  shares_held: number;
-  ex_date: string;
-  pay_date: string | null;
-  tax_rate: number;
-  tax_amount: number;
-  net_amount: number;
-  account_id: number | null;
-  created_at: string;
-}
+  /**
+   * Get all account transactions for a user (for balance calculations)
+   */
+  getAllTransactions: async (userId: string): Promise<Array<{
+    account_id: number;
+    type: TransactionType;
+    amount: number;
+  }>> => {
+    return query(
+      `SELECT at.account_id, at.type, at.amount
+      FROM account_transactions at
+      JOIN accounts a ON at.account_id = a.id
+      WHERE a.user_id = $1`,
+      [userId]
+    );
+  },
+};
+
+// =============================================================================
+// ACCOUNT QUERIES
+// =============================================================================
 
 // Account queries - all filtered by userId
 export const accountQueries = {
@@ -921,7 +964,7 @@ export const settingsQueries = {
 
   getMainCurrency: async (userId: string): Promise<Currency> => {
     const currency = await settingsQueries.get(userId, 'main_currency');
-    return (currency as Currency) || 'ALL';
+    return (currency as Currency) || 'EUR';
   },
 
   getSidebarCollapsed: async (userId: string) => {

@@ -24,7 +24,8 @@
     "dotenv": "^17.2.3",
     "express": "^4.18.2",
     "pg": "^8.17.2",
-    "yahoo-finance2": "^3.11.2"
+    "yahoo-finance2": "^3.11.2",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.8",
