@@ -1,3 +1,18 @@
+/**
+ * Dashboard Service
+ *
+ * Aggregates all financial data for the main dashboard view including:
+ * - Total net worth across all accounts
+ * - Stock portfolio with live prices
+ * - Account summaries by type
+ * - Due recurring transactions
+ * - Recent transaction history
+ *
+ * Uses batch queries to efficiently fetch all data in minimal database calls.
+ *
+ * @module services/dashboard
+ */
+
 import {
   holdingsQueries,
   recurringQueries,
@@ -12,6 +27,9 @@ import { getMultipleQuotes } from './yahoo.js';
 import { convertToMainCurrency, getExchangeRates, ExchangeRates } from './currency.js';
 import { getAggregatedPortfolio, PortfolioSummary } from './portfolio.js';
 
+/**
+ * Summary information for a single account
+ */
 export interface AccountSummary {
   id: number;
   name: string;
@@ -21,12 +39,21 @@ export interface AccountSummary {
   balanceInMainCurrency: number;
 }
 
+/**
+ * Aggregated totals for an account type
+ */
 export interface TypeSummary {
+  /** Number of accounts of this type */
   count: number;
+  /** Total balance in main currency */
   total: number;
-  owed?: number; // For credit cards
+  /** Amount owed (for credit cards only) */
+  owed?: number;
 }
 
+/**
+ * Recent transaction for dashboard display
+ */
 export interface RecentTransaction {
   id: number;
   accountId: number;
@@ -39,6 +66,9 @@ export interface RecentTransaction {
   category: string | null;
 }
 
+/**
+ * Recurring transaction that is due (today or earlier)
+ */
 export interface DueRecurring {
   id: number;
   accountId: number;
@@ -52,9 +82,17 @@ export interface DueRecurring {
   nextDueDate: string;
 }
 
+/**
+ * Complete dashboard data structure
+ *
+ * Contains all information needed to render the main dashboard view.
+ */
 export interface DashboardData {
+  /** User's main currency setting */
   mainCurrency: Currency;
+  /** Total net worth across all accounts in main currency */
   totalNetWorth: number;
+  /** Totals grouped by account type */
   byType: {
     bank: TypeSummary;
     cash: TypeSummary;
@@ -63,15 +101,46 @@ export interface DashboardData {
     credit: TypeSummary & { owed: number };
     asset: TypeSummary;
   };
+  /** Aggregated stock portfolio with live prices */
   stockPortfolio: PortfolioSummary;
+  /** All accounts with balances */
   accounts: AccountSummary[];
+  /** Recurring transactions due today or earlier */
   dueRecurring: DueRecurring[];
+  /** Last 10 transactions across all accounts */
   recentTransactions: RecentTransaction[];
+  /** Current exchange rates */
   exchangeRates: ExchangeRates;
 }
 
 /**
- * Get aggregated dashboard data using batch queries (no N+1)
+ * Get aggregated dashboard data for a user.
+ *
+ * Fetches all dashboard data using parallel batch queries for optimal performance:
+ * 1. User settings (main currency)
+ * 2. All accounts with transaction totals
+ * 3. All holdings for stock valuation
+ * 4. Stock portfolio with live prices
+ * 5. Due recurring transactions
+ * 6. Recent transactions
+ * 7. Exchange rates
+ *
+ * Net worth calculation by account type:
+ * - Bank/Cash/Stock: Balance adds to net worth
+ * - Asset: Initial value adds to net worth
+ * - Loan: Balance subtracts from net worth
+ * - Credit: Amount owed (limit - available) subtracts
+ *
+ * @param userId - Supabase user UUID
+ * @returns Complete dashboard data including net worth, portfolio, and transactions
+ * @throws Error if database queries fail
+ *
+ * @example
+ * ```typescript
+ * const dashboard = await getDashboardData(userId);
+ * console.log(`Net Worth: ${dashboard.totalNetWorth} ${dashboard.mainCurrency}`);
+ * console.log(`Due payments: ${dashboard.dueRecurring.length}`);
+ * ```
  */
 export async function getDashboardData(userId: string): Promise<DashboardData> {
   // Fetch all data in parallel using batch queries

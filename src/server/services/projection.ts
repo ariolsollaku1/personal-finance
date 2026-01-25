@@ -1,3 +1,18 @@
+/**
+ * Projection Service
+ *
+ * Generates financial projections based on recurring transactions.
+ * Provides year-to-date (YTD) historical estimates and 12-month forward projections.
+ *
+ * Key features:
+ * - Converts recurring frequencies to monthly amounts
+ * - Projects net worth growth based on savings rate
+ * - Breaks down income and expenses by source/category
+ * - Calculates financial health metrics (savings rate, debt ratio)
+ *
+ * @module services/projection
+ */
+
 import {
   recurringQueries,
   settingsQueries,
@@ -8,6 +23,9 @@ import {
 } from '../db/queries.js';
 import { convertToMainCurrency } from './currency.js';
 
+/**
+ * Monthly financial data for projections
+ */
 export interface MonthlyData {
   month: string; // YYYY-MM
   label: string; // "Jan 2026"
@@ -30,37 +48,76 @@ export interface MonthlyData {
   };
 }
 
+/**
+ * Recurring transaction item with monthly normalization
+ */
 export interface RecurringItem {
+  /** Payee name */
   name: string;
+  /** Original amount in account currency */
   amount: number;
+  /** Frequency: weekly, biweekly, monthly, yearly */
   frequency: string;
+  /** Amount normalized to monthly in main currency */
   monthlyAmount: number;
+  /** Category (for expenses) */
   category?: string;
 }
 
+/**
+ * Summary of projected financial metrics
+ */
 export interface ProjectionSummary {
+  /** Total monthly income from recurring transactions */
   monthlyIncome: number;
+  /** Total monthly expenses from recurring transactions */
   monthlyExpenses: number;
+  /** Net monthly savings (income - expenses) */
   monthlySavings: number;
+  /** Savings rate as percentage (savings / income × 100) */
   savingsRate: number;
+  /** Projected net worth at year end */
   projectedYearEndNetWorth: number;
+  /** Projected change from start of year */
   projectedNetWorthChange: number;
 }
 
+/**
+ * Complete projection data for the projection page
+ */
 export interface ProjectionData {
+  /** User's main currency */
   mainCurrency: Currency;
+  /** Current month in YYYY-MM format */
   currentMonth: string;
+  /** Year-to-date monthly data (Jan to current month) */
   ytd: MonthlyData[];
+  /** Future 12 months projection */
   future: MonthlyData[];
+  /** Summary metrics */
   summary: ProjectionSummary;
+  /** Breakdown of recurring income and expenses */
   recurringBreakdown: {
+    /** Income sources sorted by monthly amount (descending) */
     income: RecurringItem[];
+    /** Expense categories sorted by monthly amount (descending) */
     expenses: (RecurringItem & { category: string })[];
   };
 }
 
 /**
- * Convert frequency to monthly multiplier
+ * Convert recurring frequency to monthly multiplier.
+ *
+ * @param frequency - Recurring frequency (weekly, biweekly, monthly, yearly)
+ * @returns Multiplier to convert to monthly amount
+ *
+ * @example
+ * ```typescript
+ * getMonthlyMultiplier('weekly');   // 4.33 (52/12)
+ * getMonthlyMultiplier('biweekly'); // 2.17 (26/12)
+ * getMonthlyMultiplier('monthly');  // 1
+ * getMonthlyMultiplier('yearly');   // 0.083 (1/12)
+ * ```
  */
 export function getMonthlyMultiplier(frequency: string): number {
   switch (frequency) {
@@ -73,7 +130,20 @@ export function getMonthlyMultiplier(frequency: string): number {
 }
 
 /**
- * Get monthly recurring totals for a user (using batch query)
+ * Get total monthly income and expenses from recurring transactions.
+ *
+ * Sums all active recurring transactions, converting each to monthly
+ * equivalent and then to the user's main currency.
+ *
+ * @param userId - Supabase user UUID
+ * @param mainCurrency - Target currency for conversion
+ * @returns Monthly income and expenses totals
+ *
+ * @example
+ * ```typescript
+ * const totals = await getMonthlyRecurringTotals(userId, 'EUR');
+ * const monthlySavings = totals.income - totals.expenses;
+ * ```
  */
 export async function getMonthlyRecurringTotals(
   userId: string,
@@ -102,7 +172,33 @@ export async function getMonthlyRecurringTotals(
 }
 
 /**
- * Generate financial projection data using batch queries (no N+1)
+ * Generate complete financial projection data.
+ *
+ * Creates projections based on:
+ * 1. Current account balances (snapshot)
+ * 2. Active recurring transactions (projected cash flow)
+ * 3. Stock holdings at cost basis (investments)
+ *
+ * YTD data works backwards from current net worth, assuming consistent
+ * recurring transactions throughout the year.
+ *
+ * Future projections assume recurring transactions continue unchanged.
+ *
+ * @param userId - Supabase user UUID
+ * @returns Complete projection data including YTD, future, and summaries
+ *
+ * @remarks
+ * - Investments (stocks) are kept constant in projections (no price prediction)
+ * - Debt reduction is not modeled (loans/credit stay constant)
+ * - Savings are assumed to go into liquid assets (bank/cash)
+ *
+ * @example
+ * ```typescript
+ * const projection = await generateProjection(userId);
+ * console.log(`Monthly savings: ${projection.summary.monthlySavings}`);
+ * console.log(`Savings rate: ${projection.summary.savingsRate}%`);
+ * console.log(`Year-end net worth: ${projection.summary.projectedYearEndNetWorth}`);
+ * ```
  */
 export async function generateProjection(userId: string): Promise<ProjectionData> {
   // Fetch all data in parallel using batch queries

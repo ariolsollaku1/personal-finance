@@ -1,7 +1,25 @@
+/**
+ * Profit & Loss Service
+ *
+ * Generates monthly P&L reports from actual transaction data.
+ * Used for the P&L page to show income, expenses, and net by month.
+ *
+ * Key features:
+ * - Groups transactions by month
+ * - Excludes transfer transactions (to avoid double counting)
+ * - Converts all amounts to user's main currency
+ * - Starts from January 2026
+ *
+ * @module services/pnl
+ */
+
 import { query } from '../db/schema.js';
 import { settingsQueries, accountQueries, Currency } from '../db/queries.js';
 import { convertToMainCurrency, roundCurrency } from './currency.js';
 
+/**
+ * Monthly P&L summary for a single month
+ */
 export interface MonthlyPnL {
   month: string; // YYYY-MM
   label: string; // "January 2026"
@@ -11,11 +29,16 @@ export interface MonthlyPnL {
   transactionCount: number;
 }
 
+/**
+ * Individual transaction details for P&L drill-down
+ */
 export interface TransactionDetail {
   id: number;
   date: string;
   type: 'inflow' | 'outflow';
+  /** Amount in original account currency */
   amount: number;
+  /** Amount converted to user's main currency */
   amountInMainCurrency: number;
   payee: string | null;
   category: string | null;
@@ -24,18 +47,33 @@ export interface TransactionDetail {
   notes: string | null;
 }
 
+/**
+ * P&L summary with all monthly data
+ */
 export interface PnLSummary {
+  /** User's main currency */
   mainCurrency: Currency;
+  /** Array of monthly P&L data from Jan 2026 to current month */
   months: MonthlyPnL[];
 }
 
+/**
+ * Detailed P&L for a specific month including all transactions
+ */
 export interface PnLDetail {
+  /** Month in YYYY-MM format */
   month: string;
+  /** Human-readable label (e.g., "January 2026") */
   label: string;
+  /** User's main currency */
   mainCurrency: Currency;
+  /** Total income for the month */
   income: number;
+  /** Total expenses for the month */
   expenses: number;
+  /** Net income (income - expenses) */
   net: number;
+  /** All transactions for the month (excluding transfers) */
   transactions: TransactionDetail[];
 }
 
@@ -56,7 +94,12 @@ interface RawTransaction {
 }
 
 /**
- * Format date to YYYY-MM-DD string (handles both Date objects and strings)
+ * Format date to YYYY-MM-DD string.
+ *
+ * Handles both Date objects and ISO strings from PostgreSQL.
+ *
+ * @param date - Date object or ISO date string
+ * @returns Date in YYYY-MM-DD format
  */
 function formatDateString(date: Date | string): string {
   if (date instanceof Date) {
@@ -66,7 +109,23 @@ function formatDateString(date: Date | string): string {
 }
 
 /**
- * Get monthly P&L summaries
+ * Get monthly P&L summaries from January 2026 to current month.
+ *
+ * Fetches all transactions, groups by month, and calculates
+ * income, expenses, and net for each month.
+ *
+ * Transfer transactions are excluded to avoid double counting.
+ *
+ * @param userId - Supabase user UUID
+ * @returns P&L summary with all months
+ *
+ * @example
+ * ```typescript
+ * const pnl = await getMonthlySummaries(userId);
+ * for (const month of pnl.months) {
+ *   console.log(`${month.label}: Net ${month.net} ${pnl.mainCurrency}`);
+ * }
+ * ```
  */
 export async function getMonthlySummaries(userId: string): Promise<PnLSummary> {
   const mainCurrency = await settingsQueries.getMainCurrency(userId);
@@ -171,7 +230,21 @@ export async function getMonthlySummaries(userId: string): Promise<PnLSummary> {
 }
 
 /**
- * Get transaction details for a specific month
+ * Get detailed P&L for a specific month including all transactions.
+ *
+ * Returns all non-transfer transactions for the month, sorted by date descending.
+ *
+ * @param userId - Supabase user UUID
+ * @param month - Month in YYYY-MM format (e.g., '2026-01')
+ * @returns P&L detail with all transactions
+ * @throws Error if month format is invalid
+ *
+ * @example
+ * ```typescript
+ * const detail = await getMonthDetail(userId, '2026-01');
+ * console.log(`January 2026: ${detail.transactions.length} transactions`);
+ * console.log(`Income: ${detail.income}, Expenses: ${detail.expenses}`);
+ * ```
  */
 export async function getMonthDetail(userId: string, month: string): Promise<PnLDetail> {
   const mainCurrency = await settingsQueries.getMainCurrency(userId);

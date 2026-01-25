@@ -1,3 +1,18 @@
+/**
+ * Portfolio Service
+ *
+ * Calculates stock portfolio metrics with live market prices from Yahoo Finance.
+ * Provides both per-account portfolio details and aggregated portfolio summary.
+ *
+ * Key calculations:
+ * - Market Value: shares × current price
+ * - Cost Basis: shares × average cost
+ * - Gain/Loss: market value - cost basis
+ * - Day Change: price change × shares
+ *
+ * @module services/portfolio
+ */
+
 import {
   accountQueries,
   holdingsQueries,
@@ -6,6 +21,9 @@ import {
 import { getMultipleQuotes, Quote } from './yahoo.js';
 import { roundCurrency } from './currency.js';
 
+/**
+ * Stock holding enriched with live quote data and calculated metrics
+ */
 export interface HoldingWithQuote {
   id: number;
   symbol: string;
@@ -21,29 +39,57 @@ export interface HoldingWithQuote {
   name: string;
 }
 
+/**
+ * Complete portfolio data for a single stock account
+ */
 export interface AccountPortfolio {
+  /** Cash balance in the account (not invested) */
   cashBalance: number;
+  /** Total market value of all holdings */
   totalValue: number;
+  /** Total cost basis of all holdings */
   totalCost: number;
+  /** Total unrealized gain/loss */
   totalGain: number;
+  /** Total gain as percentage of cost */
   totalGainPercent: number;
+  /** Total change in value today */
   dayChange: number;
+  /** Day change as percentage */
   dayChangePercent: number;
+  /** Individual holdings with live quotes */
   holdings: HoldingWithQuote[];
 }
 
+/**
+ * Aggregated portfolio summary across all stock accounts
+ */
 export interface PortfolioSummary {
+  /** Total market value across all holdings */
   totalValue: number;
+  /** Total cost basis across all holdings */
   totalCost: number;
+  /** Total unrealized gain/loss */
   totalGain: number;
+  /** Total gain as percentage */
   totalGainPercent: number;
+  /** Total change today */
   dayChange: number;
+  /** Day change as percentage */
   dayChangePercent: number;
+  /** Number of individual holdings */
   holdingsCount: number;
 }
 
 /**
- * Calculate holding metrics given a holding and its quote
+ * Calculate metrics for a single holding given its quote data.
+ *
+ * @param holding - Database holding record
+ * @param quote - Live quote from Yahoo Finance (optional)
+ * @returns Holding with all calculated metrics
+ *
+ * @remarks
+ * If quote is unavailable, currentPrice is set to 0 and gains will be negative.
  */
 function calculateHoldingMetrics(
   holding: Holding,
@@ -76,7 +122,23 @@ function calculateHoldingMetrics(
 }
 
 /**
- * Get portfolio for a specific stock account with live prices
+ * Get detailed portfolio for a specific stock account.
+ *
+ * Fetches live prices for all holdings and calculates portfolio metrics.
+ * Returns null for non-stock accounts.
+ *
+ * @param userId - Supabase user UUID
+ * @param accountId - Stock account ID
+ * @returns Portfolio with holdings and metrics, or null if not a stock account
+ *
+ * @example
+ * ```typescript
+ * const portfolio = await getAccountPortfolio(userId, stockAccountId);
+ * if (portfolio) {
+ *   console.log(`Total Value: $${portfolio.totalValue}`);
+ *   console.log(`Day Change: ${portfolio.dayChangePercent}%`);
+ * }
+ * ```
  */
 export async function getAccountPortfolio(
   userId: string,
@@ -143,7 +205,24 @@ export async function getAccountPortfolio(
 }
 
 /**
- * Get aggregated portfolio across all stock accounts with live prices
+ * Get aggregated portfolio across all stock accounts.
+ *
+ * Combines holdings from all stock accounts and calculates total portfolio metrics.
+ * Used for dashboard display to show overall stock exposure.
+ *
+ * @param userId - Supabase user UUID
+ * @returns Aggregated portfolio summary
+ *
+ * @remarks
+ * Holdings with the same symbol across different accounts are NOT merged -
+ * they contribute separately to totals.
+ *
+ * @example
+ * ```typescript
+ * const portfolio = await getAggregatedPortfolio(userId);
+ * console.log(`Total stocks value: $${portfolio.totalValue}`);
+ * console.log(`Holdings: ${portfolio.holdingsCount}`);
+ * ```
  */
 export async function getAggregatedPortfolio(
   userId: string
@@ -217,8 +296,22 @@ export async function getAggregatedPortfolio(
 }
 
 /**
- * Get quotes map for all holdings in stock accounts
- * Useful when caller needs both portfolio metrics and quote data
+ * Get quotes map for all holdings across all stock accounts.
+ *
+ * Useful when the caller needs both portfolio metrics and raw quote data
+ * for additional calculations or display.
+ *
+ * @param userId - Supabase user UUID
+ * @returns Map of symbol -> Quote for all held symbols
+ *
+ * @example
+ * ```typescript
+ * const quotes = await getPortfolioQuotes(userId);
+ * const appleQuote = quotes.get('AAPL');
+ * if (appleQuote) {
+ *   console.log(`AAPL: $${appleQuote.regularMarketPrice}`);
+ * }
+ * ```
  */
 export async function getPortfolioQuotes(
   userId: string

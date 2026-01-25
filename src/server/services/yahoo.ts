@@ -1,7 +1,22 @@
+/**
+ * Yahoo Finance Service
+ *
+ * Wrapper around yahoo-finance2 library for fetching stock market data.
+ * Provides functions for quotes, historical prices, search, and dividends.
+ *
+ * All functions handle errors gracefully and return null/empty arrays on failure.
+ *
+ * @module services/yahoo
+ */
+
 import YahooFinance from 'yahoo-finance2';
 
+/** Yahoo Finance client with survey notices suppressed */
 const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
+/**
+ * Stock quote with market data
+ */
 export interface Quote {
   symbol: string;
   shortName: string;
@@ -20,6 +35,9 @@ export interface Quote {
   currency?: string;
 }
 
+/**
+ * Historical price data point (OHLCV)
+ */
 export interface HistoricalPrice {
   date: Date;
   open: number;
@@ -27,17 +45,36 @@ export interface HistoricalPrice {
   low: number;
   close: number;
   volume: number;
+  /** Adjusted close price (accounts for splits/dividends) */
   adjClose: number;
 }
 
+/**
+ * Stock search result
+ */
 export interface SearchResult {
   symbol: string;
   shortname: string;
   longname?: string;
   exchange: string;
+  /** EQUITY or ETF */
   quoteType: string;
 }
 
+/**
+ * Get current quote for a stock symbol.
+ *
+ * @param symbol - Stock ticker symbol (e.g., 'AAPL', 'MSFT')
+ * @returns Quote data or null if symbol not found or error
+ *
+ * @example
+ * ```typescript
+ * const quote = await getQuote('AAPL');
+ * if (quote) {
+ *   console.log(`${quote.shortName}: $${quote.regularMarketPrice}`);
+ * }
+ * ```
+ */
 export async function getQuote(symbol: string): Promise<Quote | null> {
   try {
     const result = await yahooFinance.quote(symbol);
@@ -66,6 +103,20 @@ export async function getQuote(symbol: string): Promise<Quote | null> {
   }
 }
 
+/**
+ * Get quotes for multiple symbols in parallel.
+ *
+ * @param symbols - Array of stock ticker symbols
+ * @returns Map of symbol -> Quote (symbols with errors are omitted)
+ *
+ * @example
+ * ```typescript
+ * const quotes = await getMultipleQuotes(['AAPL', 'MSFT', 'GOOGL']);
+ * for (const [symbol, quote] of quotes) {
+ *   console.log(`${symbol}: $${quote.regularMarketPrice}`);
+ * }
+ * ```
+ */
 export async function getMultipleQuotes(symbols: string[]): Promise<Map<string, Quote>> {
   const quotes = new Map<string, Quote>();
 
@@ -89,6 +140,22 @@ export async function getMultipleQuotes(symbols: string[]): Promise<Map<string, 
   return quotes;
 }
 
+/**
+ * Get historical price data for a symbol.
+ *
+ * @param symbol - Stock ticker symbol
+ * @param period1 - Start date
+ * @param period2 - End date (defaults to today)
+ * @param interval - Data interval: '1d' (daily), '1wk' (weekly), '1mo' (monthly)
+ * @returns Array of historical prices, empty array on error
+ *
+ * @example
+ * ```typescript
+ * const oneYearAgo = new Date();
+ * oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+ * const history = await getHistoricalPrices('AAPL', oneYearAgo);
+ * ```
+ */
 export async function getHistoricalPrices(
   symbol: string,
   period1: Date,
@@ -117,6 +184,20 @@ export async function getHistoricalPrices(
   }
 }
 
+/**
+ * Search for stocks by name or symbol.
+ *
+ * Returns up to 10 results, filtered to EQUITY and ETF types only.
+ *
+ * @param query - Search query (company name or symbol)
+ * @returns Array of search results, empty array on error
+ *
+ * @example
+ * ```typescript
+ * const results = await searchStocks('Apple');
+ * // [{ symbol: 'AAPL', shortname: 'Apple Inc.', ... }]
+ * ```
+ */
 export async function searchStocks(query: string): Promise<SearchResult[]> {
   try {
     const result = await yahooFinance.search(query, { quotesCount: 10 });
@@ -136,6 +217,22 @@ export async function searchStocks(query: string): Promise<SearchResult[]> {
   }
 }
 
+/**
+ * Get dividend payment history for a symbol.
+ *
+ * Returns dividend payments from the last 5 years.
+ *
+ * @param symbol - Stock ticker symbol
+ * @returns Array of dividend payments with dates, empty array on error
+ *
+ * @example
+ * ```typescript
+ * const dividends = await getDividendHistory('AAPL');
+ * for (const div of dividends) {
+ *   console.log(`${div.date}: $${div.dividends}`);
+ * }
+ * ```
+ */
 export async function getDividendHistory(symbol: string): Promise<{ date: Date; dividends: number }[]> {
   try {
     const endDate = new Date();

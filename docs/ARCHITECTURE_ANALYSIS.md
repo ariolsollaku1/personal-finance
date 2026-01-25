@@ -352,13 +352,13 @@ useEffect(() => {
 
 > **Improve maintainability and AI agent experience**
 
-### MED-1: No JSDoc Comments on Services
+### ~~MED-1: No JSDoc Comments on Services~~
 
 | Field | Value |
 |-------|-------|
-| **Status** | 🔴 Open |
+| **Status** | ✅ Fixed |
 | **Files** | All `services/*.ts` files |
-| **Impact** | AI agents lack context for safe modifications |
+| **Resolution** | Added comprehensive JSDoc to all 9 service files |
 
 **Current:**
 ```typescript
@@ -677,7 +677,7 @@ Use this checklist to track completion:
 - [x] HIGH-7: Consistent error responses
 
 ## Medium Priority
-- [ ] MED-1: Add JSDoc comments
+- [x] MED-1: Add JSDoc comments
 - [ ] MED-2: Add test coverage
 - [ ] MED-3: Add error boundaries
 - [ ] MED-4: Fix date math

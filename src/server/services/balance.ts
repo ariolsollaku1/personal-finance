@@ -1,3 +1,17 @@
+/**
+ * Balance Service
+ *
+ * Calculates account balances and net worth contributions for all account types.
+ * Handles the complex logic of different account types:
+ * - Bank/Cash: Balance adds to net worth
+ * - Stock: Cost basis (shares × avg cost) adds to net worth
+ * - Asset: Initial value (current value) adds to net worth
+ * - Loan: Balance subtracts from net worth
+ * - Credit: Amount owed (limit - available) subtracts from net worth
+ *
+ * @module services/balance
+ */
+
 import {
   accountQueries,
   holdingsQueries,
@@ -9,6 +23,9 @@ import {
 } from '../db/queries.js';
 import { convertToMainCurrency, roundCurrency } from './currency.js';
 
+/**
+ * Account balance information including recurring transaction counts
+ */
 export interface AccountBalance {
   id: number;
   name: string;
@@ -20,14 +37,38 @@ export interface AccountBalance {
   recurringOutflow: number;
 }
 
+
+/**
+ * Account balance with currency conversion and net worth contribution
+ */
 export interface AccountBalanceWithConversion extends AccountBalance {
+  /** Balance converted to user's main currency */
   balanceInMainCurrency: number;
+  /** Contribution to net worth (can be negative for debt accounts) */
   netWorthContribution: number;
 }
 
 /**
- * Get the balance for a single account
- * Note: For bulk operations, use getAllAccountBalances instead to avoid N+1
+ * Get the balance for a single account.
+ *
+ * Calculates balance based on account type:
+ * - Stock accounts: Returns cost basis (sum of shares × avg cost)
+ * - Other accounts: Returns initial_balance + sum of transactions
+ *
+ * @param userId - Supabase user UUID
+ * @param accountId - Account ID to fetch balance for
+ * @returns Account balance with recurring counts, or null if not found
+ *
+ * @remarks
+ * For bulk operations, use {@link getAllAccountBalances} instead to avoid N+1 queries.
+ *
+ * @example
+ * ```typescript
+ * const balance = await getAccountBalance(userId, 123);
+ * if (balance) {
+ *   console.log(`${balance.name}: ${balance.balance} ${balance.currency}`);
+ * }
+ * ```
  */
 export async function getAccountBalance(
   userId: string,
@@ -76,7 +117,23 @@ export async function getAccountBalance(
 }
 
 /**
- * Get balances for all accounts using batch queries (no N+1)
+ * Get balances for all user accounts using batch queries.
+ *
+ * Uses parallel batch queries to efficiently fetch all account data in 3 queries
+ * regardless of account count, avoiding N+1 query problems.
+ *
+ * @param userId - Supabase user UUID
+ * @returns Array of account balances with recurring counts
+ *
+ * @remarks
+ * Performance: 3 queries total (accounts+balances, holdings, recurring counts)
+ * vs N+1 queries if fetching individually.
+ *
+ * @example
+ * ```typescript
+ * const balances = await getAllAccountBalances(userId);
+ * const totalBalance = balances.reduce((sum, b) => sum + b.balance, 0);
+ * ```
  */
 export async function getAllAccountBalances(
   userId: string
@@ -145,8 +202,26 @@ export async function getAllAccountBalances(
 }
 
 /**
- * Calculate net worth contribution for an account
- * This handles the different logic for each account type
+ * Calculate net worth contribution for an account.
+ *
+ * Different account types contribute differently to net worth:
+ * - **Bank/Cash**: Balance adds directly
+ * - **Stock**: Balance (cost basis) adds directly
+ * - **Asset**: Uses initial_balance as current value (adds)
+ * - **Loan**: Balance subtracts (debt)
+ * - **Credit**: Amount owed (limit - available) subtracts
+ *
+ * @param account - Account or account balance row
+ * @param balance - Current balance in account's currency
+ * @param mainCurrency - User's main currency for conversion
+ * @returns Net worth contribution (negative for debt accounts)
+ *
+ * @example
+ * ```typescript
+ * // Credit card with $1000 limit and $800 available = $200 owed
+ * const contribution = calculateNetWorthContribution(creditCard, 800, 'USD');
+ * // Returns -200 (debt)
+ * ```
  */
 export function calculateNetWorthContribution(
   account: Account | AccountBalanceRow,
@@ -190,8 +265,24 @@ export function calculateNetWorthContribution(
 }
 
 /**
- * Get all account balances with currency conversion and net worth contribution
- * Uses batch queries (no N+1)
+ * Get all account balances with currency conversion and net worth contribution.
+ *
+ * Combines balance calculation with currency conversion in a single efficient
+ * operation using batch queries.
+ *
+ * @param userId - Supabase user UUID
+ * @param mainCurrency - Target currency for conversion
+ * @returns Array of account balances with converted values and net worth contribution
+ *
+ * @remarks
+ * This is the recommended method for dashboard and net worth calculations
+ * as it provides all necessary data in one call.
+ *
+ * @example
+ * ```typescript
+ * const balances = await getAllAccountBalancesWithConversion(userId, 'EUR');
+ * const netWorth = balances.reduce((sum, b) => sum + b.netWorthContribution, 0);
+ * ```
  */
 export async function getAllAccountBalancesWithConversion(
   userId: string,
@@ -269,7 +360,24 @@ export async function getAllAccountBalancesWithConversion(
 }
 
 /**
- * Get credit card amount owed
+ * Calculate credit card amount owed.
+ *
+ * Credit card logic:
+ * - initial_balance = Credit limit
+ * - balance = Available credit
+ * - Amount owed = limit - available
+ *
+ * @param initialBalance - Credit limit in account currency
+ * @param currentBalance - Available credit in account currency
+ * @param currency - Account currency
+ * @param mainCurrency - Target currency for conversion
+ * @returns Amount owed converted to main currency
+ *
+ * @example
+ * ```typescript
+ * // $5000 limit, $3500 available = $1500 owed
+ * const owed = getCreditCardOwed(5000, 3500, 'USD', 'EUR');
+ * ```
  */
 export function getCreditCardOwed(
   initialBalance: number,
