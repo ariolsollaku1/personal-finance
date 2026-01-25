@@ -183,7 +183,7 @@ export default function Dashboard() {
                     {recurring.payee || recurring.category || 'Recurring Transaction'}
                   </p>
                   <p className="text-sm text-gray-500">
-                    {recurring.accountName} • Due: {recurring.nextDueDate}
+                    {recurring.accountName} • Due: {new Date(recurring.nextDueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </p>
                 </div>
                 <div className="flex items-center gap-4">

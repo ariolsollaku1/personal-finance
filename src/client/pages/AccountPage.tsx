@@ -651,7 +651,7 @@ export default function AccountPage() {
                               )}
                             </p>
                             <p className="text-xs text-gray-500">
-                              {rec.frequency} • Next: {rec.next_due_date}
+                              {rec.frequency} • Next: {new Date(rec.next_due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                             </p>
                           </div>
                         </div>
@@ -716,7 +716,7 @@ export default function AccountPage() {
                               )}
                             </p>
                             <p className="text-xs text-gray-500">
-                              {tx.date}
+                              {new Date(tx.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                               {tx.notes && !tx.notes.startsWith('Buy ') && !tx.notes.startsWith('Sell ') && ` • ${tx.notes}`}
                               {tx.balance !== undefined && ` • Bal: ${formatCurrency(tx.balance, account.currency)}`}
                             </p>
@@ -793,7 +793,7 @@ export default function AccountPage() {
                           )}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {rec.frequency} • Next: {rec.next_due_date}
+                          {rec.frequency} • Next: {new Date(rec.next_due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </p>
                       </div>
                     </div>
@@ -859,7 +859,7 @@ export default function AccountPage() {
                           )}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {tx.date}
+                          {new Date(tx.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                           {tx.notes && ` • ${tx.notes}`}
                           {tx.balance !== undefined && ` • Bal: ${formatCurrency(tx.balance, account.currency)}`}
                         </p>
