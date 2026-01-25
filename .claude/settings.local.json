@@ -31,7 +31,18 @@
       "Bash(npx tsx:*)",
       "mcp__ide__getDiagnostics",
       "Bash(cmd //c \"taskkill /F /PID 13168\")",
-      "Bash(PGPASSWORD='*$95lydtiDhdV!' psql:*)"
+      "Bash(PGPASSWORD='*$95lydtiDhdV!' psql:*)",
+      "Bash(ssh -o StrictHostKeyChecking=no root@173.212.203.239 \"top -bn1 | head -20\")",
+      "Bash(ssh root@173.212.203.239 \"mysql -e ''SHOW FULL PROCESSLIST;''\")",
+      "Bash(ssh root@173.212.203.239 \"mysql -e ''SHOW GLOBAL STATUS LIKE \"\"Threads_running\"\";''\")",
+      "Bash(ssh root@173.212.203.239 \"docker ps --format ''{{.Names}}\\\\t{{.Status}}\\\\t{{.Image}}''\")",
+      "Bash(ssh root@173.212.203.239 \"docker exec mysql mysql -e ''SHOW FULL PROCESSLIST\\\\G''\")",
+      "Bash(ssh root@173.212.203.239 \"docker inspect mysql --format ''{{range .Config.Env}}{{println .}}{{end}}'' | grep -i mysql\")",
+      "Bash(ssh:*)",
+      "Bash(ssh-keygen:*)",
+      "Bash(npm run dev:client:*)",
+      "Bash(npx vite build)",
+      "Bash(git checkout:*)"
     ]
   }
 }
