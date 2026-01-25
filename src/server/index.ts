@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import morgan from 'morgan';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initDatabase } from './db/schema.js';
@@ -40,6 +41,13 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+
+// Request logging - 'combined' for production, 'dev' for development
+const logFormat = process.env.NODE_ENV === 'production' ? 'combined' : 'dev';
+app.use(morgan(logFormat, {
+  // Skip logging for health checks and static assets
+  skip: (req) => req.url === '/health' || req.url?.startsWith('/assets'),
+}));
 
 // Initialize database and start server
 async function start() {

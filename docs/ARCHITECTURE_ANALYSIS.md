@@ -683,6 +683,6 @@ Use this checklist to track completion:
 - [x] MED-4: Fix date math
 - [x] MED-5: Cache session token
 - [x] MED-6: Add pagination
-- [ ] MED-7: Add request logging
+- [x] MED-7: Add request logging
 - [ ] MED-8: Fix division by zero
 ```
