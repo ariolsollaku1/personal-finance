@@ -150,6 +150,16 @@ export async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_categories_user_id ON categories(user_id);
     `);
 
+    // Migration: add unique constraint on (user_id, name) if it doesn't exist
+    await client.query(`
+      DO $$ BEGIN
+        ALTER TABLE categories ADD CONSTRAINT categories_user_id_name_key UNIQUE (user_id, name);
+      EXCEPTION
+        WHEN duplicate_table THEN null;
+        WHEN duplicate_object THEN null;
+      END $$;
+    `);
+
     // Payees: per-user
     await client.query(`
       CREATE TABLE IF NOT EXISTS payees (
@@ -173,6 +183,16 @@ export async function initDatabase() {
     // Create index on user_id for payees
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_payees_user_id ON payees(user_id);
+    `);
+
+    // Migration: add unique constraint on (user_id, name) if it doesn't exist
+    await client.query(`
+      DO $$ BEGIN
+        ALTER TABLE payees ADD CONSTRAINT payees_user_id_name_key UNIQUE (user_id, name);
+      EXCEPTION
+        WHEN duplicate_table THEN null;
+        WHEN duplicate_object THEN null;
+      END $$;
     `);
 
     // Holdings: current stock positions

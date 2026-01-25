@@ -8,15 +8,18 @@ const router = Router();
 router.post('/init', async (req: Request, res: Response) => {
   try {
     const userId = req.userId;
+    console.log('Auth init called for userId:', userId);
 
     if (!userId) {
       return unauthorized(res, 'Not authenticated');
     }
 
     const result = await initializeNewUser(userId);
+    console.log('User initialized:', result);
     sendSuccess(res, result);
   } catch (error) {
     console.error('Error initializing user:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
     internalError(res, 'Failed to initialize user');
   }
 });
