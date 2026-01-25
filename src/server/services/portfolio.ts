@@ -188,8 +188,9 @@ export async function getAccountPortfolio(
 
   const totalGain = totalValue - totalCost;
   const totalGainPercent = totalCost > 0 ? (totalGain / totalCost) * 100 : 0;
-  const dayChangePercent = totalValue > 0 && totalValue !== totalDayChange
-    ? (totalDayChange / (totalValue - totalDayChange)) * 100
+  const previousValue = totalValue - totalDayChange;
+  const dayChangePercent = previousValue > 0
+    ? (totalDayChange / previousValue) * 100
     : 0;
 
   return {
@@ -280,8 +281,9 @@ export async function getAggregatedPortfolio(
 
   const totalGain = totalValue - totalCost;
   const totalGainPercent = totalCost > 0 ? (totalGain / totalCost) * 100 : 0;
-  const dayChangePercent = totalValue > 0 && totalValue !== dayChange
-    ? (dayChange / (totalValue - dayChange)) * 100
+  const previousValue = totalValue - dayChange;
+  const dayChangePercent = previousValue > 0
+    ? (dayChange / previousValue) * 100
     : 0;
 
   return {
