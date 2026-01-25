@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { holdingsQueries } from '../db/queries.js';
 import { getMultipleQuotes } from '../services/yahoo.js';
+import { sendSuccess, internalError } from '../utils/response.js';
 
 const router = Router();
 
@@ -11,7 +12,7 @@ router.get('/', async (req: Request, res: Response) => {
     const holdings = await holdingsQueries.getAll(userId);
 
     if (holdings.length === 0) {
-      return res.json({
+      return sendSuccess(res, {
         totalValue: 0,
         totalCost: 0,
         totalGain: 0,
@@ -65,7 +66,7 @@ router.get('/', async (req: Request, res: Response) => {
     const totalGainPercent = totalCost > 0 ? (totalGain / totalCost) * 100 : 0;
     const dayChangePercent = totalValue > 0 ? (totalDayChange / (totalValue - totalDayChange)) * 100 : 0;
 
-    res.json({
+    sendSuccess(res, {
       totalValue: Math.round(totalValue * 100) / 100,
       totalCost: Math.round(totalCost * 100) / 100,
       totalGain: Math.round(totalGain * 100) / 100,
@@ -76,7 +77,7 @@ router.get('/', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error fetching portfolio:', error);
-    res.status(500).json({ error: 'Failed to fetch portfolio' });
+    internalError(res, 'Failed to fetch portfolio');
   }
 });
 

@@ -8,6 +8,7 @@ import {
   TransactionType,
   Frequency,
 } from '../db/queries.js';
+import { sendSuccess, badRequest, notFound, internalError } from '../utils/response.js';
 
 const router = Router();
 
@@ -41,14 +42,14 @@ router.get('/accounts/:id/recurring', async (req: Request, res: Response) => {
     const account = await accountQueries.getById(userId, accountId);
 
     if (!account) {
-      return res.status(404).json({ error: 'Account not found' });
+      return notFound(res, 'Account not found');
     }
 
     const recurring = await recurringQueries.getByAccount(userId, accountId);
-    res.json(recurring);
+    sendSuccess(res, recurring);
   } catch (error) {
     console.error('Error fetching recurring transactions:', error);
-    res.status(500).json({ error: 'Failed to fetch recurring transactions' });
+    internalError(res, 'Failed to fetch recurring transactions');
   }
 });
 
@@ -58,10 +59,10 @@ router.get('/due', async (req: Request, res: Response) => {
     const userId = req.userId!;
     const today = new Date().toISOString().split('T')[0];
     const dueRecurring = await recurringQueries.getDue(userId, today);
-    res.json(dueRecurring);
+    sendSuccess(res, dueRecurring);
   } catch (error) {
     console.error('Error fetching due recurring transactions:', error);
-    res.status(500).json({ error: 'Failed to fetch due recurring transactions' });
+    internalError(res, 'Failed to fetch due recurring transactions');
   }
 });
 
@@ -74,19 +75,19 @@ router.post('/accounts/:id/recurring', async (req: Request, res: Response) => {
 
     const account = await accountQueries.getById(userId, accountId);
     if (!account) {
-      return res.status(404).json({ error: 'Account not found' });
+      return notFound(res, 'Account not found');
     }
 
     if (!type || !amount || !frequency || !nextDueDate) {
-      return res.status(400).json({ error: 'type, amount, frequency, and nextDueDate are required' });
+      return badRequest(res, 'type, amount, frequency, and nextDueDate are required');
     }
 
     if (!['inflow', 'outflow'].includes(type)) {
-      return res.status(400).json({ error: 'Invalid transaction type' });
+      return badRequest(res, 'Invalid transaction type');
     }
 
     if (!['weekly', 'biweekly', 'monthly', 'yearly'].includes(frequency)) {
-      return res.status(400).json({ error: 'Invalid frequency' });
+      return badRequest(res, 'Invalid frequency');
     }
 
     // Handle payee - get or create
@@ -115,10 +116,10 @@ router.post('/accounts/:id/recurring', async (req: Request, res: Response) => {
     );
 
     const recurring = await recurringQueries.getById(userId, id as number);
-    res.status(201).json(recurring);
+    sendSuccess(res, recurring, 201);
   } catch (error) {
     console.error('Error creating recurring transaction:', error);
-    res.status(500).json({ error: 'Failed to create recurring transaction' });
+    internalError(res, 'Failed to create recurring transaction');
   }
 });
 
@@ -131,17 +132,17 @@ router.put('/:id', async (req: Request, res: Response) => {
 
     const recurring = await recurringQueries.getById(userId, id);
     if (!recurring) {
-      return res.status(404).json({ error: 'Recurring transaction not found' });
+      return notFound(res, 'Recurring transaction not found');
     }
 
     const txType = type || recurring.type;
     if (!['inflow', 'outflow'].includes(txType)) {
-      return res.status(400).json({ error: 'Invalid transaction type' });
+      return badRequest(res, 'Invalid transaction type');
     }
 
     const freq = frequency || recurring.frequency;
     if (!['weekly', 'biweekly', 'monthly', 'yearly'].includes(freq)) {
-      return res.status(400).json({ error: 'Invalid frequency' });
+      return badRequest(res, 'Invalid frequency');
     }
 
     // Handle payee - get or create
@@ -171,10 +172,10 @@ router.put('/:id', async (req: Request, res: Response) => {
     );
 
     const updatedRecurring = await recurringQueries.getById(userId, id);
-    res.json(updatedRecurring);
+    sendSuccess(res, updatedRecurring);
   } catch (error) {
     console.error('Error updating recurring transaction:', error);
-    res.status(500).json({ error: 'Failed to update recurring transaction' });
+    internalError(res, 'Failed to update recurring transaction');
   }
 });
 
@@ -186,14 +187,14 @@ router.delete('/:id', async (req: Request, res: Response) => {
     const recurring = await recurringQueries.getById(userId, id);
 
     if (!recurring) {
-      return res.status(404).json({ error: 'Recurring transaction not found' });
+      return notFound(res, 'Recurring transaction not found');
     }
 
     await recurringQueries.delete(userId, id);
-    res.json({ success: true });
+    sendSuccess(res, { deleted: true });
   } catch (error) {
     console.error('Error deleting recurring transaction:', error);
-    res.status(500).json({ error: 'Failed to delete recurring transaction' });
+    internalError(res, 'Failed to delete recurring transaction');
   }
 });
 
@@ -206,7 +207,7 @@ router.post('/:id/apply', async (req: Request, res: Response) => {
 
     const recurring = await recurringQueries.getById(userId, id);
     if (!recurring) {
-      return res.status(404).json({ error: 'Recurring transaction not found' });
+      return notFound(res, 'Recurring transaction not found');
     }
 
     // Use provided date or the next due date
@@ -231,14 +232,14 @@ router.post('/:id/apply', async (req: Request, res: Response) => {
     const transaction = await accountTransactionQueries.getById(userId, txId as number);
     const updatedRecurring = await recurringQueries.getById(userId, id);
 
-    res.status(201).json({
+    sendSuccess(res, {
       transaction,
       recurring: updatedRecurring,
       message: `Applied recurring transaction. Next due: ${nextDueDate}`,
-    });
+    }, 201);
   } catch (error) {
     console.error('Error applying recurring transaction:', error);
-    res.status(500).json({ error: 'Failed to apply recurring transaction' });
+    internalError(res, 'Failed to apply recurring transaction');
   }
 });
 

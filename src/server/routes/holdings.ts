@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { holdingsQueries, transactionQueries, accountTransactionQueries, accountQueries } from '../db/queries.js';
 import { getQuote } from '../services/yahoo.js';
+import { sendSuccess, badRequest, notFound, internalError } from '../utils/response.js';
 
 const router = Router();
 
@@ -9,10 +10,10 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
     const holdings = await holdingsQueries.getAll(userId);
-    res.json(holdings);
+    sendSuccess(res, holdings);
   } catch (error) {
     console.error('Error fetching holdings:', error);
-    res.status(500).json({ error: 'Failed to fetch holdings' });
+    internalError(res, 'Failed to fetch holdings');
   }
 });
 
@@ -22,10 +23,10 @@ router.get('/account/:accountId', async (req: Request, res: Response) => {
     const userId = req.userId!;
     const accountId = parseInt(req.params.accountId);
     const holdings = await holdingsQueries.getByAccount(userId, accountId);
-    res.json(holdings);
+    sendSuccess(res, holdings);
   } catch (error) {
     console.error('Error fetching holdings:', error);
-    res.status(500).json({ error: 'Failed to fetch holdings' });
+    internalError(res, 'Failed to fetch holdings');
   }
 });
 
@@ -36,12 +37,12 @@ router.get('/:symbol', async (req: Request, res: Response) => {
     const accountId = req.query.accountId ? parseInt(req.query.accountId as string) : undefined;
     const holding = await holdingsQueries.getBySymbol(userId, req.params.symbol.toUpperCase(), accountId);
     if (!holding) {
-      return res.status(404).json({ error: 'Holding not found' });
+      return notFound(res, 'Holding not found');
     }
-    res.json(holding);
+    sendSuccess(res, holding);
   } catch (error) {
     console.error('Error fetching holding:', error);
-    res.status(500).json({ error: 'Failed to fetch holding' });
+    internalError(res, 'Failed to fetch holding');
   }
 });
 
@@ -52,17 +53,17 @@ router.post('/', async (req: Request, res: Response) => {
     const { symbol, shares, price, fees = 0, date, accountId } = req.body;
 
     if (!symbol || !shares || !price) {
-      return res.status(400).json({ error: 'Symbol, shares, and price are required' });
+      return badRequest(res, 'Symbol, shares, and price are required');
     }
 
     if (!accountId) {
-      return res.status(400).json({ error: 'accountId is required' });
+      return badRequest(res, 'accountId is required');
     }
 
     // Verify account belongs to user
     const account = await accountQueries.getById(userId, accountId);
     if (!account) {
-      return res.status(404).json({ error: 'Account not found' });
+      return notFound(res, 'Account not found');
     }
 
     const upperSymbol = symbol.toUpperCase();
@@ -70,7 +71,7 @@ router.post('/', async (req: Request, res: Response) => {
     // Verify symbol exists
     const quote = await getQuote(upperSymbol);
     if (!quote) {
-      return res.status(400).json({ error: 'Invalid stock symbol' });
+      return badRequest(res, 'Invalid stock symbol');
     }
 
     // Calculate total cost including fees
@@ -119,10 +120,10 @@ router.post('/', async (req: Request, res: Response) => {
     );
 
     const updatedHolding = await holdingsQueries.getBySymbol(userId, upperSymbol, accountId);
-    res.status(201).json(updatedHolding);
+    sendSuccess(res, updatedHolding, 201);
   } catch (error) {
     console.error('Error adding holding:', error);
-    res.status(500).json({ error: 'Failed to add holding' });
+    internalError(res, 'Failed to add holding');
   }
 });
 
@@ -132,10 +133,10 @@ router.delete('/:id', async (req: Request, res: Response) => {
     const userId = req.userId!;
     const id = parseInt(req.params.id);
     await holdingsQueries.delete(userId, id);
-    res.json({ success: true });
+    sendSuccess(res, { deleted: true });
   } catch (error) {
     console.error('Error deleting holding:', error);
-    res.status(500).json({ error: 'Failed to delete holding' });
+    internalError(res, 'Failed to delete holding');
   }
 });
 
@@ -147,26 +148,26 @@ router.post('/:symbol/sell', async (req: Request, res: Response) => {
     const symbol = req.params.symbol.toUpperCase();
 
     if (!shares || !price) {
-      return res.status(400).json({ error: 'Shares and price are required' });
+      return badRequest(res, 'Shares and price are required');
     }
 
     if (!accountId) {
-      return res.status(400).json({ error: 'accountId is required' });
+      return badRequest(res, 'accountId is required');
     }
 
     // Verify account belongs to user
     const account = await accountQueries.getById(userId, accountId);
     if (!account) {
-      return res.status(404).json({ error: 'Account not found' });
+      return notFound(res, 'Account not found');
     }
 
     const holding = await holdingsQueries.getBySymbol(userId, symbol, accountId);
     if (!holding) {
-      return res.status(404).json({ error: 'Holding not found' });
+      return notFound(res, 'Holding not found');
     }
 
     if (shares > Number(holding.shares)) {
-      return res.status(400).json({ error: 'Cannot sell more shares than owned' });
+      return badRequest(res, 'Cannot sell more shares than owned');
     }
 
     const txDate = date || new Date().toISOString().split('T')[0];
@@ -201,16 +202,16 @@ router.post('/:symbol/sell', async (req: Request, res: Response) => {
     if (remainingShares <= 0) {
       // Remove holding if no shares remain
       await holdingsQueries.delete(userId, holding.id);
-      return res.json({ success: true, holding: null });
+      return sendSuccess(res, { holding: null });
     } else {
       // Update holding with remaining shares (avg cost stays the same)
       await holdingsQueries.update(userId, holding.id, remainingShares, Number(holding.avg_cost));
       const updatedHolding = await holdingsQueries.getBySymbol(userId, symbol, accountId);
-      return res.json({ success: true, holding: updatedHolding });
+      return sendSuccess(res, { holding: updatedHolding });
     }
   } catch (error) {
     console.error('Error selling shares:', error);
-    res.status(500).json({ error: 'Failed to sell shares' });
+    internalError(res, 'Failed to sell shares');
   }
 });
 

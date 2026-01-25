@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { initializeNewUser, isUserInitialized } from '../services/userSetup.js';
+import { sendSuccess, unauthorized, internalError } from '../utils/response.js';
 
 const router = Router();
 
@@ -9,14 +10,14 @@ router.post('/init', async (req: Request, res: Response) => {
     const userId = req.userId;
 
     if (!userId) {
-      return res.status(401).json({ error: 'Not authenticated' });
+      return unauthorized(res, 'Not authenticated');
     }
 
     const result = await initializeNewUser(userId);
-    res.json(result);
+    sendSuccess(res, result);
   } catch (error) {
     console.error('Error initializing user:', error);
-    res.status(500).json({ error: 'Failed to initialize user' });
+    internalError(res, 'Failed to initialize user');
   }
 });
 
@@ -26,14 +27,14 @@ router.get('/status', async (req: Request, res: Response) => {
     const userId = req.userId;
 
     if (!userId) {
-      return res.status(401).json({ error: 'Not authenticated' });
+      return unauthorized(res, 'Not authenticated');
     }
 
     const initialized = await isUserInitialized(userId);
-    res.json({ initialized, userId });
+    sendSuccess(res, { initialized, userId });
   } catch (error) {
     console.error('Error checking user status:', error);
-    res.status(500).json({ error: 'Failed to check user status' });
+    internalError(res, 'Failed to check user status');
   }
 });
 

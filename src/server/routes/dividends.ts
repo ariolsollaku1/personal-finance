@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { dividendQueries, holdingsQueries, transactionQueries, accountTransactionQueries, accountQueries, settingsQueries } from '../db/queries.js';
 import { getDividendHistory } from '../services/yahoo.js';
+import { sendSuccess, badRequest, notFound, internalError } from '../utils/response.js';
 
 const router = Router();
 
@@ -13,24 +14,24 @@ router.get('/', async (req: Request, res: Response) => {
 
     if (year) {
       const dividends = await dividendQueries.getByYear(userId, parseInt(year as string), parsedAccountId);
-      return res.json(dividends);
+      return sendSuccess(res, dividends);
     }
 
     if (symbol) {
       const dividends = await dividendQueries.getBySymbol(userId, symbol as string, parsedAccountId);
-      return res.json(dividends);
+      return sendSuccess(res, dividends);
     }
 
     if (parsedAccountId) {
       const dividends = await dividendQueries.getByAccount(userId, parsedAccountId);
-      return res.json(dividends);
+      return sendSuccess(res, dividends);
     }
 
     const dividends = await dividendQueries.getAll(userId);
-    res.json(dividends);
+    sendSuccess(res, dividends);
   } catch (error) {
     console.error('Error fetching dividends:', error);
-    res.status(500).json({ error: 'Failed to fetch dividends' });
+    internalError(res, 'Failed to fetch dividends');
   }
 });
 
@@ -40,10 +41,10 @@ router.get('/account/:accountId', async (req: Request, res: Response) => {
     const userId = req.userId!;
     const accountId = parseInt(req.params.accountId);
     const dividends = await dividendQueries.getByAccount(userId, accountId);
-    res.json(dividends);
+    sendSuccess(res, dividends);
   } catch (error) {
     console.error('Error fetching dividends:', error);
-    res.status(500).json({ error: 'Failed to fetch dividends' });
+    internalError(res, 'Failed to fetch dividends');
   }
 });
 
@@ -55,13 +56,13 @@ router.get('/tax', async (req: Request, res: Response) => {
     const summary = await dividendQueries.getTaxSummary(userId, undefined, accountId);
     const currentTaxRate = await settingsQueries.getDividendTaxRate(userId);
 
-    res.json({
+    sendSuccess(res, {
       currentTaxRate,
       summary,
     });
   } catch (error) {
     console.error('Error fetching tax summary:', error);
-    res.status(500).json({ error: 'Failed to fetch tax summary' });
+    internalError(res, 'Failed to fetch tax summary');
   }
 });
 
@@ -72,21 +73,17 @@ router.post('/', async (req: Request, res: Response) => {
     const { symbol, amountPerShare, sharesHeld, exDate, payDate, accountId } = req.body;
 
     if (!symbol || !amountPerShare || !exDate) {
-      return res.status(400).json({
-        error: 'Symbol, amountPerShare, and exDate are required',
-      });
+      return badRequest(res, 'Symbol, amountPerShare, and exDate are required');
     }
 
     if (!accountId) {
-      return res.status(400).json({
-        error: 'accountId is required',
-      });
+      return badRequest(res, 'accountId is required');
     }
 
     // Verify account belongs to user
     const account = await accountQueries.getById(userId, accountId);
     if (!account) {
-      return res.status(404).json({ error: 'Account not found' });
+      return notFound(res, 'Account not found');
     }
 
     // If sharesHeld not provided, try to get from current holdings for this account
@@ -96,9 +93,7 @@ router.post('/', async (req: Request, res: Response) => {
       if (holding) {
         shares = Number(holding.shares);
       } else {
-        return res.status(400).json({
-          error: 'Shares held is required when no holding exists for this symbol in this account',
-        });
+        return badRequest(res, 'Shares held is required when no holding exists for this symbol in this account');
       }
     }
 
@@ -121,7 +116,7 @@ router.post('/', async (req: Request, res: Response) => {
       accountId
     );
 
-    res.status(201).json({
+    sendSuccess(res, {
       id,
       symbol: symbol.toUpperCase(),
       amount: grossAmount,
@@ -132,10 +127,10 @@ router.post('/', async (req: Request, res: Response) => {
       tax_amount: taxAmount,
       net_amount: netAmount,
       account_id: accountId,
-    });
+    }, 201);
   } catch (error) {
     console.error('Error creating dividend:', error);
-    res.status(500).json({ error: 'Failed to create dividend' });
+    internalError(res, 'Failed to create dividend');
   }
 });
 
@@ -145,10 +140,10 @@ router.delete('/:id', async (req: Request, res: Response) => {
     const userId = req.userId!;
     const id = parseInt(req.params.id);
     await dividendQueries.delete(userId, id);
-    res.json({ success: true });
+    sendSuccess(res, { deleted: true });
   } catch (error) {
     console.error('Error deleting dividend:', error);
-    res.status(500).json({ error: 'Failed to delete dividend' });
+    internalError(res, 'Failed to delete dividend');
   }
 });
 
@@ -159,16 +154,14 @@ router.put('/tax-rate', async (req: Request, res: Response) => {
     const { rate } = req.body;
 
     if (rate === undefined || rate < 0 || rate > 1) {
-      return res.status(400).json({
-        error: 'Rate is required and must be between 0 and 1',
-      });
+      return badRequest(res, 'Rate is required and must be between 0 and 1');
     }
 
     await settingsQueries.set(userId, 'dividend_tax_rate', rate.toString());
-    res.json({ success: true, rate });
+    sendSuccess(res, { rate });
   } catch (error) {
     console.error('Error updating tax rate:', error);
-    res.status(500).json({ error: 'Failed to update tax rate' });
+    internalError(res, 'Failed to update tax rate');
   }
 });
 
@@ -181,14 +174,14 @@ router.post('/check/:accountId', async (req: Request, res: Response) => {
     // Verify account belongs to user
     const account = await accountQueries.getById(userId, accountId);
     if (!account) {
-      return res.status(404).json({ error: 'Account not found' });
+      return notFound(res, 'Account not found');
     }
 
     // Get all holdings for this account
     const holdings = await holdingsQueries.getByAccount(userId, accountId);
 
     if (holdings.length === 0) {
-      return res.json({ message: 'No holdings found', dividendsFound: 0, dividendsCreated: 0, transactionsCreated: 0 });
+      return sendSuccess(res, { message: 'No holdings found', dividendsFound: 0, dividendsCreated: 0, transactionsCreated: 0 });
     }
 
     const today = new Date().toISOString().split('T')[0];
@@ -294,7 +287,7 @@ router.post('/check/:accountId', async (req: Request, res: Response) => {
       }
     }
 
-    res.json({
+    sendSuccess(res, {
       message: `Checked ${holdings.length} holding(s)`,
       dividendsFound,
       dividendsCreated,
@@ -303,7 +296,7 @@ router.post('/check/:accountId', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error checking dividends:', error);
-    res.status(500).json({ error: 'Failed to check dividends' });
+    internalError(res, 'Failed to check dividends');
   }
 });
 

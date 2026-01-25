@@ -53,7 +53,8 @@
       "Bash(VITE_API_URL=\"https://sleeve-saturday-intersection-disposal.trycloudflare.com/api\" npm run deploy:*)",
       "Bash(VITE_API_URL=\"https://apartments-florida-flooring-slightly.trycloudflare.com/api\" npm run deploy:*)",
       "Bash(VITE_API_URL=\"https://api.0ec.ai/api\" npm run deploy:*)",
-      "Bash(docker build:*)"
+      "Bash(docker build:*)",
+      "Bash(./ansible/deploy-ssh.sh:*)"
     ]
   }
 }

@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { transactionQueries, accountQueries } from '../db/queries.js';
+import { sendSuccess, badRequest, notFound, internalError } from '../utils/response.js';
 
 const router = Router();
 
@@ -12,14 +13,14 @@ router.get('/', async (req: Request, res: Response) => {
 
     if (symbol) {
       const transactions = await transactionQueries.getBySymbol(userId, symbol as string, parsedAccountId);
-      return res.json(transactions);
+      return sendSuccess(res, transactions);
     }
 
     const transactions = await transactionQueries.getAll(userId);
-    res.json(transactions);
+    sendSuccess(res, transactions);
   } catch (error) {
     console.error('Error fetching transactions:', error);
-    res.status(500).json({ error: 'Failed to fetch transactions' });
+    internalError(res, 'Failed to fetch transactions');
   }
 });
 
@@ -30,23 +31,21 @@ router.post('/', async (req: Request, res: Response) => {
     const { symbol, type, shares, price, fees = 0, date, accountId } = req.body;
 
     if (!symbol || !type || !shares || !price || !date) {
-      return res.status(400).json({
-        error: 'Symbol, type, shares, price, and date are required',
-      });
+      return badRequest(res, 'Symbol, type, shares, price, and date are required');
     }
 
     if (!accountId) {
-      return res.status(400).json({ error: 'accountId is required' });
+      return badRequest(res, 'accountId is required');
     }
 
     // Verify account belongs to user
     const account = await accountQueries.getById(userId, accountId);
     if (!account) {
-      return res.status(404).json({ error: 'Account not found' });
+      return notFound(res, 'Account not found');
     }
 
     if (type !== 'buy' && type !== 'sell') {
-      return res.status(400).json({ error: 'Type must be "buy" or "sell"' });
+      return badRequest(res, 'Type must be "buy" or "sell"');
     }
 
     const id = await transactionQueries.create(
@@ -60,10 +59,10 @@ router.post('/', async (req: Request, res: Response) => {
       accountId
     );
 
-    res.status(201).json({ id, symbol: symbol.toUpperCase(), type, shares, price, fees, date, accountId });
+    sendSuccess(res, { id, symbol: symbol.toUpperCase(), type, shares, price, fees, date, accountId }, 201);
   } catch (error) {
     console.error('Error creating transaction:', error);
-    res.status(500).json({ error: 'Failed to create transaction' });
+    internalError(res, 'Failed to create transaction');
   }
 });
 
@@ -73,10 +72,10 @@ router.delete('/:id', async (req: Request, res: Response) => {
     const userId = req.userId!;
     const id = parseInt(req.params.id);
     await transactionQueries.delete(userId, id);
-    res.json({ success: true });
+    sendSuccess(res, { deleted: true });
   } catch (error) {
     console.error('Error deleting transaction:', error);
-    res.status(500).json({ error: 'Failed to delete transaction' });
+    internalError(res, 'Failed to delete transaction');
   }
 });
 

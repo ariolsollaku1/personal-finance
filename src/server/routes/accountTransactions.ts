@@ -6,6 +6,7 @@ import {
   categoryQueries,
   TransactionType,
 } from '../db/queries.js';
+import { sendSuccess, badRequest, notFound, internalError } from '../utils/response.js';
 
 const router = Router();
 
@@ -17,7 +18,7 @@ router.get('/:id/transactions', async (req: Request, res: Response) => {
     const account = await accountQueries.getById(userId, accountId);
 
     if (!account) {
-      return res.status(404).json({ error: 'Account not found' });
+      return notFound(res, 'Account not found');
     }
 
     const transactions = await accountTransactionQueries.getByAccount(userId, accountId);
@@ -33,10 +34,10 @@ router.get('/:id/transactions', async (req: Request, res: Response) => {
       return { ...tx, balance: runningBalance };
     }).reverse();
 
-    res.json(transactionsWithBalance);
+    sendSuccess(res, transactionsWithBalance);
   } catch (error) {
     console.error('Error fetching account transactions:', error);
-    res.status(500).json({ error: 'Failed to fetch transactions' });
+    internalError(res, 'Failed to fetch transactions');
   }
 });
 
@@ -49,15 +50,15 @@ router.post('/:id/transactions', async (req: Request, res: Response) => {
 
     const account = await accountQueries.getById(userId, accountId);
     if (!account) {
-      return res.status(404).json({ error: 'Account not found' });
+      return notFound(res, 'Account not found');
     }
 
     if (!type || !amount || !date) {
-      return res.status(400).json({ error: 'type, amount, and date are required' });
+      return badRequest(res, 'type, amount, and date are required');
     }
 
     if (!['inflow', 'outflow'].includes(type)) {
-      return res.status(400).json({ error: 'Invalid transaction type' });
+      return badRequest(res, 'Invalid transaction type');
     }
 
     // Handle payee - get or create
@@ -85,10 +86,10 @@ router.post('/:id/transactions', async (req: Request, res: Response) => {
     );
 
     const transaction = await accountTransactionQueries.getById(userId, id as number);
-    res.status(201).json(transaction);
+    sendSuccess(res, transaction, 201);
   } catch (error) {
     console.error('Error creating account transaction:', error);
-    res.status(500).json({ error: 'Failed to create transaction' });
+    internalError(res, 'Failed to create transaction');
   }
 });
 
@@ -102,25 +103,25 @@ router.put('/:accountId/transactions/:txId', async (req: Request, res: Response)
 
     const account = await accountQueries.getById(userId, accountId);
     if (!account) {
-      return res.status(404).json({ error: 'Account not found' });
+      return notFound(res, 'Account not found');
     }
 
     const transaction = await accountTransactionQueries.getById(userId, txId);
     if (!transaction) {
-      return res.status(404).json({ error: 'Transaction not found' });
+      return notFound(res, 'Transaction not found');
     }
 
     if (transaction.account_id !== accountId) {
-      return res.status(400).json({ error: 'Transaction does not belong to this account' });
+      return badRequest(res, 'Transaction does not belong to this account');
     }
 
     if (transaction.transfer_id) {
-      return res.status(400).json({ error: 'Cannot edit transfer transactions directly. Delete the transfer instead.' });
+      return badRequest(res, 'Cannot edit transfer transactions directly. Delete the transfer instead.');
     }
 
     const txType = type || transaction.type;
     if (!['inflow', 'outflow'].includes(txType)) {
-      return res.status(400).json({ error: 'Invalid transaction type' });
+      return badRequest(res, 'Invalid transaction type');
     }
 
     // Handle payee - get or create
@@ -148,10 +149,10 @@ router.put('/:accountId/transactions/:txId', async (req: Request, res: Response)
     );
 
     const updatedTransaction = await accountTransactionQueries.getById(userId, txId);
-    res.json(updatedTransaction);
+    sendSuccess(res, updatedTransaction);
   } catch (error) {
     console.error('Error updating account transaction:', error);
-    res.status(500).json({ error: 'Failed to update transaction' });
+    internalError(res, 'Failed to update transaction');
   }
 });
 
@@ -164,27 +165,27 @@ router.delete('/:accountId/transactions/:txId', async (req: Request, res: Respon
 
     const account = await accountQueries.getById(userId, accountId);
     if (!account) {
-      return res.status(404).json({ error: 'Account not found' });
+      return notFound(res, 'Account not found');
     }
 
     const transaction = await accountTransactionQueries.getById(userId, txId);
     if (!transaction) {
-      return res.status(404).json({ error: 'Transaction not found' });
+      return notFound(res, 'Transaction not found');
     }
 
     if (transaction.account_id !== accountId) {
-      return res.status(400).json({ error: 'Transaction does not belong to this account' });
+      return badRequest(res, 'Transaction does not belong to this account');
     }
 
     if (transaction.transfer_id) {
-      return res.status(400).json({ error: 'Cannot delete transfer transactions directly. Delete the transfer instead.' });
+      return badRequest(res, 'Cannot delete transfer transactions directly. Delete the transfer instead.');
     }
 
     await accountTransactionQueries.delete(userId, txId);
-    res.json({ success: true });
+    sendSuccess(res, { deleted: true });
   } catch (error) {
     console.error('Error deleting account transaction:', error);
-    res.status(500).json({ error: 'Failed to delete transaction' });
+    internalError(res, 'Failed to delete transaction');
   }
 });
 

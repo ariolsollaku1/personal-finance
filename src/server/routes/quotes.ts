@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getQuote, getHistoricalPrices, searchStocks } from '../services/yahoo.js';
+import { sendSuccess, badRequest, notFound, internalError } from '../utils/response.js';
 
 const router = Router();
 
@@ -9,14 +10,14 @@ router.get('/search', async (req, res) => {
     const query = req.query.q as string;
 
     if (!query || query.length < 1) {
-      return res.status(400).json({ error: 'Search query is required' });
+      return badRequest(res, 'Search query is required');
     }
 
     const results = await searchStocks(query);
-    res.json(results);
+    sendSuccess(res, results);
   } catch (error) {
     console.error('Error searching stocks:', error);
-    res.status(500).json({ error: 'Failed to search stocks' });
+    internalError(res, 'Failed to search stocks');
   }
 });
 
@@ -26,13 +27,13 @@ router.get('/:symbol', async (req, res) => {
     const quote = await getQuote(req.params.symbol.toUpperCase());
 
     if (!quote) {
-      return res.status(404).json({ error: 'Symbol not found' });
+      return notFound(res, 'Symbol not found');
     }
 
-    res.json(quote);
+    sendSuccess(res, quote);
   } catch (error) {
     console.error('Error fetching quote:', error);
-    res.status(500).json({ error: 'Failed to fetch quote' });
+    internalError(res, 'Failed to fetch quote');
   }
 });
 
@@ -80,10 +81,10 @@ router.get('/:symbol/history', async (req, res) => {
       intervalParam
     );
 
-    res.json(history);
+    sendSuccess(res, history);
   } catch (error) {
     console.error('Error fetching historical prices:', error);
-    res.status(500).json({ error: 'Failed to fetch historical prices' });
+    internalError(res, 'Failed to fetch historical prices');
   }
 });
 

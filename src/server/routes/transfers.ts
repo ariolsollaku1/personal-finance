@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { accountQueries, transferQueries } from '../db/queries.js';
+import { sendSuccess, badRequest, notFound, internalError } from '../utils/response.js';
 
 const router = Router();
 
@@ -8,10 +9,10 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
     const transfers = await transferQueries.getAll(userId);
-    res.json(transfers);
+    sendSuccess(res, transfers);
   } catch (error) {
     console.error('Error fetching transfers:', error);
-    res.status(500).json({ error: 'Failed to fetch transfers' });
+    internalError(res, 'Failed to fetch transfers');
   }
 });
 
@@ -23,13 +24,13 @@ router.get('/:id', async (req: Request, res: Response) => {
     const transfer = await transferQueries.getById(userId, id);
 
     if (!transfer) {
-      return res.status(404).json({ error: 'Transfer not found' });
+      return notFound(res, 'Transfer not found');
     }
 
-    res.json(transfer);
+    sendSuccess(res, transfer);
   } catch (error) {
     console.error('Error fetching transfer:', error);
-    res.status(500).json({ error: 'Failed to fetch transfer' });
+    internalError(res, 'Failed to fetch transfer');
   }
 });
 
@@ -40,26 +41,26 @@ router.post('/', async (req: Request, res: Response) => {
     const { fromAccountId, toAccountId, fromAmount, toAmount, date, notes } = req.body;
 
     if (!fromAccountId || !toAccountId || !fromAmount || !date) {
-      return res.status(400).json({ error: 'fromAccountId, toAccountId, fromAmount, and date are required' });
+      return badRequest(res, 'fromAccountId, toAccountId, fromAmount, and date are required');
     }
 
     const fromAccount = await accountQueries.getById(userId, fromAccountId);
     const toAccount = await accountQueries.getById(userId, toAccountId);
 
     if (!fromAccount) {
-      return res.status(404).json({ error: 'Source account not found' });
+      return notFound(res, 'Source account not found');
     }
 
     if (!toAccount) {
-      return res.status(404).json({ error: 'Destination account not found' });
+      return notFound(res, 'Destination account not found');
     }
 
     if (fromAccount.type === 'stock' || toAccount.type === 'stock') {
-      return res.status(400).json({ error: 'Transfers to/from stock accounts are not supported' });
+      return badRequest(res, 'Transfers to/from stock accounts are not supported');
     }
 
     if (fromAccountId === toAccountId) {
-      return res.status(400).json({ error: 'Cannot transfer to the same account' });
+      return badRequest(res, 'Cannot transfer to the same account');
     }
 
     // If currencies are the same, toAmount defaults to fromAmount
@@ -68,7 +69,7 @@ router.post('/', async (req: Request, res: Response) => {
     if (fromAccount.currency === toAccount.currency) {
       finalToAmount = toAmount || fromAmount;
     } else if (!toAmount) {
-      return res.status(400).json({ error: 'toAmount is required for cross-currency transfers' });
+      return badRequest(res, 'toAmount is required for cross-currency transfers');
     }
 
     const id = await transferQueries.create(
@@ -82,10 +83,10 @@ router.post('/', async (req: Request, res: Response) => {
     );
 
     const transfer = await transferQueries.getById(userId, id as number);
-    res.status(201).json(transfer);
+    sendSuccess(res, transfer, 201);
   } catch (error) {
     console.error('Error creating transfer:', error);
-    res.status(500).json({ error: 'Failed to create transfer' });
+    internalError(res, 'Failed to create transfer');
   }
 });
 
@@ -97,14 +98,14 @@ router.delete('/:id', async (req: Request, res: Response) => {
     const transfer = await transferQueries.getById(userId, id);
 
     if (!transfer) {
-      return res.status(404).json({ error: 'Transfer not found' });
+      return notFound(res, 'Transfer not found');
     }
 
     await transferQueries.delete(userId, id);
-    res.json({ success: true });
+    sendSuccess(res, { deleted: true });
   } catch (error) {
     console.error('Error deleting transfer:', error);
-    res.status(500).json({ error: 'Failed to delete transfer' });
+    internalError(res, 'Failed to delete transfer');
   }
 });
 

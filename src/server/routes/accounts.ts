@@ -51,10 +51,10 @@ router.get('/', async (req: Request, res: Response) => {
       };
     }));
 
-    sendSuccess(res, accountsWithBalances);
+    res.json(accountsWithBalances);
   } catch (error) {
     console.error('Error fetching accounts:', error);
-    internalError(res, 'Failed to fetch accounts');
+    res.status(500).json({ error: 'Failed to fetch accounts' });
   }
 });
 

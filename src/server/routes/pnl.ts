@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { getMonthlySummaries, getMonthDetail } from '../services/pnl.js';
+import { sendSuccess, badRequest, internalError } from '../utils/response.js';
 
 const router = Router();
 
@@ -8,10 +9,10 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
     const data = await getMonthlySummaries(userId);
-    res.json(data);
+    sendSuccess(res, data);
   } catch (error) {
     console.error('Error fetching P&L:', error);
-    res.status(500).json({ error: 'Failed to fetch P&L data' });
+    internalError(res, 'Failed to fetch P&L data');
   }
 });
 
@@ -21,13 +22,13 @@ router.get('/:month', async (req: Request, res: Response) => {
     const userId = req.userId!;
     const { month } = req.params;
     const data = await getMonthDetail(userId, month);
-    res.json(data);
+    sendSuccess(res, data);
   } catch (error) {
     if (error instanceof Error && error.message.includes('Invalid month format')) {
-      return res.status(400).json({ error: error.message });
+      return badRequest(res, error.message);
     }
     console.error('Error fetching P&L details:', error);
-    res.status(500).json({ error: 'Failed to fetch P&L details' });
+    internalError(res, 'Failed to fetch P&L details');
   }
 });
 

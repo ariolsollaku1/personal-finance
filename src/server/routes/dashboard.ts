@@ -7,6 +7,7 @@ import {
   setCurrencySchema,
   setSidebarCollapsedSchema,
 } from '../validation/index.js';
+import { sendSuccess, internalError } from '../utils/response.js';
 
 const router = Router();
 
@@ -15,10 +16,10 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
     const data = await getDashboardData(userId);
-    res.json(data);
+    sendSuccess(res, data);
   } catch (error) {
     console.error('Error fetching dashboard data:', error);
-    res.status(500).json({ error: 'Failed to fetch dashboard data' });
+    internalError(res, 'Failed to fetch dashboard data');
   }
 });
 
@@ -28,10 +29,10 @@ router.get('/settings/currency', async (req: Request, res: Response) => {
     const userId = req.userId!;
     const mainCurrency = await settingsQueries.getMainCurrency(userId);
     const exchangeRates = await getExchangeRates();
-    res.json({ mainCurrency, exchangeRates });
+    sendSuccess(res, { mainCurrency, exchangeRates });
   } catch (error) {
     console.error('Error fetching currency settings:', error);
-    res.status(500).json({ error: 'Failed to fetch currency settings' });
+    internalError(res, 'Failed to fetch currency settings');
   }
 });
 
@@ -42,10 +43,10 @@ router.put('/settings/currency', validateBody(setCurrencySchema), async (req: Re
     const { currency } = req.body;
 
     await settingsQueries.set(userId, 'main_currency', currency);
-    res.json({ mainCurrency: currency });
+    sendSuccess(res, { mainCurrency: currency });
   } catch (error) {
     console.error('Error updating currency settings:', error);
-    res.status(500).json({ error: 'Failed to update currency settings' });
+    internalError(res, 'Failed to update currency settings');
   }
 });
 
@@ -54,10 +55,10 @@ router.get('/settings/sidebar', async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
     const collapsed = await settingsQueries.getSidebarCollapsed(userId);
-    res.json({ collapsed });
+    sendSuccess(res, { collapsed });
   } catch (error) {
     console.error('Error fetching sidebar settings:', error);
-    res.status(500).json({ error: 'Failed to fetch sidebar settings' });
+    internalError(res, 'Failed to fetch sidebar settings');
   }
 });
 
@@ -68,10 +69,10 @@ router.put('/settings/sidebar', validateBody(setSidebarCollapsedSchema), async (
     const { collapsed } = req.body;
 
     await settingsQueries.set(userId, 'sidebar_collapsed', collapsed ? '1' : '0');
-    res.json({ collapsed });
+    sendSuccess(res, { collapsed });
   } catch (error) {
     console.error('Error updating sidebar settings:', error);
-    res.status(500).json({ error: 'Failed to update sidebar settings' });
+    internalError(res, 'Failed to update sidebar settings');
   }
 });
 
