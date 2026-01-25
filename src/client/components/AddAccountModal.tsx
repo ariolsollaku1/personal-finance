@@ -157,9 +157,19 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
                     className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 disabled:bg-gray-100 disabled:text-gray-500"
                     disabled={formData.type === 'stock'}
                   >
-                    <option value="ALL">ALL - Albanian Lek</option>
                     <option value="EUR">EUR - Euro</option>
                     <option value="USD">USD - US Dollar</option>
+                    <option value="GBP">GBP - British Pound</option>
+                    <option value="CHF">CHF - Swiss Franc</option>
+                    <option value="NOK">NOK - Norwegian Krone</option>
+                    <option value="SEK">SEK - Swedish Krona</option>
+                    <option value="DKK">DKK - Danish Krone</option>
+                    <option value="PLN">PLN - Polish Zloty</option>
+                    <option value="CZK">CZK - Czech Koruna</option>
+                    <option value="HUF">HUF - Hungarian Forint</option>
+                    <option value="RON">RON - Romanian Leu</option>
+                    <option value="BGN">BGN - Bulgarian Lev</option>
+                    <option value="ALL">ALL - Albanian Lek</option>
                   </select>
                   {formData.type === 'stock' && (
                     <p className="text-xs text-gray-500 mt-1.5">

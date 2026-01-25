@@ -4,13 +4,36 @@ const CURRENCY_SYMBOLS: Record<Currency, string> = {
   EUR: '€',
   USD: '$',
   ALL: 'L',
+  GBP: '£',
+  CHF: 'Fr.',
+  NOK: 'kr',
+  SEK: 'kr',
+  DKK: 'kr',
+  PLN: 'zł',
+  CZK: 'Kč',
+  HUF: 'Ft',
+  RON: 'lei',
+  BGN: 'лв',
 };
 
 const CURRENCY_FORMATS: Record<Currency, { locale: string; decimals: number }> = {
   EUR: { locale: 'de-DE', decimals: 2 },
   USD: { locale: 'en-US', decimals: 2 },
   ALL: { locale: 'sq-AL', decimals: 0 },
+  GBP: { locale: 'en-GB', decimals: 2 },
+  CHF: { locale: 'de-CH', decimals: 2 },
+  NOK: { locale: 'nb-NO', decimals: 2 },
+  SEK: { locale: 'sv-SE', decimals: 2 },
+  DKK: { locale: 'da-DK', decimals: 2 },
+  PLN: { locale: 'pl-PL', decimals: 2 },
+  CZK: { locale: 'cs-CZ', decimals: 2 },
+  HUF: { locale: 'hu-HU', decimals: 0 },  // Forint typically shown without decimals
+  RON: { locale: 'ro-RO', decimals: 2 },
+  BGN: { locale: 'bg-BG', decimals: 2 },
 };
+
+// Currencies where symbol comes after the amount
+const SYMBOL_SUFFIX_CURRENCIES: Currency[] = ['EUR', 'ALL', 'NOK', 'SEK', 'DKK', 'PLN', 'CZK', 'HUF', 'RON', 'BGN', 'CHF'];
 
 export function formatCurrency(amount: number, currency: Currency): string {
   const { decimals } = CURRENCY_FORMATS[currency];
@@ -23,12 +46,11 @@ export function formatCurrency(amount: number, currency: Currency): string {
 
   const sign = amount < 0 ? '-' : '';
 
-  // Position symbol based on currency
-  if (currency === 'EUR') {
-    return `${sign}${formatted} ${symbol}`;
-  } else if (currency === 'ALL') {
+  // Position symbol based on currency convention
+  if (SYMBOL_SUFFIX_CURRENCIES.includes(currency)) {
     return `${sign}${formatted} ${symbol}`;
   } else {
+    // USD, GBP use prefix
     return `${sign}${symbol}${formatted}`;
   }
 }

@@ -8,6 +8,16 @@ export default function CurrencyPage() {
     EUR: 1,
     USD: 1.08,
     ALL: 100.0,
+    GBP: 0.86,
+    CHF: 0.94,
+    NOK: 11.5,
+    SEK: 11.2,
+    DKK: 7.46,
+    PLN: 4.35,
+    CZK: 25.0,
+    HUF: 390.0,
+    RON: 4.97,
+    BGN: 1.96,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -58,7 +68,17 @@ export default function CurrencyPage() {
   const currencies: { code: Currency; name: string; description: string; flag: string }[] = [
     { code: 'EUR', name: 'Euro', description: 'Official currency of the Eurozone', flag: '🇪🇺' },
     { code: 'USD', name: 'US Dollar', description: 'Official currency of the United States', flag: '🇺🇸' },
-    { code: 'ALL', name: 'Albanian Lek', description: 'The official currency of Albania', flag: '🇦🇱' },
+    { code: 'GBP', name: 'British Pound', description: 'Official currency of the United Kingdom', flag: '🇬🇧' },
+    { code: 'CHF', name: 'Swiss Franc', description: 'Official currency of Switzerland', flag: '🇨🇭' },
+    { code: 'NOK', name: 'Norwegian Krone', description: 'Official currency of Norway', flag: '🇳🇴' },
+    { code: 'SEK', name: 'Swedish Krona', description: 'Official currency of Sweden', flag: '🇸🇪' },
+    { code: 'DKK', name: 'Danish Krone', description: 'Official currency of Denmark', flag: '🇩🇰' },
+    { code: 'PLN', name: 'Polish Zloty', description: 'Official currency of Poland', flag: '🇵🇱' },
+    { code: 'CZK', name: 'Czech Koruna', description: 'Official currency of Czech Republic', flag: '🇨🇿' },
+    { code: 'HUF', name: 'Hungarian Forint', description: 'Official currency of Hungary', flag: '🇭🇺' },
+    { code: 'RON', name: 'Romanian Leu', description: 'Official currency of Romania', flag: '🇷🇴' },
+    { code: 'BGN', name: 'Bulgarian Lev', description: 'Official currency of Bulgaria', flag: '🇧🇬' },
+    { code: 'ALL', name: 'Albanian Lek', description: 'Official currency of Albania', flag: '🇦🇱' },
   ];
 
   return (

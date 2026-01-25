@@ -19,9 +19,24 @@ function formatCompactCurrency(amount: number, currency: Currency): string {
     formatted = absAmount.toFixed(0);
   }
 
-  const symbols: Record<Currency, string> = { ALL: ' L', EUR: ' €', USD: '$' };
-  if (currency === 'USD') {
-    return `${sign}${symbols.USD}${formatted}`;
+  const symbols: Record<Currency, string> = {
+    EUR: ' €',
+    USD: '$',
+    ALL: ' L',
+    GBP: '£',
+    CHF: ' Fr.',
+    NOK: ' kr',
+    SEK: ' kr',
+    DKK: ' kr',
+    PLN: ' zł',
+    CZK: ' Kč',
+    HUF: ' Ft',
+    RON: ' lei',
+    BGN: ' лв',
+  };
+  // USD and GBP have prefix symbols
+  if (currency === 'USD' || currency === 'GBP') {
+    return `${sign}${symbols[currency]}${formatted}`;
   }
   return `${sign}${formatted}${symbols[currency]}`;
 }

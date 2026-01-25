@@ -10,6 +10,7 @@ import type pg from 'pg';
  */
 
 import * as m001 from './001_create_test_table.js';
+import * as m002 from './002_add_european_currencies.js';
 
 export interface Migration {
   version: number;
@@ -28,5 +29,11 @@ export const migrations: Migration[] = [
     description: m001.description,
     up: m001.up,
     down: m001.down,
+  },
+  {
+    version: m002.version,
+    description: m002.description,
+    up: m002.up,
+    down: m002.down,
   },
 ];

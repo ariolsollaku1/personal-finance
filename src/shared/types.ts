@@ -8,7 +8,7 @@
 // =============================================================================
 
 export type AccountType = 'stock' | 'bank' | 'cash' | 'loan' | 'credit' | 'asset';
-export type Currency = 'EUR' | 'USD' | 'ALL';
+export type Currency = 'EUR' | 'USD' | 'ALL' | 'GBP' | 'CHF' | 'NOK' | 'SEK' | 'DKK' | 'PLN' | 'CZK' | 'HUF' | 'RON' | 'BGN';
 export type TransactionType = 'inflow' | 'outflow';
 export type Frequency = 'weekly' | 'biweekly' | 'monthly' | 'yearly';
 export type CategoryType = 'income' | 'expense';

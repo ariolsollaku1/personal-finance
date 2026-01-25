@@ -10,7 +10,7 @@ import { z } from 'zod';
 // =============================================================================
 
 export const accountTypeSchema = z.enum(['stock', 'bank', 'cash', 'loan', 'credit', 'asset']);
-export const currencySchema = z.enum(['EUR', 'USD', 'ALL']);
+export const currencySchema = z.enum(['EUR', 'USD', 'ALL', 'GBP', 'CHF', 'NOK', 'SEK', 'DKK', 'PLN', 'CZK', 'HUF', 'RON', 'BGN']);
 export const transactionTypeSchema = z.enum(['inflow', 'outflow']);
 export const frequencySchema = z.enum(['weekly', 'biweekly', 'monthly', 'yearly']);
 export const categoryTypeSchema = z.enum(['income', 'expense']);

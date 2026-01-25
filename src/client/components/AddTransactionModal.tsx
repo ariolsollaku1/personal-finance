@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Combobox, ComboboxInput, ComboboxButton, ComboboxOptions, ComboboxOption } from '@headlessui/react';
 import { accountTransactionsApi, categoriesApi, payeesApi, Category, Payee, TransactionType, Currency } from '../lib/api';
+import { getCurrencySymbol } from '../lib/currency';
 
 interface AddTransactionModalProps {
   isOpen: boolean;
@@ -136,7 +137,7 @@ export default function AddTransactionModal({
 
   if (!isOpen) return null;
 
-  const currencySymbol = accountCurrency === 'USD' ? '$' : accountCurrency === 'EUR' ? '€' : 'L';
+  const currencySymbol = getCurrencySymbol(accountCurrency);
 
   // Filter payees based on query
   const filteredPayees = payeeQuery === ''
