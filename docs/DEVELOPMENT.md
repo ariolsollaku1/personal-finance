@@ -3,63 +3,47 @@
 ## Quick Start
 
 ```bash
-# Install dependencies
 npm install
+cp .env.example .env   # Configure environment variables
+npm run dev            # Start both servers
 
-# Configure environment variables (see below)
-cp .env.example .env
-# Edit .env with your Supabase credentials
-
-# Start development servers (backend + frontend)
-npm run dev
-
-# Access the app
+# Access
 # Frontend: http://localhost:5173
 # Backend:  http://localhost:3000
 ```
 
+---
+
 ## Supabase Setup
 
-The app requires Supabase for authentication. Follow these steps:
+### 1. Create Project
+1. Go to [supabase.com](https://supabase.com) and create project
+2. Note project URL and keys from Settings > API
 
-### 1. Create a Supabase Project
-
-1. Go to [supabase.com](https://supabase.com) and create an account
-2. Create a new project
-3. Note your project URL and keys from Settings > API
-
-### 2. Configure Environment Variables
-
-Create a `.env` file in the project root:
-
+### 2. Environment Variables
 ```bash
+# .env (required)
 VITE_SUPABASE_URL=https://your-project-id.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# PostgreSQL (required)
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=personal_finance_dev
+DB_USER=postgres
+DB_PASSWORD=your-password
+
+# Optional
+PORT=3000                    # Backend port
+ALLOWED_ORIGINS=http://localhost:5173  # CORS origins (comma-separated)
 ```
 
 ### 3. Enable Auth Providers
+- **Email/Password**: Authentication > Providers > Enable Email
+- **Google OAuth**: Add callback URL `https://your-project-id.supabase.co/auth/v1/callback`
 
-In your Supabase Dashboard:
-
-**Email/Password:**
-1. Go to Authentication > Providers
-2. Enable "Email" provider
-3. Configure email templates if desired
-
-**Google OAuth (optional):**
-1. Go to Authentication > Providers > Google
-2. Enable Google provider
-3. Create OAuth credentials in Google Cloud Console
-4. Add callback URL: `https://your-project-id.supabase.co/auth/v1/callback`
-5. Enter Client ID and Secret in Supabase
-
-### 4. First User Setup
-
-When a user first logs in:
-1. The frontend calls `/api/auth/init`
-2. Backend creates default categories and settings for the user
-3. User is redirected to the dashboard
+**Note**: New users are automatically initialized on first API call (server-side).
 
 ---
 
@@ -77,257 +61,155 @@ When a user first logs in:
 
 ## Project URLs
 
-| Service | URL | Description |
-|---------|-----|-------------|
-| Frontend | http://localhost:5173 | Vite dev server with HMR |
-| Backend API | http://localhost:3000/api | Express REST API |
-| API Proxy | http://localhost:5173/api | Vite proxies to backend |
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:5173 (Vite dev server) |
+| Backend API | http://localhost:3000/api |
+| API Proxy | http://localhost:5173/api (proxied to backend) |
 
-**Note**: During development, always access the app via port 5173. Vite handles proxying API requests to the backend.
-
----
-
-## File Watching
-
-- **Backend**: `tsx watch` watches for changes in `src/server/`
-- **Frontend**: Vite HMR for instant updates in `src/client/`
-- **Tailwind**: JIT compilation on file changes
+Always access via port 5173 in development.
 
 ---
 
 ## Database
 
-### Location
-```
-data/portfolio.db
+### PostgreSQL Connection
+
+```bash
+# Connect
+psql -h $DB_HOST -U $DB_USER -d $DB_NAME
+
+# Common commands
+\dt                  # List tables
+\d accounts          # Describe table
+\di                  # List indexes
+SELECT * FROM schema_migrations;  # Check migration status
 ```
 
 ### Reset Database
+
 ```bash
-rm data/portfolio.db
-npm run dev  # Recreates with default schema
+# Drop and recreate (development only)
+psql -h $DB_HOST -U $DB_USER -c "DROP DATABASE personal_finance_dev;"
+psql -h $DB_HOST -U $DB_USER -c "CREATE DATABASE personal_finance_dev;"
+npm run dev  # Recreates schema and runs migrations
 ```
 
-### Direct Access
+### Migrations
+
+Located in `src/server/db/migrations/`. Applied automatically on server start.
+
 ```bash
-sqlite3 data/portfolio.db
-
-# Useful commands
-.tables          # List tables
-.schema          # Show all schemas
-SELECT * FROM holdings;
-SELECT * FROM settings;
-```
-
-### Sample Data
-
-Add test holding via API:
-```bash
-curl -X POST http://localhost:3000/api/holdings \
-  -H "Content-Type: application/json" \
-  -d '{"symbol":"AAPL","shares":10,"price":150,"date":"2024-01-15"}'
-```
-
-Add test dividend:
-```bash
-curl -X POST http://localhost:3000/api/dividends \
-  -H "Content-Type: application/json" \
-  -d '{"symbol":"AAPL","amountPerShare":0.24,"exDate":"2024-02-09"}'
+# Check applied migrations
+psql -d $DB_NAME -c "SELECT * FROM schema_migrations ORDER BY version;"
 ```
 
 ---
 
-## Common Development Tasks
+## Docker Deployment
 
-### Add a new API endpoint
+### Local Docker Compose
 
-1. **Create/update route file** (`src/server/routes/`)
-   ```typescript
-   // src/server/routes/newfeature.ts
-   import { Router } from 'express';
-   const router = Router();
+```bash
+# Start PostgreSQL
+docker compose up -d postgres
 
-   router.get('/', (req, res) => {
-     res.json({ message: 'Hello' });
-   });
+# View logs
+docker compose logs -f postgres
+```
 
-   export default router;
-   ```
+### Production Deployment
 
-2. **Register route** (`src/server/index.ts`)
-   ```typescript
-   import newFeatureRoutes from './routes/newfeature.js';
-   app.use('/api/newfeature', newFeatureRoutes);
-   ```
+```bash
+# Build and push
+npm run build
+npm run deploy  # Uses ansible/deploy-ssh.sh
+```
 
-3. **Add API client** (`src/client/lib/api.ts`)
-   ```typescript
-   export const newFeatureApi = {
-     getData: () => fetchApi<DataType>('/newfeature'),
-   };
-   ```
+### docker-compose.yml
 
-### Add a database table
-
-1. **Update schema** (`src/server/db/schema.ts`)
-   ```typescript
-   db.exec(`
-     CREATE TABLE IF NOT EXISTS new_table (
-       id INTEGER PRIMARY KEY AUTOINCREMENT,
-       ...
-     )
-   `);
-   ```
-
-2. **Add queries** (`src/server/db/queries.ts`)
-   ```typescript
-   export const newTableQueries = {
-     getAll: () => db.prepare('SELECT * FROM new_table').all(),
-     create: (data) => db.prepare('INSERT INTO new_table...').run(data),
-   };
-   ```
-
-3. **Restart server** to apply schema changes
-
-### Add a React component
-
-1. **Create component file**
-   ```typescript
-   // src/client/components/MyComponent.tsx
-   interface MyComponentProps {
-     data: string;
-   }
-
-   export default function MyComponent({ data }: MyComponentProps) {
-     return <div>{data}</div>;
-   }
-   ```
-
-2. **Import and use**
-   ```typescript
-   import MyComponent from '../components/MyComponent';
-   <MyComponent data="hello" />
-   ```
-
-### Add a React hook
-
-1. **Create hook file**
-   ```typescript
-   // src/client/hooks/useMyData.ts
-   import { useState, useEffect } from 'react';
-
-   export function useMyData() {
-     const [data, setData] = useState(null);
-     const [loading, setLoading] = useState(true);
-
-     useEffect(() => {
-       fetchData().then(setData).finally(() => setLoading(false));
-     }, []);
-
-     return { data, loading };
-   }
-   ```
-
-### Add a new page
-
-1. **Create page component** (`src/client/pages/NewPage.tsx`)
-
-2. **Add route** (`src/client/App.tsx`)
-   ```tsx
-   <Route path="/new-page" element={<NewPage />} />
-   ```
-
-3. **Add navigation** (`src/client/components/Layout.tsx`)
-   ```typescript
-   { to: '/new-page', label: 'New Page' }
-   ```
+```yaml
+services:
+  postgres:
+    image: postgres:15
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: personal_finance
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+```
 
 ---
 
-## Testing API Endpoints
+## Common Tasks
 
-### Authentication Required
+### Add API Endpoint
 
-All API endpoints (except `/api/auth/*`) require a valid JWT token. Include it in the Authorization header:
+1. Create route in `src/server/routes/newfeature.ts`
+2. Add Zod schema in `src/server/validation/schemas.ts`
+3. Register in `src/server/index.ts`
+4. Add client in `src/client/lib/api.ts`
+
+### Add Database Table
+
+1. Update schema in `src/server/db/schema.ts`
+2. Add queries in `src/server/db/queries.ts`
+3. Create migration if modifying existing table
+4. Restart server
+
+### Add React Page
+
+1. Create component in `src/client/pages/`
+2. Add route in `src/client/App.tsx`
+3. Add navigation in Sidebar if needed
+
+---
+
+## Testing API
 
 ```bash
-# Get a token by logging in via the frontend, then extract from browser DevTools
-# Or use Supabase CLI/API to get a token programmatically
+# Get JWT token from browser DevTools after login
 TOKEN="your-jwt-token"
-```
 
-### Using curl
-
-```bash
-# Search stocks (no auth required for quotes)
+# Search stocks
 curl "http://localhost:3000/api/quotes/search?q=apple"
 
-# Get quote
-curl http://localhost:3000/api/quotes/AAPL
-
-# Get portfolio (requires auth)
-curl http://localhost:3000/api/portfolio \
+# Get account (requires auth)
+curl http://localhost:3000/api/accounts \
   -H "Authorization: Bearer $TOKEN"
 
-# Add holding (requires auth)
-curl -X POST http://localhost:3000/api/holdings \
+# Create transaction
+curl -X POST http://localhost:3000/api/accounts/1/transactions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
-  -d '{"symbol":"AAPL","shares":10,"price":150,"accountId":1}'
-
-# Sell shares (requires auth)
-curl -X POST http://localhost:3000/api/holdings/AAPL/sell \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"shares":5,"price":175,"accountId":1}'
-
-# Add dividend (requires auth)
-curl -X POST http://localhost:3000/api/dividends \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"symbol":"AAPL","amountPerShare":0.24,"exDate":"2024-02-09","accountId":1}'
-
-# Get tax summary (requires auth)
-curl http://localhost:3000/api/dividends/tax \
-  -H "Authorization: Bearer $TOKEN"
+  -d '{"type":"outflow","amount":50,"date":"2026-01-25","payee":"Store"}'
 ```
-
-### Using browser
-
-For authenticated endpoints, use the frontend app (which handles token management) or browser extensions that can add auth headers.
 
 ---
 
 ## Debugging
 
-### Backend Logs
+### Backend
 - Express logs to console
-- Database errors logged with `console.error`
-- Yahoo Finance errors logged per request
+- Enable verbose logging: `DEBUG=* npm run dev:server`
 
-### Frontend Debugging
+### Frontend
 - React DevTools for component inspection
 - Network tab for API requests
 - Console for JavaScript errors
 
 ### Common Issues
 
-**"Invalid stock symbol"**
-- Symbol doesn't exist on Yahoo Finance
-- Check symbol is uppercase
-- May be delisted or renamed
-
-**"Cannot sell more shares than owned"**
-- Check holdings before selling
-- Verify share count
-
-**Database locked**
-- Only one connection at a time
-- Close other SQLite clients
-
-**Port already in use**
-- Kill process on port 3000 or 5173
-- Or change port in config
+| Issue | Solution |
+|-------|----------|
+| Port already in use | Kill process: `npx kill-port 3000` |
+| Database connection failed | Check `DB_HOST`, `DB_PORT`, `DB_PASSWORD` |
+| Auth errors | Verify Supabase keys in `.env` |
+| CORS errors | Check `ALLOWED_ORIGINS` env var |
+| Yahoo Finance fails | Circuit breaker may be open; wait 30s |
 
 ---
 
@@ -336,73 +218,48 @@ For authenticated endpoints, use the frontend app (which handles token managemen
 ### TypeScript
 - Strict mode enabled
 - Explicit types for function parameters
-- Interface for object shapes
+- Shared types in `src/shared/types.ts`
 
 ### React
 - Functional components with hooks
-- Props interface defined above component
-- State at top of component
+- Props interface above component
+- Custom hooks in `hooks/` folder
 
 ### Naming
 - Components: PascalCase (`HoldingRow.tsx`)
-- Hooks: camelCase with `use` prefix (`usePortfolio.ts`)
-- API functions: camelCase (`getQuote`)
-- Database columns: snake_case (`avg_cost`)
-
-### File Organization
-- One component per file
-- Co-locate related components in folders
-- Hooks in dedicated `hooks/` folder
-- API types and functions in `lib/api.ts`
+- Hooks: camelCase with `use` prefix
+- API functions: camelCase
+- Database columns: snake_case
 
 ---
 
 ## Production Build
 
 ```bash
-# Build frontend
-npm run build
+npm run build           # Builds client + server
+npm run preview         # Preview production
 
-# Output in dist/client/
-
-# Start production server
+# Deploy
 NODE_ENV=production node dist/server/index.js
 ```
 
-**Note**: Production mode serves static files from `dist/client/`.
+Production serves static files from `dist/client/`.
 
 ---
 
-## Environment Variables
+## Environment Variables Reference
 
-Required for authentication:
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `VITE_SUPABASE_URL` | Yes | Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | Yes | Supabase anonymous key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service role key |
+| `DB_HOST` | Yes | PostgreSQL host |
+| `DB_PORT` | Yes | PostgreSQL port (usually 5432) |
+| `DB_NAME` | Yes | Database name |
+| `DB_USER` | Yes | Database user |
+| `DB_PASSWORD` | Yes | Database password |
+| `PORT` | No | Backend port (default 3000) |
+| `ALLOWED_ORIGINS` | No | CORS origins (default localhost:5173) |
 
-```bash
-# .env (required)
-VITE_SUPABASE_URL=https://your-project-id.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-
-# Optional
-PORT=3000                    # Backend port (default: 3000)
-DATABASE_PATH=./data/portfolio.db  # SQLite database location
-```
-
-**Note**: The `VITE_` prefix is required for variables that need to be accessible in the frontend (Vite exposes these to the client).
-
----
-
-## Dependencies Update
-
-```bash
-# Check outdated
-npm outdated
-
-# Update all
-npm update
-
-# Update specific package
-npm install package@latest
-```
-
-**Note**: `yahoo-finance2` is at v2 (deprecated). Migration to v3 recommended but requires code changes. See: https://github.com/gadicc/yahoo-finance2/blob/dev/docs/UPGRADING.md
+**Note**: `VITE_` prefix exposes variables to frontend.

@@ -1,6 +1,6 @@
 # Personal Finance Manager - AI Reference
 
-> **Detailed docs**: `/docs/` folder contains API.md, DATABASE.md, FRONTEND.md, SERVICES.md, DEVELOPMENT.md
+> **Detailed docs**: `docs/REFERENCE.md` (API, DB, Services) | `docs/DEVELOPMENT.md` (setup, deployment)
 
 ## Quick Start
 
@@ -143,7 +143,7 @@ All require `Authorization: Bearer <token>` except auth routes.
 
 ### Theme: Orange primary (`orange-500`/`orange-600`)
 
-### Core Classes
+### Core Elements
 | Element | Classes |
 |---------|---------|
 | Page bg | `bg-gray-50` |
@@ -151,33 +151,91 @@ All require `Authorization: Bearer <token>` except auth routes.
 | Hero card | `bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 rounded-2xl shadow-xl p-8 text-white` |
 | Primary btn | `bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl shadow-lg shadow-orange-500/25` |
 | Secondary btn | `bg-white border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50` |
-| Input | `border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent` |
+| Input | `px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent` |
 | Link | `text-orange-600 hover:text-orange-500` |
-| Glass icon | `bg-white/20 backdrop-blur rounded-xl` |
+| Glass icon | `w-10 h-10 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center` |
 
-### Patterns
-| Pattern | Implementation |
+### Component Patterns
+| Component | Structure |
+|-----------|-----------|
+| Page header | `flex justify-between` → heading left (`text-3xl font-bold`) + action btn right |
+| Stat card | Card → `flex items-center gap-3` → icon box (`w-10 h-10 bg-blue-100 rounded-xl`) + label/value |
+| Gradient header | `px-6 py-4 bg-gradient-to-r from-green-500 to-emerald-600` → glass icon + title (white) |
+| List item | `px-6 py-4 flex justify-between hover:bg-gray-50 group` → content + hover actions |
+| Hover actions | `opacity-0 group-hover:opacity-100 transition-opacity` on button container |
+| Modal | Overlay (`fixed inset-0 bg-black/50 backdrop-blur-sm`) + panel (`bg-white rounded-2xl max-w-2xl`) |
+| Empty state | `p-6 text-center` → icon circle (`w-12 h-12 bg-gray-100 rounded-full mx-auto`) + text |
+| Badge | `px-1.5 py-0.5 text-[10px] font-semibold rounded-full` + `bg-green-100 text-green-700` or `bg-red-100 text-red-700` |
+| Avatar | `w-9 h-9 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white font-semibold` |
+| Table header | `px-4 py-3 text-xs font-semibold text-gray-500 uppercase cursor-pointer hover:text-orange-600` |
+| Divider text | `relative` → line (`absolute inset-0 flex items-center` + `border-t`) + text (`relative px-4 bg-gray-50 text-gray-500`) |
+| Error alert | `bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2` |
+| Success icon | `w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto` → checkmark |
+| Loading | `animate-spin h-5 w-5` on spinner SVG |
+
+### Full-Page Auth Layout
+```
+<div class="min-h-screen flex">
+  <!-- Left: Branding (hidden lg:flex lg:w-1/2) - gradient bg, logo, features, footer -->
+  <!-- Right: Form (flex-1 bg-gray-50) - mobile logo, heading, OAuth btns, divider, form, link -->
+</div>
+```
+
+### Active States
+| Element | Active Classes |
 |---------|---------------|
-| Gradient header | `bg-gradient-to-r from-green-500 to-emerald-600` (income), `from-red-500 to-rose-600` (expense) |
-| Hover actions | `group` parent + `opacity-0 group-hover:opacity-100` on buttons |
-| Active nav | `bg-gradient-to-r from-orange-500 to-amber-500 text-white` |
-| Modal overlay | `fixed inset-0 bg-black/50 backdrop-blur-sm` |
-| Transitions | `transition-all duration-200` on all interactive elements |
+| Nav item | `bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/25` |
+| Nav inactive | `text-gray-700 hover:bg-orange-50 hover:text-orange-700` |
+| Tab active | `border-b-2 border-orange-500 text-orange-600` |
+| Selected card | `border-2 border-orange-500 bg-orange-50 ring-2 ring-orange-500/20` |
 
-### Colors
+### Colors & Typography
 ```
 Primary: orange-500/600    Success: green-600    Error: red-600
 Text: gray-900 (heading), gray-600 (body), gray-500 (muted)
 Borders: gray-200 (subtle), gray-300 (inputs)
+
+Page heading: text-3xl font-bold text-gray-900
+Card heading: text-lg font-bold text-gray-900
+Label: text-sm font-medium text-gray-700
+Muted: text-sm text-gray-500
 ```
 
-### Typography
-| Element | Classes |
-|---------|---------|
-| Page heading | `text-3xl font-bold text-gray-900` |
-| Card heading | `text-lg font-bold text-gray-900` |
-| Label | `text-sm font-medium text-gray-700` |
-| Muted | `text-sm text-gray-500` |
+### Key Principles
+- Corners: `rounded-xl` (cards/buttons), `rounded-2xl` (hero/modals)
+- Shadows: `shadow-sm` (cards), `shadow-lg shadow-orange-500/25` (primary buttons)
+- Transitions: `transition-all duration-200` on all interactive elements
+- Positive values: `text-green-600` | Negative: `text-red-600`
+
+---
+
+## Frontend Patterns
+
+### Key Files
+| File | Purpose |
+|------|---------|
+| `lib/api.ts` | API client with token caching, retry logic, envelope unwrap |
+| `hooks/useAccountPage.ts` | Consolidated state for AccountPage (20+ useState → 1 hook) |
+| `components/ErrorBoundary.tsx` | Catches React errors, shows fallback UI |
+| `contexts/AuthContext.tsx` | Auth state (user, session, signIn, signOut) |
+
+### API Client Features
+- **Token caching**: Stored at module level, updated via `setAccessToken()`
+- **Retry logic**: 3 retries with exponential backoff (1s, 2s, 4s) for 5xx/429
+- **Envelope unwrap**: `{ success: true, data }` → `data`
+- **Auth events**: Dispatches `AUTH_EVENTS.SESSION_EXPIRED` on 401 (no hard reload)
+
+### Component Patterns
+```typescript
+// Trigger sidebar refresh after data change
+window.dispatchEvent(new Event('accounts-changed'));
+
+// Auto-refresh with visibility pause
+useEffect(() => {
+  const interval = setInterval(loadData, 60000);
+  return () => clearInterval(interval);
+}, []);
+```
 
 ---
 
