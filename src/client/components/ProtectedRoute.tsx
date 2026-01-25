@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, loading, initializeUser, session } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
 
   // Handle auth expiration events from API layer
@@ -30,12 +30,8 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     }
   }, [user, loading, navigate]);
 
-  useEffect(() => {
-    // Initialize user when they first sign in
-    if (session && user) {
-      initializeUser();
-    }
-  }, [session, user, initializeUser]);
+  // Note: User initialization now happens automatically server-side
+  // in the auth middleware on first authenticated API call
 
   if (loading) {
     return (

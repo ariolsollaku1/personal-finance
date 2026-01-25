@@ -5,23 +5,9 @@ import { useAuth } from '../contexts/AuthContext';
 export default function AuthCallbackPage() {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { session, initializeUser } = useAuth();
+  const { session } = useAuth();
 
   useEffect(() => {
-    const handleCallback = async () => {
-      // The session should be automatically set by Supabase after OAuth redirect
-      // We just need to wait for it and then initialize the user
-      if (session) {
-        try {
-          await initializeUser();
-          navigate('/');
-        } catch (err) {
-          console.error('Error initializing user:', err);
-          setError('Failed to initialize user account');
-        }
-      }
-    };
-
     // Check URL for error
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
     const errorDescription = hashParams.get('error_description');
@@ -30,10 +16,12 @@ export default function AuthCallbackPage() {
       return;
     }
 
-    // Small delay to ensure session is set
-    const timer = setTimeout(handleCallback, 500);
-    return () => clearTimeout(timer);
-  }, [session, navigate, initializeUser]);
+    // When session is available, navigate to home
+    // User initialization happens automatically on first API call (server-side)
+    if (session) {
+      navigate('/');
+    }
+  }, [session, navigate]);
 
   if (error) {
     return (
