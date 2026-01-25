@@ -1,4 +1,4 @@
-import { query, queryOne, insert, DEFAULT_CATEGORIES } from '../db/schema.js';
+import { query, queryOne, DEFAULT_CATEGORIES } from '../db/schema.js';
 
 // Default settings for new users
 const DEFAULT_SETTINGS = [

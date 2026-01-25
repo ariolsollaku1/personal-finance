@@ -145,8 +145,8 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4">
-        {/* Favorites Section */}
-        {!collapsed && (
+        {/* Favorites Section - only show if there are favorites */}
+        {!collapsed && favoriteAccounts.length > 0 && (
           <div>
             <button
               onClick={() => toggleGroup('favorites')}
@@ -174,55 +174,51 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
             </button>
             {expandedGroups.favorites && (
               <div className="mt-1 px-2 space-y-1">
-                {favoriteAccounts.length === 0 ? (
-                  <p className="px-4 py-2 text-sm text-gray-400 italic">No favorites yet</p>
-                ) : (
-                  favoriteAccounts.map((account) => (
-                    <NavLink
-                      key={account.id}
-                      to={`/accounts/${account.id}`}
-                      className={({ isActive }) =>
-                        `flex items-center justify-between px-3 py-2 rounded-xl text-sm transition-all duration-200 group ${
-                          isActive
-                            ? 'bg-orange-100 text-orange-700 font-medium'
-                            : 'text-gray-600 hover:bg-gray-50'
-                        }`
-                      }
-                    >
-                      <div className="flex items-center min-w-0">
-                        <span className="mr-2 text-sm">{getAccountIcon(account.type)}</span>
-                        <span className="truncate">{account.name}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className={`text-xs font-medium flex-shrink-0 ${account.type === 'credit' && (account.initial_balance - (account.balance || 0)) > 0 ? 'text-red-500' : 'text-gray-400'}`}>
-                          {account.type === 'stock'
-                            ? formatCompactCurrency(account.costBasis || 0, 'USD')
-                            : account.type === 'credit'
-                            ? formatCompactCurrency(account.initial_balance - (account.balance || 0), account.currency)
-                            : formatCompactCurrency(account.balance || 0, account.currency)}
-                        </span>
-                        <button
-                          onClick={(e) => handleToggleFavorite(e, account)}
-                          className="p-1 hover:bg-orange-100 rounded-lg text-yellow-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                          title="Remove from favorites"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                          </svg>
-                        </button>
-                      </div>
-                    </NavLink>
-                  ))
-                )}
+                {favoriteAccounts.map((account) => (
+                  <NavLink
+                    key={account.id}
+                    to={`/accounts/${account.id}`}
+                    className={({ isActive }) =>
+                      `flex items-center justify-between px-3 py-2 rounded-xl text-sm transition-all duration-200 group ${
+                        isActive
+                          ? 'bg-orange-100 text-orange-700 font-medium'
+                          : 'text-gray-600 hover:bg-gray-50'
+                      }`
+                    }
+                  >
+                    <div className="flex items-center min-w-0">
+                      <span className="mr-2 text-sm">{getAccountIcon(account.type)}</span>
+                      <span className="truncate">{account.name}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-xs font-medium flex-shrink-0 ${account.type === 'credit' && (account.initial_balance - (account.balance || 0)) > 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                        {account.type === 'stock'
+                          ? formatCompactCurrency(account.costBasis || 0, 'USD')
+                          : account.type === 'credit'
+                          ? formatCompactCurrency(account.initial_balance - (account.balance || 0), account.currency)
+                          : formatCompactCurrency(account.balance || 0, account.currency)}
+                      </span>
+                      <button
+                        onClick={(e) => handleToggleFavorite(e, account)}
+                        className="p-1 hover:bg-orange-100 rounded-lg text-yellow-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Remove from favorites"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                      </button>
+                    </div>
+                  </NavLink>
+                ))}
               </div>
             )}
           </div>
         )}
 
-        {/* Account Groups */}
+        {/* Account Groups - only show groups that have accounts */}
         {!collapsed && (
-          <div className="mt-2">
-            {accountGroups.map((group) => (
+          <div className={favoriteAccounts.length > 0 ? 'mt-2' : ''}>
+            {accountGroups.filter(group => group.accounts.length > 0).map((group) => (
               <div key={group.key} className="mb-1">
                 <button
                   onClick={() => toggleGroup(group.key)}
@@ -250,55 +246,51 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 </button>
                 {expandedGroups[group.key] && (
                   <div className="mt-1 px-2 space-y-1">
-                    {group.accounts.length === 0 ? (
-                      <p className="px-4 py-2 text-sm text-gray-400 italic">No accounts</p>
-                    ) : (
-                      group.accounts.map((account) => (
-                        <NavLink
-                          key={account.id}
-                          to={`/accounts/${account.id}`}
-                          className={({ isActive }) =>
-                            `flex items-center justify-between px-3 py-2 rounded-xl text-sm transition-all duration-200 group ${
-                              isActive
-                                ? 'bg-orange-100 text-orange-700 font-medium'
-                                : 'text-gray-600 hover:bg-gray-50'
-                            }`
-                          }
-                        >
-                          <div className="flex items-center min-w-0">
-                            <span className="truncate">{account.name}</span>
-                            {(account.recurringInflow || 0) > 0 && (
-                              <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-semibold bg-green-100 text-green-700 rounded-full" title={`${account.recurringInflow} recurring income`}>
-                                {account.recurringInflow}
-                              </span>
-                            )}
-                            {(account.recurringOutflow || 0) > 0 && (
-                              <span className="ml-1 px-1.5 py-0.5 text-[10px] font-semibold bg-red-100 text-red-700 rounded-full" title={`${account.recurringOutflow} recurring expense`}>
-                                {account.recurringOutflow}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <span className={`text-xs font-medium flex-shrink-0 ${account.type === 'credit' && (account.initial_balance - (account.balance || 0)) > 0 ? 'text-red-500' : 'text-gray-400'}`} title={account.type === 'stock' ? 'Cost Basis' : account.type === 'credit' ? 'Amount Owed' : 'Balance'}>
-                              {account.type === 'stock'
-                                ? formatCompactCurrency(account.costBasis || 0, 'USD')
-                                : account.type === 'credit'
-                                ? formatCompactCurrency(account.initial_balance - (account.balance || 0), account.currency)
-                                : formatCompactCurrency(account.balance || 0, account.currency)}
+                    {group.accounts.map((account) => (
+                      <NavLink
+                        key={account.id}
+                        to={`/accounts/${account.id}`}
+                        className={({ isActive }) =>
+                          `flex items-center justify-between px-3 py-2 rounded-xl text-sm transition-all duration-200 group ${
+                            isActive
+                              ? 'bg-orange-100 text-orange-700 font-medium'
+                              : 'text-gray-600 hover:bg-gray-50'
+                          }`
+                        }
+                      >
+                        <div className="flex items-center min-w-0">
+                          <span className="truncate">{account.name}</span>
+                          {(account.recurringInflow || 0) > 0 && (
+                            <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-semibold bg-green-100 text-green-700 rounded-full" title={`${account.recurringInflow} recurring income`}>
+                              {account.recurringInflow}
                             </span>
-                            <button
-                              onClick={(e) => handleToggleFavorite(e, account)}
-                              className={`p-1 rounded-lg transition-all duration-200 opacity-0 group-hover:opacity-100 ${account.is_favorite ? 'text-yellow-500 hover:bg-yellow-100' : 'text-gray-300 hover:text-yellow-500 hover:bg-gray-100'}`}
-                              title={account.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
-                            >
-                              <svg className="w-3.5 h-3.5" fill={account.is_favorite ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 20 20">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                              </svg>
-                            </button>
-                          </div>
-                        </NavLink>
-                      ))
-                    )}
+                          )}
+                          {(account.recurringOutflow || 0) > 0 && (
+                            <span className="ml-1 px-1.5 py-0.5 text-[10px] font-semibold bg-red-100 text-red-700 rounded-full" title={`${account.recurringOutflow} recurring expense`}>
+                              {account.recurringOutflow}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`text-xs font-medium flex-shrink-0 ${account.type === 'credit' && (account.initial_balance - (account.balance || 0)) > 0 ? 'text-red-500' : 'text-gray-400'}`} title={account.type === 'stock' ? 'Cost Basis' : account.type === 'credit' ? 'Amount Owed' : 'Balance'}>
+                            {account.type === 'stock'
+                              ? formatCompactCurrency(account.costBasis || 0, 'USD')
+                              : account.type === 'credit'
+                              ? formatCompactCurrency(account.initial_balance - (account.balance || 0), account.currency)
+                              : formatCompactCurrency(account.balance || 0, account.currency)}
+                          </span>
+                          <button
+                            onClick={(e) => handleToggleFavorite(e, account)}
+                            className={`p-1 rounded-lg transition-all duration-200 opacity-0 group-hover:opacity-100 ${account.is_favorite ? 'text-yellow-500 hover:bg-yellow-100' : 'text-gray-300 hover:text-yellow-500 hover:bg-gray-100'}`}
+                            title={account.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
+                          >
+                            <svg className="w-3.5 h-3.5" fill={account.is_favorite ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 20 20">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                          </button>
+                        </div>
+                      </NavLink>
+                    ))}
                   </div>
                 )}
               </div>

@@ -1,4 +1,4 @@
-import { query, queryOne, insert, pool } from './schema.js';
+import { query, queryOne, insert } from './schema.js';
 
 // Types
 export type AccountType = 'stock' | 'bank' | 'cash' | 'loan' | 'credit' | 'asset';
