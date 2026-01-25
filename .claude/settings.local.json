@@ -56,7 +56,13 @@
       "Bash(docker build:*)",
       "Bash(./ansible/deploy-ssh.sh:*)",
       "Bash(npm run deploy:*)",
-      "Bash(tasklist:*)"
+      "Bash(tasklist:*)",
+      "Bash(docker exec:*)",
+      "Bash(PGPASSWORD='*$95lydtiDhdV!' psql -h 207.180.192.49 -U postgres -c \"\\\\l\")",
+      "Bash(docker run --rm postgres:17-alpine psql \"postgresql://postgres:*$95lydtiDhdV!@207.180.192.49:5432/postgres\" -c \"\\\\l\")",
+      "Bash(docker run --rm postgres:17-alpine psql \"postgresql://postgres:*$95lydtiDhdV!@207.180.192.49:5432/personal_finance\" -c \"\\\\dt\")",
+      "Bash(docker run --rm postgres:17-alpine psql \"postgresql://postgres:*$95lydtiDhdV!@207.180.192.49:5432/postgres\" -c \"\\\\dt\")",
+      "Bash(docker run:*)"
     ]
   }
 }
