@@ -406,13 +406,13 @@ src/server/routes/__tests__/
 
 ---
 
-### MED-3: No Error Boundaries in Frontend
+### ~~MED-3: No Error Boundaries in Frontend~~
 
 | Field | Value |
 |-------|-------|
-| **Status** | 🔴 Open |
-| **Files** | `src/client/App.tsx` |
-| **Impact** | Single component error crashes entire app |
+| **Status** | ✅ Fixed |
+| **Files** | `src/client/App.tsx`, `src/client/components/ErrorBoundary.tsx` |
+| **Resolution** | Added ErrorBoundary component wrapping protected routes |
 
 **Solution:**
 ```typescript
@@ -435,13 +435,13 @@ class ErrorBoundary extends React.Component {
 
 ---
 
-### MED-4: Date Math Bug in Recurring Transactions
+### ~~MED-4: Date Math Bug in Recurring Transactions~~
 
 | Field | Value |
 |-------|-------|
-| **Status** | 🔴 Open |
-| **Files** | `src/server/routes/recurring.ts:15-34` |
-| **Impact** | Monthly recurring transactions may skip or double |
+| **Status** | ✅ Fixed |
+| **Files** | `src/server/routes/recurring.ts` |
+| **Resolution** | Replaced native Date methods with date-fns (addMonths, addYears) |
 
 **Problem:**
 ```typescript
@@ -459,13 +459,13 @@ case 'monthly':
 
 ---
 
-### MED-5: Session Fetched on Every API Call
+### ~~MED-5: Session Fetched on Every API Call~~
 
 | Field | Value |
 |-------|-------|
-| **Status** | 🔴 Open |
-| **Files** | `src/client/lib/api.ts:6` |
-| **Impact** | Unnecessary async overhead on every request |
+| **Status** | ✅ Fixed |
+| **Files** | `src/client/lib/api.ts`, `src/client/contexts/AuthContext.tsx` |
+| **Resolution** | Cache access token at module level, updated by AuthContext on session change |
 
 **Problem:**
 ```typescript
@@ -679,10 +679,10 @@ Use this checklist to track completion:
 ## Medium Priority
 - [x] MED-1: Add JSDoc comments
 - [ ] MED-2: Add test coverage
-- [ ] MED-3: Add error boundaries
-- [ ] MED-4: Fix date math
-- [ ] MED-5: Cache session token
-- [ ] MED-6: Add pagination
+- [x] MED-3: Add error boundaries
+- [x] MED-4: Fix date math
+- [x] MED-5: Cache session token
+- [x] MED-6: Add pagination
 - [ ] MED-7: Add request logging
 - [ ] MED-8: Fix division by zero
 ```

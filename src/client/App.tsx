@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import { SidebarLayout } from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
 import Dashboard from './pages/Dashboard';
 import AccountPage from './pages/AccountPage';
 import TransfersPage from './pages/TransfersPage';
@@ -26,18 +27,20 @@ function App() {
         path="/*"
         element={
           <ProtectedRoute>
-            <SidebarLayout>
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/accounts/:id" element={<AccountPage />} />
-                <Route path="/transfers" element={<TransfersPage />} />
-                <Route path="/projection" element={<ProjectionPage />} />
-                <Route path="/pnl" element={<PnLPage />} />
-                <Route path="/settings/categories" element={<CategoriesPage />} />
-                <Route path="/settings/payees" element={<PayeesPage />} />
-                <Route path="/settings/currency" element={<CurrencyPage />} />
-              </Routes>
-            </SidebarLayout>
+            <ErrorBoundary>
+              <SidebarLayout>
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/accounts/:id" element={<AccountPage />} />
+                  <Route path="/transfers" element={<TransfersPage />} />
+                  <Route path="/projection" element={<ProjectionPage />} />
+                  <Route path="/pnl" element={<PnLPage />} />
+                  <Route path="/settings/categories" element={<CategoriesPage />} />
+                  <Route path="/settings/payees" element={<PayeesPage />} />
+                  <Route path="/settings/currency" element={<CurrencyPage />} />
+                </Routes>
+              </SidebarLayout>
+            </ErrorBoundary>
           </ProtectedRoute>
         }
       />

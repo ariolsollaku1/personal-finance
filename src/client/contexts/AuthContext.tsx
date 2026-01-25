@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User, AuthError } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { setAccessToken } from '../lib/api';
 
 interface AuthContextType {
   user: User | null;
@@ -25,6 +26,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      // Cache the access token for API calls
+      setAccessToken(session?.access_token ?? null);
       setLoading(false);
     });
 
@@ -34,6 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+      // Update cached access token when session changes
+      setAccessToken(session?.access_token ?? null);
       setLoading(false);
     });
 

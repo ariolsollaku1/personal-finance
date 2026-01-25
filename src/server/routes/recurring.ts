@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { addDays, addMonths, addYears, format, parseISO } from 'date-fns';
 import {
   accountQueries,
   recurringQueries,
@@ -12,26 +13,39 @@ import { sendSuccess, badRequest, notFound, internalError } from '../utils/respo
 
 const router = Router();
 
-// Helper function to calculate next due date
+/**
+ * Calculate the next due date based on frequency.
+ *
+ * Uses date-fns to properly handle edge cases:
+ * - Jan 31 + 1 month = Feb 28/29 (not March 3)
+ * - Feb 29 + 1 year = Feb 28 (on non-leap years)
+ *
+ * @param currentDate - Current due date in YYYY-MM-DD format
+ * @param frequency - Recurring frequency
+ * @returns Next due date in YYYY-MM-DD format
+ */
 function calculateNextDueDate(currentDate: string, frequency: Frequency): string {
-  const date = new Date(currentDate);
+  const date = parseISO(currentDate);
 
+  let nextDate: Date;
   switch (frequency) {
     case 'weekly':
-      date.setDate(date.getDate() + 7);
+      nextDate = addDays(date, 7);
       break;
     case 'biweekly':
-      date.setDate(date.getDate() + 14);
+      nextDate = addDays(date, 14);
       break;
     case 'monthly':
-      date.setMonth(date.getMonth() + 1);
+      nextDate = addMonths(date, 1);
       break;
     case 'yearly':
-      date.setFullYear(date.getFullYear() + 1);
+      nextDate = addYears(date, 1);
       break;
+    default:
+      nextDate = addMonths(date, 1);
   }
 
-  return date.toISOString().split('T')[0];
+  return format(nextDate, 'yyyy-MM-dd');
 }
 
 // GET /api/accounts/:id/recurring - List recurring transactions for an account

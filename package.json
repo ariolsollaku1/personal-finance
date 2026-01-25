@@ -16,7 +16,7 @@
     "deploy:server": "bash ansible/deploy-ssh.sh"
   },
   "dependencies": {
-    "22": "^0.0.0",
+    "date-fns": "^4.1.0",
     "@headlessui/react": "^2.2.9",
     "@supabase/supabase-js": "^2.91.0",
     "better-sqlite3": "^12.6.2",

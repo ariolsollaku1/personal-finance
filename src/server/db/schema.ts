@@ -150,7 +150,15 @@ export async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_categories_user_id ON categories(user_id);
     `);
 
-    // Migration: add unique constraint on (user_id, name) if it doesn't exist
+    // Migration: drop old name-only constraint and add (user_id, name) constraint
+    await client.query(`
+      DO $$ BEGIN
+        -- Drop old constraint on just 'name' if it exists
+        ALTER TABLE categories DROP CONSTRAINT IF EXISTS categories_name_key;
+      EXCEPTION
+        WHEN undefined_object THEN null;
+      END $$;
+    `);
     await client.query(`
       DO $$ BEGIN
         ALTER TABLE categories ADD CONSTRAINT categories_user_id_name_key UNIQUE (user_id, name);
@@ -185,7 +193,15 @@ export async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_payees_user_id ON payees(user_id);
     `);
 
-    // Migration: add unique constraint on (user_id, name) if it doesn't exist
+    // Migration: drop old name-only constraint and add (user_id, name) constraint
+    await client.query(`
+      DO $$ BEGIN
+        -- Drop old constraint on just 'name' if it exists
+        ALTER TABLE payees DROP CONSTRAINT IF EXISTS payees_name_key;
+      EXCEPTION
+        WHEN undefined_object THEN null;
+      END $$;
+    `);
     await client.query(`
       DO $$ BEGIN
         ALTER TABLE payees ADD CONSTRAINT payees_user_id_name_key UNIQUE (user_id, name);

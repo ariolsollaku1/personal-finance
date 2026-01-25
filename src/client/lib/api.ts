@@ -1,5 +1,3 @@
-import { supabase } from './supabase';
-
 // Import shared types and re-export for convenience
 export type {
   AccountType,
@@ -53,6 +51,28 @@ import type {
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
+/**
+ * Cached access token - updated by AuthContext when session changes.
+ * This avoids calling supabase.auth.getSession() on every API request.
+ */
+let cachedAccessToken: string | null = null;
+
+/**
+ * Set the cached access token. Called by AuthContext when session changes.
+ * @param token - Access token or null when logged out
+ */
+export function setAccessToken(token: string | null): void {
+  cachedAccessToken = token;
+}
+
+/**
+ * Get the current cached access token.
+ * @returns Cached access token or null
+ */
+export function getAccessToken(): string | null {
+  return cachedAccessToken;
+}
+
 // Auth event types for session expiration handling
 export const AUTH_EVENTS = {
   SESSION_EXPIRED: 'auth:session-expired',
@@ -69,9 +89,10 @@ function dispatchAuthExpired(reason: string) {
 }
 
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const { data: { session } } = await supabase.auth.getSession();
+  // Use cached token instead of fetching session on every request
+  const token = cachedAccessToken;
 
-  if (!session) {
+  if (!token) {
     // Signal auth expiration - let React components handle navigation
     dispatchAuthExpired('not_authenticated');
     throw new Error('Not authenticated');
@@ -81,7 +102,7 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session.access_token}`,
+      'Authorization': `Bearer ${token}`,
       ...options?.headers,
     },
   });
@@ -136,10 +157,27 @@ export const accountsApi = {
     }),
 };
 
+// Pagination types
+export interface PaginationInfo {
+  page: number;
+  limit: number;
+  totalCount: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
+export interface PaginatedTransactions {
+  transactions: AccountTransaction[];
+  pagination: PaginationInfo;
+}
+
 // Account Transactions API
 export const accountTransactionsApi = {
   getByAccount: (accountId: number) =>
     fetchApi<AccountTransaction[]>(`/accounts/${accountId}/transactions`),
+  getByAccountPaginated: (accountId: number, page: number = 1, limit: number = 50) =>
+    fetchApi<PaginatedTransactions>(`/accounts/${accountId}/transactions?page=${page}&limit=${limit}`),
   create: (
     accountId: number,
     data: {

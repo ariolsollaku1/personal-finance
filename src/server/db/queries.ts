@@ -338,6 +338,71 @@ export const accountTransactionQueries = {
     );
   },
 
+  /**
+   * Get paginated transactions for an account.
+   * Returns transactions with LIMIT and OFFSET for pagination.
+   */
+  getByAccountPaginated: async (userId: string, accountId: number, limit: number, offset: number) => {
+    const account = await accountQueries.getById(userId, accountId);
+    if (!account) return [];
+
+    return query<AccountTransaction>(
+      `SELECT
+        at.*,
+        p.name as payee_name,
+        c.name as category_name
+      FROM account_transactions at
+      LEFT JOIN payees p ON at.payee_id = p.id
+      LEFT JOIN categories c ON at.category_id = c.id
+      WHERE at.account_id = $1
+      ORDER BY at.date DESC, at.id DESC
+      LIMIT $2 OFFSET $3`,
+      [accountId, limit, offset]
+    );
+  },
+
+  /**
+   * Count total transactions for an account (for pagination metadata).
+   */
+  countByAccount: async (userId: string, accountId: number): Promise<number> => {
+    const account = await accountQueries.getById(userId, accountId);
+    if (!account) return 0;
+
+    const result = await queryOne<{ count: string }>(
+      'SELECT COUNT(*) as count FROM account_transactions WHERE account_id = $1',
+      [accountId]
+    );
+    return result ? parseInt(result.count, 10) : 0;
+  },
+
+  /**
+   * Get net sum of transactions AFTER a given offset (for running balance calculation).
+   * These are older transactions when sorted DESC by date.
+   * Net = sum(inflows) - sum(outflows)
+   */
+  getNetSumAfterOffset: async (userId: string, accountId: number, offset: number): Promise<number> => {
+    const account = await accountQueries.getById(userId, accountId);
+    if (!account) return 0;
+
+    // Get net sum of transactions at positions >= offset (older transactions)
+    const result = await queryOne<{ net: string | null }>(
+      `SELECT
+        COALESCE(
+          SUM(CASE WHEN type = 'inflow' THEN amount ELSE -amount END),
+          0
+        ) as net
+      FROM (
+        SELECT type, amount
+        FROM account_transactions
+        WHERE account_id = $1
+        ORDER BY date DESC, id DESC
+        OFFSET $2
+      ) older_txs`,
+      [accountId, offset]
+    );
+    return result ? parseFloat(result.net || '0') : 0;
+  },
+
   getById: async (userId: string, id: number) => {
     // Join with accounts to verify ownership
     return queryOne<AccountTransaction>(
