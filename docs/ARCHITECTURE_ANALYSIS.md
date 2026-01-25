@@ -557,49 +557,61 @@ const dayChangePercent = previousValue > 0
 
 | Field | Value |
 |-------|-------|
-| **Status** | 🟡 Open |
+| **Status** | ✅ Fixed |
 | **Files** | `src/server/index.ts` |
 | **Impact** | API vulnerable to abuse |
+
+**Solution implemented:** Added `express-rate-limit` with 100 requests per minute per IP.
 
 ### LOW-2: No Circuit Breaker for Yahoo Finance
 
 | Field | Value |
 |-------|-------|
-| **Status** | 🟡 Open |
+| **Status** | ✅ Fixed |
 | **Files** | `src/server/services/yahoo.ts` |
 | **Impact** | If Yahoo API fails, entire dashboard fails |
+
+**Solution implemented:** Added CircuitBreaker class with 5 failure threshold and 30-second reset timeout. All Yahoo Finance functions now check circuit state before making requests.
 
 ### LOW-3: No Retry Logic for API Calls
 
 | Field | Value |
 |-------|-------|
-| **Status** | 🟡 Open |
+| **Status** | ✅ Fixed |
 | **Files** | `src/client/lib/api.ts` |
 | **Impact** | Transient failures show as errors |
+
+**Solution implemented:** Added retry logic with exponential backoff (1s, 2s, 4s) for network errors, 5xx server errors, and 429 rate limit errors. Max 3 retries. Auth errors (401) are not retried.
 
 ### LOW-4: Stock Quotes Not Cached
 
 | Field | Value |
 |-------|-------|
-| **Status** | 🟡 Open |
+| **Status** | ✅ Fixed |
 | **Files** | `src/server/services/yahoo.ts` |
 | **Impact** | Repeated calls for same symbols |
+
+**Solution implemented:** Added QuoteCache class with TTL-based caching. Quotes are cached for 1 minute during market hours (14:30-21:00 UTC, weekdays) and 5 minutes outside market hours.
 
 ### LOW-5: No Migration System
 
 | Field | Value |
 |-------|-------|
-| **Status** | 🟡 Open |
+| **Status** | ✅ Fixed |
 | **Files** | `src/server/db/schema.ts` |
 | **Impact** | Manual schema changes, hard to track versions |
+
+**Solution implemented:** Added lightweight migration tracking system with `schema_migrations` table. Tracks version numbers and descriptions. Initial schema recorded as version 0. Future migrations can be added to the `migrations` array with version numbers > 0.
 
 ### LOW-6: TypeScript `any` in Query Helpers
 
 | Field | Value |
 |-------|-------|
-| **Status** | 🟡 Open |
+| **Status** | ✅ Fixed |
 | **Files** | `src/server/db/schema.ts:310-325` |
 | **Impact** | Reduced type safety |
+
+**Solution implemented:** Replaced `any` with proper types. Added `QueryParam` type for parameters (`string | number | boolean | null | Date | Buffer`). Changed default generic from `any` to `Record<string, unknown>`. Added JSDoc documentation.
 
 ---
 
@@ -685,4 +697,12 @@ Use this checklist to track completion:
 - [x] MED-6: Add pagination
 - [x] MED-7: Add request logging
 - [x] MED-8: Fix division by zero
+
+## Low Priority
+- [x] LOW-1: Add rate limiting
+- [x] LOW-2: Add circuit breaker for Yahoo Finance
+- [x] LOW-3: Add retry logic for API calls
+- [x] LOW-4: Add stock quotes caching
+- [x] LOW-5: Add migration system
+- [x] LOW-6: TypeScript `any` in query helpers
 ```

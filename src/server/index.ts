@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initDatabase } from './db/schema.js';
@@ -49,6 +50,16 @@ app.use(morgan(logFormat, {
   skip: (req) => req.url === '/health' || req.url?.startsWith('/assets'),
 }));
 
+// Rate limiting - 100 requests per minute per IP
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 100, // 100 requests per window
+  standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
+  legacyHeaders: false, // Disable `X-RateLimit-*` headers
+  message: { success: false, error: { message: 'Too many requests, please try again later.' } },
+  skip: (req) => req.url === '/health', // Skip rate limiting for health checks
+});
+
 // Initialize database and start server
 async function start() {
   try {
@@ -59,7 +70,8 @@ async function start() {
     const rates = await getExchangeRates();
     console.log('Exchange rates cached:', rates);
 
-    // Apply auth middleware to all /api routes
+    // Apply rate limiting and auth middleware to all /api routes
+    app.use('/api', apiLimiter);
     app.use('/api', authMiddleware);
 
     // Auth routes

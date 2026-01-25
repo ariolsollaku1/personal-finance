@@ -88,6 +88,33 @@ function dispatchAuthExpired(reason: string) {
   );
 }
 
+/** Sleep for specified milliseconds */
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+/** Check if error is retryable (network error or 5xx server error) */
+function isRetryableError(error: unknown, status?: number): boolean {
+  // Network errors (fetch failed)
+  if (error instanceof TypeError && error.message.includes('fetch')) {
+    return true;
+  }
+  // Server errors (5xx)
+  if (status && status >= 500 && status < 600) {
+    return true;
+  }
+  // Rate limited (429) - retry after backoff
+  if (status === 429) {
+    return true;
+  }
+  return false;
+}
+
+/** Retry configuration */
+const RETRY_CONFIG = {
+  maxRetries: 3,
+  baseDelay: 1000, // 1 second
+  maxDelay: 8000,  // 8 seconds max
+};
+
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
   // Use cached token instead of fetching session on every request
   const token = cachedAccessToken;
@@ -98,39 +125,81 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
     throw new Error('Not authenticated');
   }
 
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-      ...options?.headers,
-    },
-  });
+  let lastError: Error | null = null;
+  let lastStatus: number | undefined;
 
-  if (response.status === 401) {
-    // Session expired or invalid - signal auth expiration
-    dispatchAuthExpired('session_expired');
-    throw new Error('Session expired');
-  }
+  for (let attempt = 0; attempt <= RETRY_CONFIG.maxRetries; attempt++) {
+    try {
+      // Wait before retry (exponential backoff)
+      if (attempt > 0) {
+        const delay = Math.min(
+          RETRY_CONFIG.baseDelay * Math.pow(2, attempt - 1),
+          RETRY_CONFIG.maxDelay
+        );
+        console.log(`Retrying ${endpoint} (attempt ${attempt + 1}) after ${delay}ms`);
+        await sleep(delay);
+      }
 
-  const json = await response.json().catch(() => ({ error: 'Request failed' }));
+      const response = await fetch(`${API_BASE}${endpoint}`, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          ...options?.headers,
+        },
+      });
 
-  // Handle new envelope format: { success: true/false, data/error }
-  if (typeof json === 'object' && json !== null && 'success' in json) {
-    if (json.success === false) {
-      throw new Error(json.error?.message || 'Request failed');
+      lastStatus = response.status;
+
+      if (response.status === 401) {
+        // Session expired or invalid - don't retry, signal auth expiration
+        dispatchAuthExpired('session_expired');
+        throw new Error('Session expired');
+      }
+
+      // Check for retryable server errors before parsing JSON
+      if (response.status >= 500 || response.status === 429) {
+        lastError = new Error(`Server error: ${response.status}`);
+        if (attempt < RETRY_CONFIG.maxRetries) {
+          continue; // Retry
+        }
+      }
+
+      const json = await response.json().catch(() => ({ error: 'Request failed' }));
+
+      // Handle new envelope format: { success: true/false, data/error }
+      if (typeof json === 'object' && json !== null && 'success' in json) {
+        if (json.success === false) {
+          throw new Error(json.error?.message || 'Request failed');
+        }
+        if (json.success === true && 'data' in json) {
+          return json.data as T;
+        }
+      }
+
+      // Handle legacy format (raw data or { error: 'message' })
+      if (!response.ok) {
+        throw new Error(json.error || 'Request failed');
+      }
+
+      return json as T;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      // Don't retry auth errors or client errors
+      if (lastError.message === 'Session expired' || lastError.message === 'Not authenticated') {
+        throw lastError;
+      }
+
+      // Check if error is retryable
+      if (!isRetryableError(error, lastStatus) || attempt >= RETRY_CONFIG.maxRetries) {
+        throw lastError;
+      }
+      // Otherwise, continue to retry
     }
-    if (json.success === true && 'data' in json) {
-      return json.data as T;
-    }
   }
 
-  // Handle legacy format (raw data or { error: 'message' })
-  if (!response.ok) {
-    throw new Error(json.error || 'Request failed');
-  }
-
-  return json as T;
+  throw lastError || new Error('Request failed after retries');
 }
 
 // Accounts API

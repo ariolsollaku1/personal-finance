@@ -1,5 +1,6 @@
 import pg from 'pg';
 import dotenv from 'dotenv';
+import { migrations, type Migration } from './migrations/index.js';
 
 dotenv.config();
 
@@ -14,6 +15,69 @@ export const pool = new Pool({
   password: process.env.DB_PASSWORD,
   ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
 });
+
+/**
+ * Schema Migration System
+ *
+ * Tracks applied migrations in the `schema_migrations` table.
+ * Each migration has a unique version number and description.
+ */
+
+/** Current schema version - increment when adding new migrations */
+const CURRENT_SCHEMA_VERSION = 1;
+
+/**
+ * Check if a migration has been applied
+ */
+async function isMigrationApplied(client: pg.PoolClient, version: number): Promise<boolean> {
+  const result = await client.query(
+    'SELECT 1 FROM schema_migrations WHERE version = $1',
+    [version]
+  );
+  return result.rows.length > 0;
+}
+
+/**
+ * Record a migration as applied
+ */
+async function recordMigration(client: pg.PoolClient, version: number, description: string): Promise<void> {
+  await client.query(
+    'INSERT INTO schema_migrations (version, description, applied_at) VALUES ($1, $2, CURRENT_TIMESTAMP)',
+    [version, description]
+  );
+}
+
+/**
+ * Run pending migrations in order
+ */
+async function runMigrations(client: pg.PoolClient, migrations: Migration[]): Promise<void> {
+  for (const migration of migrations) {
+    const applied = await isMigrationApplied(client, migration.version);
+    if (!applied) {
+      console.log(`Running migration ${migration.version}: ${migration.description}`);
+      await migration.up(client);
+      await recordMigration(client, migration.version, migration.description);
+      console.log(`Migration ${migration.version} completed`);
+    }
+  }
+}
+
+/**
+ * Get current schema version
+ */
+export async function getSchemaVersion(): Promise<number> {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      'SELECT MAX(version) as version FROM schema_migrations'
+    );
+    return result.rows[0]?.version || 0;
+  } catch {
+    return 0; // Table doesn't exist yet
+  } finally {
+    client.release();
+  }
+}
 
 // Default categories to seed for new users
 export const DEFAULT_CATEGORIES = [
@@ -42,6 +106,15 @@ export async function initDatabase() {
   const client = await pool.connect();
 
   try {
+    // Create schema_migrations table first (for tracking applied migrations)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS schema_migrations (
+        version INTEGER PRIMARY KEY,
+        description TEXT NOT NULL,
+        applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // Create account_type enum if not exists
     await client.query(`
       DO $$ BEGIN
@@ -378,26 +451,68 @@ export async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_transactions_account_id ON transactions(account_id);
     `);
 
-    console.log('Database initialized successfully');
+    // Record initial schema version (0) if not already recorded
+    // This marks all tables above as the "baseline" schema
+    const initialMigration = await isMigrationApplied(client, 0);
+    if (!initialMigration) {
+      await recordMigration(client, 0, 'Initial schema - all base tables');
+      console.log('Recorded initial schema (version 0)');
+    }
+
+    // Run any pending migrations from src/server/db/migrations/
+    if (migrations.length > 0) {
+      await runMigrations(client, migrations);
+    }
+
+    const currentVersion = await client.query('SELECT MAX(version) as v FROM schema_migrations');
+    console.log(`Database initialized successfully (schema version: ${currentVersion.rows[0]?.v || 0})`);
   } finally {
     client.release();
   }
 }
 
-// Helper function to run queries
-export async function query<T = any>(text: string, params?: any[]): Promise<T[]> {
+/** Query parameter types supported by pg */
+type QueryParam = string | number | boolean | null | Date | Buffer | QueryParam[];
+
+/**
+ * Run a query and return all rows.
+ * @param text - SQL query string with $1, $2, etc. placeholders
+ * @param params - Query parameters (type-safe)
+ * @returns Array of rows typed as T
+ */
+export async function query<T = Record<string, unknown>>(
+  text: string,
+  params?: QueryParam[]
+): Promise<T[]> {
   const result = await pool.query(text, params);
   return result.rows as T[];
 }
 
-// Helper function to run a query and get single row
-export async function queryOne<T = any>(text: string, params?: any[]): Promise<T | undefined> {
+/**
+ * Run a query and return the first row.
+ * @param text - SQL query string with $1, $2, etc. placeholders
+ * @param params - Query parameters (type-safe)
+ * @returns First row typed as T, or undefined if no rows
+ */
+export async function queryOne<T = Record<string, unknown>>(
+  text: string,
+  params?: QueryParam[]
+): Promise<T | undefined> {
   const result = await pool.query(text, params);
   return result.rows[0] as T | undefined;
 }
 
-// Helper function to run insert and return the inserted row
-export async function insert<T = any>(text: string, params?: any[]): Promise<T> {
+/**
+ * Run an INSERT query and return the inserted row.
+ * Use with RETURNING * clause.
+ * @param text - SQL INSERT statement with RETURNING clause
+ * @param params - Query parameters (type-safe)
+ * @returns Inserted row typed as T
+ */
+export async function insert<T = Record<string, unknown>>(
+  text: string,
+  params?: QueryParam[]
+): Promise<T> {
   const result = await pool.query(text, params);
   return result.rows[0] as T;
 }
