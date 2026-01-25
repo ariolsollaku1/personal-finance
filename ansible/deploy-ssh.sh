@@ -31,10 +31,12 @@ cp "$PROJECT_DIR/package.json" "$TEMP_DIR/"
 cp "$PROJECT_DIR/package-lock.json" "$TEMP_DIR/"
 cp "$PROJECT_DIR/Dockerfile" "$TEMP_DIR/"
 cp -r "$PROJECT_DIR/src/server" "$TEMP_DIR/src_server"
+cp -r "$PROJECT_DIR/src/shared" "$TEMP_DIR/src_shared"
 cp "$PROJECT_DIR/tsconfig.server.json" "$TEMP_DIR/"
 
 mkdir -p "$TEMP_DIR/src"
 mv "$TEMP_DIR/src_server" "$TEMP_DIR/src/server"
+mv "$TEMP_DIR/src_shared" "$TEMP_DIR/src/shared"
 
 # Copy config files to temp
 cp "$SCRIPT_DIR/.env.production" "$TEMP_DIR/.env"

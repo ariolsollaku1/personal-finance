@@ -12,6 +12,7 @@ RUN npm ci
 # Copy source code
 COPY tsconfig*.json ./
 COPY src/server ./src/server
+COPY src/shared ./src/shared
 
 # Build the server
 RUN npm run build:server

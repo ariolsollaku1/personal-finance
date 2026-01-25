@@ -5,6 +5,8 @@ import {
   batchQueries,
   Currency,
   Holding,
+  RecurringTransaction,
+  TransactionType,
 } from '../db/queries.js';
 import { getMultipleQuotes } from './yahoo.js';
 import { convertToMainCurrency, getExchangeRates, ExchangeRates } from './currency.js';
@@ -102,7 +104,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   }
 
   // Get unique symbols for live quotes
-  const uniqueSymbols = [...new Set(allHoldings.map(h => h.symbol))];
+  const uniqueSymbols: string[] = [...new Set(allHoldings.map((h: Holding) => h.symbol))];
   const quotes = uniqueSymbols.length > 0 ? await getMultipleQuotes(uniqueSymbols) : new Map();
 
   let totalNetWorth = 0;
@@ -174,7 +176,8 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   }
 
   // Transform due recurring transactions
-  const dueRecurring: DueRecurring[] = dueRecurringRaw.map((r) => ({
+  type DueRecurringRow = RecurringTransaction & { account_name: string; account_currency: Currency };
+  const dueRecurring: DueRecurring[] = dueRecurringRaw.map((r: DueRecurringRow) => ({
     id: r.id,
     accountId: r.account_id,
     accountName: r.account_name,
@@ -188,7 +191,18 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   }));
 
   // Transform recent transactions (already fetched with batch query)
-  const recentTransactions: RecentTransaction[] = recentTxRaw.map((tx) => ({
+  type RecentTxRow = {
+    id: number;
+    account_id: number;
+    account_name: string;
+    account_currency: Currency;
+    type: TransactionType;
+    amount: number;
+    date: string;
+    payee_name: string | null;
+    category_name: string | null;
+  };
+  const recentTransactions: RecentTransaction[] = recentTxRaw.map((tx: RecentTxRow) => ({
     id: tx.id,
     accountId: tx.account_id,
     accountName: tx.account_name,

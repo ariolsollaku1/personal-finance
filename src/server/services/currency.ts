@@ -7,8 +7,13 @@ import { Currency, settingsQueries } from '../db/queries.js';
  * Uses EUR as the base currency. Falls back to hardcoded rates if API fails.
  */
 
+// Exchange rates type - allows indexing by Currency
+export type ExchangeRates = {
+  [K in Currency]: number;
+};
+
 // Fallback rates (EUR as base) - used if API fails
-const FALLBACK_RATES: Record<Currency, number> = {
+const FALLBACK_RATES: ExchangeRates = {
   EUR: 1,
   USD: 1.08,  // 1 EUR = 1.08 USD (approximate)
   ALL: 100.0, // 1 EUR = 100 ALL (approximate)
@@ -16,24 +21,18 @@ const FALLBACK_RATES: Record<Currency, number> = {
 
 // In-memory cache for exchange rates
 let cachedRates: {
-  rates: Record<Currency, number>;
+  rates: ExchangeRates;
   timestamp: number;
 } | null = null;
 
 // Cache duration: 24 hours in milliseconds
 const CACHE_DURATION_MS = 24 * 60 * 60 * 1000;
 
-export interface ExchangeRates {
-  EUR: number;
-  USD: number;
-  ALL: number;
-}
-
 /**
  * Fetch fresh exchange rates from frankfurter.app API
  * Returns rates with EUR as base (EUR = 1)
  */
-async function fetchExchangeRates(): Promise<Record<Currency, number>> {
+async function fetchExchangeRates(): Promise<ExchangeRates> {
   try {
     const response = await fetch('https://api.frankfurter.app/latest?from=EUR&to=USD,ALL');
 

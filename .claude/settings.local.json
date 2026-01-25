@@ -52,7 +52,8 @@
       "Bash(VITE_API_URL=\"http://207.180.192.49:3000/api\" npm run deploy:*)",
       "Bash(VITE_API_URL=\"https://sleeve-saturday-intersection-disposal.trycloudflare.com/api\" npm run deploy:*)",
       "Bash(VITE_API_URL=\"https://apartments-florida-flooring-slightly.trycloudflare.com/api\" npm run deploy:*)",
-      "Bash(VITE_API_URL=\"https://api.0ec.ai/api\" npm run deploy:*)"
+      "Bash(VITE_API_URL=\"https://api.0ec.ai/api\" npm run deploy:*)",
+      "Bash(docker build:*)"
     ]
   }
 }
