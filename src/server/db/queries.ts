@@ -1,13 +1,11 @@
 import { query, queryOne, insert } from './schema.js';
 
-// Import shared types and re-export for convenience
-export {
+// Import shared types for use in this module
+import type {
   AccountType,
   Currency,
   TransactionType,
   Frequency,
-  CategoryType,
-  StockTransactionType,
   Account,
   Category,
   Payee,
@@ -19,11 +17,14 @@ export {
   StockTransaction,
 } from '../../shared/types.js';
 
-import type {
+// Re-export types for convenience (must use 'export type' for interfaces in ESM)
+export type {
   AccountType,
   Currency,
   TransactionType,
   Frequency,
+  CategoryType,
+  StockTransactionType,
   Account,
   Category,
   Payee,
