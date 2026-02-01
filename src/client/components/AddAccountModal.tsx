@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { accountsApi, AccountType, Currency } from '../lib/api';
 
@@ -58,9 +59,9 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end lg:items-center lg:justify-center z-50 lg:p-4"
+      className="fixed inset-0 !mt-0 bg-black/50 backdrop-blur-sm flex items-end lg:items-center lg:justify-center z-50 lg:p-4"
       onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
     >
       <div
@@ -189,7 +190,7 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
                   className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
                   placeholder="e.g., Main Checking"
                   required
-                  autoFocus
+                  autoFocus={window.matchMedia('(min-width: 1024px)').matches}
                 />
               </div>
 
@@ -321,6 +322,7 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

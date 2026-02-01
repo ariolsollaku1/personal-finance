@@ -1,3 +1,5 @@
+import { createPortal } from 'react-dom';
+
 interface ConfirmModalProps {
   isOpen: boolean;
   title: string;
@@ -21,9 +23,9 @@ export default function ConfirmModal({
 
   const isDanger = variant === 'danger';
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end lg:items-center lg:justify-center z-50 lg:p-4"
+      className="fixed inset-0 !mt-0 bg-black/50 backdrop-blur-sm flex items-end lg:items-center lg:justify-center z-50 lg:p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
     >
       <div
@@ -74,6 +76,7 @@ export default function ConfirmModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

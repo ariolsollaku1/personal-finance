@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { RecurringTransaction, Category, Payee, Frequency } from '../../lib/api';
 import { NewRecurringForm } from '../../hooks/useAccountPage';
 
@@ -41,9 +42,9 @@ export function AddRecurringModal({
     newRecurring.type === 'inflow' ? c.type === 'income' : c.type === 'expense'
   );
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end lg:items-center lg:justify-center z-50 lg:p-4"
+      className="fixed inset-0 !mt-0 bg-black/50 backdrop-blur-sm flex items-end lg:items-center lg:justify-center z-50 lg:p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
@@ -185,7 +186,8 @@ export function AddRecurringModal({
         </form>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -226,9 +228,9 @@ export function EditRecurringModal({
     editingRecurring.type === 'inflow' ? c.type === 'income' : c.type === 'expense'
   );
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end lg:items-center lg:justify-center z-50 lg:p-4"
+      className="fixed inset-0 !mt-0 bg-black/50 backdrop-blur-sm flex items-end lg:items-center lg:justify-center z-50 lg:p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
@@ -385,6 +387,7 @@ export function EditRecurringModal({
         </form>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

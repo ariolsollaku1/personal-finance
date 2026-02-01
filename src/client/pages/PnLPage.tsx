@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { PnLSummary, PnLMonthDetail, MonthlyPnL, pnlApi } from '../lib/api';
 import { formatCurrency } from '../lib/currency';
 import { PnLSkeleton } from '../components/Skeleton';
@@ -229,9 +230,9 @@ interface MonthDetailModalProps {
 }
 
 function MonthDetailModal({ detail, loading, currency, onClose }: MonthDetailModalProps) {
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end lg:items-center lg:justify-center lg:p-4"
+      className="fixed inset-0 !mt-0 bg-black/50 backdrop-blur-sm z-50 flex items-end lg:items-center lg:justify-center lg:p-4"
       onClick={onClose}
     >
       <div
@@ -405,6 +406,7 @@ function MonthDetailModal({ detail, loading, currency, onClose }: MonthDetailMod
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

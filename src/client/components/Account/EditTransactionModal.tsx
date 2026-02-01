@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AccountTransaction, Category, Payee } from '../../lib/api';
 
 interface EditTransactionModalProps {
@@ -38,9 +39,9 @@ export default function EditTransactionModal({
     editingTransaction.type === 'inflow' ? c.type === 'income' : c.type === 'expense'
   );
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end lg:items-center lg:justify-center z-50 lg:p-4"
+      className="fixed inset-0 !mt-0 bg-black/50 backdrop-blur-sm flex items-end lg:items-center lg:justify-center z-50 lg:p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
@@ -177,6 +178,7 @@ export default function EditTransactionModal({
         </form>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

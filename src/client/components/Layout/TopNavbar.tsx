@@ -25,7 +25,7 @@ export default function TopNavbar() {
   };
 
   return (
-    <header className="h-16 bg-white border-b border-gray-100 shadow-sm sticky top-0 z-40">
+    <header className="h-16 bg-white border-b border-gray-100 shadow-sm sticky top-0 z-25">
       <div className="h-full px-4 lg:px-6 flex items-center justify-between">
         {/* Left: Mobile menu + Logo */}
         <div className="flex items-center gap-3">

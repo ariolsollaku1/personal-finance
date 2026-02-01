@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { RecurringTransaction, DueRecurring, Currency } from '../../lib/api';
 import { formatCurrency } from '../../lib/currency';
 
@@ -35,9 +36,9 @@ export default function ApplyRecurringModal({
     }
   };
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end lg:items-center lg:justify-center z-50 lg:p-4"
+      className="fixed inset-0 !mt-0 bg-black/50 backdrop-blur-sm flex items-end lg:items-center lg:justify-center z-50 lg:p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
@@ -62,7 +63,7 @@ export default function ApplyRecurringModal({
               onChange={(e) => setAmount(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md"
               required
-              autoFocus
+              autoFocus={window.matchMedia('(min-width: 1024px)').matches}
             />
             {parseFloat(amount) !== recurring.amount && (
               <p className="text-xs text-gray-500 mt-1">
@@ -95,6 +96,7 @@ export default function ApplyRecurringModal({
         </form>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
