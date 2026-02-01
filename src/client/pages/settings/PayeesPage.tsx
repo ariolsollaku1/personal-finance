@@ -4,6 +4,8 @@ import { PayeesSkeleton } from '../../components/Skeleton';
 import { useToast } from '../../contexts/ToastContext';
 import { useConfirm } from '../../hooks/useConfirm';
 import ConfirmModal from '../../components/ConfirmModal';
+import AddPayeeModal from '../../components/AddPayeeModal';
+import MergePayeesModal from '../../components/MergePayeesModal';
 
 export default function PayeesPage() {
   const [payees, setPayees] = useState<Payee[]>([]);
@@ -11,12 +13,8 @@ export default function PayeesPage() {
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState('');
-  const [newPayeeName, setNewPayeeName] = useState('');
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [mergeMode, setMergeMode] = useState(false);
-  const [mergeSource, setMergeSource] = useState<number | null>(null);
-  const [mergeTarget, setMergeTarget] = useState<number | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showMergeModal, setShowMergeModal] = useState(false);
   const toast = useToast();
   const { confirm, confirmState, handleConfirm, handleCancel } = useConfirm();
 
@@ -37,21 +35,6 @@ export default function PayeesPage() {
     }
   };
 
-  const handleAdd = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      await payeesApi.create({ name: newPayeeName });
-      setNewPayeeName('');
-      setShowAddForm(false);
-      loadPayees();
-    } catch (err) {
-      toast.error('Payee', err instanceof Error ? err.message : 'Failed to add payee');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const handleUpdate = async (id: number) => {
     try {
       await payeesApi.update(id, { name: editName });
@@ -69,34 +52,6 @@ export default function PayeesPage() {
       loadPayees();
     } catch (err) {
       toast.error('Payee', err instanceof Error ? err.message : 'Failed to delete payee');
-    }
-  };
-
-  const handleMerge = async () => {
-    if (!mergeSource || !mergeTarget) {
-      toast.warning('Payees', 'Please select both source and target payees');
-      return;
-    }
-    if (mergeSource === mergeTarget) {
-      toast.warning('Payees', 'Cannot merge payee with itself');
-      return;
-    }
-
-    const sourceName = payees.find((p) => p.id === mergeSource)?.name;
-    const targetName = payees.find((p) => p.id === mergeTarget)?.name;
-
-    if (!await confirm({ title: 'Merge Payees', message: `Merge "${sourceName}" into "${targetName}"? All transactions will be updated.`, confirmLabel: 'Merge' })) {
-      return;
-    }
-
-    try {
-      await payeesApi.merge(mergeSource, mergeTarget);
-      setMergeMode(false);
-      setMergeSource(null);
-      setMergeTarget(null);
-      loadPayees();
-    } catch (err) {
-      toast.error('Payees', err instanceof Error ? err.message : 'Failed to merge payees');
     }
   };
 
@@ -125,146 +80,25 @@ export default function PayeesPage() {
         </div>
         <div className="flex gap-3">
           <button
-            onClick={() => {
-              setMergeMode(!mergeMode);
-              setShowAddForm(false);
-            }}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold transition-all duration-200 ${
-              mergeMode
-                ? 'bg-gray-700 text-white hover:bg-gray-800'
-                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-            }`}
+            onClick={() => setShowMergeModal(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold transition-all duration-200 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
-            {mergeMode ? 'Cancel Merge' : 'Merge'}
+            Merge
           </button>
           <button
-            onClick={() => {
-              setShowAddForm(!showAddForm);
-              setMergeMode(false);
-            }}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold transition-all duration-200 ${
-              showAddForm
-                ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                : 'bg-orange-500 text-white hover:bg-orange-600 shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40'
-            }`}
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold transition-all duration-200 bg-orange-500 text-white hover:bg-orange-600 shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40"
           >
-            {showAddForm ? (
-              <>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-                Cancel
-              </>
-            ) : (
-              <>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Add Payee
-              </>
-            )}
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            Add Payee
           </button>
         </div>
       </div>
-
-      {/* Add Form */}
-      {showAddForm && (
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h3 className="font-semibold text-gray-900 mb-4">New Payee</h3>
-          <form onSubmit={handleAdd} className="flex gap-4">
-            <input
-              type="text"
-              value={newPayeeName}
-              onChange={(e) => setNewPayeeName(e.target.value)}
-              className="flex-1 px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
-              placeholder="Payee name"
-              required
-            />
-            <button
-              type="submit"
-              disabled={submitting}
-              className="px-6 py-3 bg-orange-500 text-white font-semibold rounded-xl hover:bg-orange-600 transition-all duration-200 shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {submitting && (
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-              )}
-              {submitting ? 'Adding...' : 'Add'}
-            </button>
-          </form>
-        </div>
-      )}
-
-      {/* Merge Mode */}
-      {mergeMode && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-amber-200 rounded-xl flex items-center justify-center">
-              <svg className="w-5 h-5 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="font-semibold text-amber-800">Merge Payees</h3>
-              <p className="text-sm text-amber-700">
-                The source payee will be deleted and all its transactions reassigned to the target.
-              </p>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Source (will be deleted)
-              </label>
-              <select
-                value={mergeSource || ''}
-                onChange={(e) => setMergeSource(parseInt(e.target.value) || null)}
-                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200"
-              >
-                <option value="">Select payee</option>
-                {payees
-                  .filter((p) => p.id !== mergeTarget)
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Target (will keep)
-              </label>
-              <select
-                value={mergeTarget || ''}
-                onChange={(e) => setMergeTarget(parseInt(e.target.value) || null)}
-                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200"
-              >
-                <option value="">Select payee</option>
-                {payees
-                  .filter((p) => p.id !== mergeSource)
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-              </select>
-            </div>
-          </div>
-          <button
-            onClick={handleMerge}
-            disabled={!mergeSource || !mergeTarget}
-            className="px-6 py-3 bg-amber-600 text-white font-semibold rounded-xl hover:bg-amber-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Merge Payees
-          </button>
-        </div>
-      )}
 
       {/* Payees List */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -350,6 +184,19 @@ export default function PayeesPage() {
           </div>
         )}
       </div>
+
+      <AddPayeeModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onAdded={loadPayees}
+      />
+
+      <MergePayeesModal
+        isOpen={showMergeModal}
+        onClose={() => setShowMergeModal(false)}
+        onMerged={loadPayees}
+        payees={payees}
+      />
 
       <ConfirmModal
         isOpen={confirmState.isOpen}
