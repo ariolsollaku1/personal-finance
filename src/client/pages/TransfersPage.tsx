@@ -3,6 +3,8 @@ import { Transfer, Account, transfersApi, accountsApi } from '../lib/api';
 import { formatCurrency } from '../lib/currency';
 import { TransfersSkeleton } from '../components/Skeleton';
 import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmModal from '../components/ConfirmModal';
 
 export default function TransfersPage() {
   const [transfers, setTransfers] = useState<Transfer[]>([]);
@@ -12,6 +14,7 @@ export default function TransfersPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const toast = useToast();
+  const { confirm, confirmState, handleConfirm, handleCancel } = useConfirm();
 
   const [newTransfer, setNewTransfer] = useState({
     fromAccountId: '',
@@ -73,19 +76,19 @@ export default function TransfersPage() {
       });
       loadData();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create transfer');
+      toast.error('Transfer', err instanceof Error ? err.message : 'Failed to create transfer');
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDeleteTransfer = async (id: number) => {
-    if (!confirm('Delete this transfer? This will remove both linked transactions.')) return;
+    if (!await confirm({ title: 'Delete Transfer', message: 'Delete this transfer? This will remove both linked transactions.', confirmLabel: 'Delete', variant: 'danger' })) return;
     try {
       await transfersApi.delete(id);
       loadData();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete transfer');
+      toast.error('Transfer', err instanceof Error ? err.message : 'Failed to delete transfer');
     }
   };
 
@@ -294,6 +297,16 @@ export default function TransfersPage() {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmLabel={confirmState.confirmLabel}
+        variant={confirmState.variant}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
     </div>
   );
 }

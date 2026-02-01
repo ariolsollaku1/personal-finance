@@ -42,7 +42,7 @@ export default function Dashboard() {
       setApplyingRecurring(null);
       loadDashboard();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to apply recurring transaction');
+      toast.error('Recurring', err instanceof Error ? err.message : 'Failed to apply recurring transaction');
     }
   };
 

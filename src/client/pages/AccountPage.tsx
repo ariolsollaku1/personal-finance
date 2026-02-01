@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmModal from '../components/ConfirmModal';
 import {
   accountsApi,
   accountTransactionsApi,
@@ -78,6 +80,8 @@ export default function AccountPage() {
     isStockAccount,
   } = accountState;
 
+  const { confirm, confirmState, handleConfirm, handleCancel } = useConfirm();
+
   // Tab change handler
   const handleTabChange = (tab: StockTab) => {
     setStockTab(tab);
@@ -91,13 +95,13 @@ export default function AccountPage() {
 
   // Event handlers
   const handleDeleteTransaction = async (txId: number) => {
-    if (!confirm('Delete this transaction?')) return;
+    if (!await confirm({ title: 'Delete Transaction', message: 'Are you sure you want to delete this transaction?', confirmLabel: 'Delete', variant: 'danger' })) return;
     try {
       await accountTransactionsApi.delete(accountId, txId);
       refreshData();
       window.dispatchEvent(new Event('accounts-changed'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete transaction');
+      toast.error('Transaction', err instanceof Error ? err.message : 'Failed to delete transaction');
     }
   };
 
@@ -117,7 +121,7 @@ export default function AccountPage() {
       recurringForm.resetForm();
       refreshData();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to add recurring transaction');
+      toast.error('Recurring', err instanceof Error ? err.message : 'Failed to add recurring transaction');
     }
   };
 
@@ -133,17 +137,17 @@ export default function AccountPage() {
       refreshData();
       window.dispatchEvent(new Event('accounts-changed'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to apply recurring transaction');
+      toast.error('Recurring', err instanceof Error ? err.message : 'Failed to apply recurring transaction');
     }
   };
 
   const handleDeleteRecurring = async (recurringId: number) => {
-    if (!confirm('Delete this recurring transaction?')) return;
+    if (!await confirm({ title: 'Delete Recurring', message: 'Are you sure you want to delete this recurring transaction?', confirmLabel: 'Delete', variant: 'danger' })) return;
     try {
       await recurringApi.delete(recurringId);
       refreshData();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete recurring transaction');
+      toast.error('Recurring', err instanceof Error ? err.message : 'Failed to delete recurring transaction');
     }
   };
 
@@ -163,7 +167,7 @@ export default function AccountPage() {
       refreshData();
       window.dispatchEvent(new Event('accounts-changed'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update transaction');
+      toast.error('Transaction', err instanceof Error ? err.message : 'Failed to update transaction');
     }
   };
 
@@ -183,7 +187,7 @@ export default function AccountPage() {
       modals.setEditingRecurring(null);
       refreshData();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update recurring transaction');
+      toast.error('Recurring', err instanceof Error ? err.message : 'Failed to update recurring transaction');
     }
   };
 
@@ -195,17 +199,17 @@ export default function AccountPage() {
       refreshData();
       window.dispatchEvent(new Event('accounts-changed'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update account');
+      toast.error('Account', err instanceof Error ? err.message : 'Failed to update account');
     }
   };
 
   const handleDeleteAccount = async () => {
-    if (!confirm('Are you sure you want to delete this account? This cannot be undone.')) return;
+    if (!await confirm({ title: 'Delete Account', message: 'Are you sure you want to delete this account? This cannot be undone.', confirmLabel: 'Delete', variant: 'danger' })) return;
     try {
       await accountsApi.delete(accountId);
       navigate('/');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete account');
+      toast.error('Account', err instanceof Error ? err.message : 'Failed to delete account');
     }
   };
 
@@ -429,6 +433,16 @@ export default function AccountPage() {
           onClose={() => setApplyingRecurring(null)}
         />
       )}
+
+      <ConfirmModal
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmLabel={confirmState.confirmLabel}
+        variant={confirmState.variant}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
     </div>
   );
 }

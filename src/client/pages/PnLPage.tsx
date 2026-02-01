@@ -230,10 +230,22 @@ interface MonthDetailModalProps {
 
 function MonthDetailModal({ detail, loading, currency, onClose }: MonthDetailModalProps) {
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end lg:items-center lg:justify-center lg:p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl w-full lg:max-w-4xl max-h-[90vh] flex flex-col animate-slide-up lg:animate-none"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Drag handle - mobile only */}
+        <div className="flex justify-center pt-3 pb-2 lg:hidden flex-shrink-0">
+          <div className="w-10 h-1 bg-gray-300 rounded-full" />
+        </div>
+
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+        <div className="px-6 py-4 lg:border-b border-gray-100 flex justify-between items-center">
           <div>
             <h2 className="text-xl font-bold text-gray-900">
               {loading ? 'Loading...' : detail?.label || 'Month Details'}

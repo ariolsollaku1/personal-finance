@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { accountsApi, AccountType, Currency } from '../lib/api';
 
 const accountTypeInfo = {
-  bank: { icon: '🏦', label: 'Bank Account', description: 'Checking, savings, or other bank accounts' },
-  cash: { icon: '💵', label: 'Cash Account', description: 'Physical cash or wallet tracking' },
-  stock: { icon: '📈', label: 'Stock Account', description: 'Investment portfolios (USD only)' },
-  asset: { icon: '🏠', label: 'Asset', description: 'Real estate, vehicles, or valuables' },
-  loan: { icon: '📋', label: 'Loan Account', description: 'Debts and loans you owe' },
-  credit: { icon: '💳', label: 'Credit Card', description: 'Credit cards - enter the credit limit' },
+  bank: { icon: '🏦', label: 'Bank Account', shortLabel: 'Bank', description: 'Checking, savings, or other bank accounts' },
+  cash: { icon: '💵', label: 'Cash Account', shortLabel: 'Cash', description: 'Physical cash or wallet tracking' },
+  stock: { icon: '📈', label: 'Stock Account', shortLabel: 'Stock', description: 'Investment portfolios (USD only)' },
+  asset: { icon: '🏠', label: 'Asset', shortLabel: 'Asset', description: 'Real estate, vehicles, or valuables' },
+  loan: { icon: '📋', label: 'Loan Account', shortLabel: 'Loan', description: 'Debts and loans you owe' },
+  credit: { icon: '💳', label: 'Credit Card', shortLabel: 'Credit', description: 'Credit cards - enter the credit limit' },
 };
 
 interface AddAccountModalProps {
@@ -59,10 +59,21 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+    <div
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end lg:items-center lg:justify-center z-50 lg:p-4"
+      onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
+    >
+      <div
+        className="bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl w-full lg:max-w-2xl max-h-[90vh] overflow-hidden animate-slide-up lg:animate-none"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        {/* Drag handle - mobile only */}
+        <div className="flex justify-center pt-3 pb-2 lg:hidden flex-shrink-0">
+          <div className="w-10 h-1 bg-gray-300 rounded-full" />
+        </div>
+
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+        <div className="px-6 py-4 lg:border-b border-gray-100 flex justify-between items-center">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Add New Account</h2>
             <p className="text-sm text-gray-500 mt-0.5">Create a new account to track your finances</p>
@@ -95,7 +106,44 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 Account Type
               </label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+
+              {/* Mobile: horizontal scroll mini cards */}
+              <div className="flex overflow-x-auto gap-2 pb-2 -mx-6 px-6 lg:hidden">
+                {(Object.keys(accountTypeInfo) as AccountType[]).map((type) => {
+                  const info = accountTypeInfo[type];
+                  const isSelected = formData.type === type;
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => {
+                        setFormData({
+                          ...formData,
+                          type,
+                          currency: type === 'stock' ? 'USD' : formData.currency,
+                        });
+                      }}
+                      className={`flex flex-col items-center justify-center w-[calc((100%-1rem)/3)] min-w-[calc((100%-1rem)/3)] py-3 rounded-xl border-2 transition-all duration-200 flex-shrink-0 ${
+                        isSelected
+                          ? 'border-orange-500 bg-orange-50 ring-2 ring-orange-500/20'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="text-2xl mb-1">{info.icon}</span>
+                      <span className={`text-xs font-medium ${isSelected ? 'text-orange-700' : 'text-gray-900'}`}>
+                        {info.shortLabel}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Mobile: selected type description */}
+              <p className="text-xs text-gray-500 mt-2 lg:hidden">
+                {accountTypeInfo[formData.type].description}
+              </p>
+
+              {/* Desktop: grid cards */}
+              <div className="hidden lg:grid grid-cols-3 gap-3">
                 {(Object.keys(accountTypeInfo) as AccountType[]).map((type) => {
                   const info = accountTypeInfo[type];
                   const isSelected = formData.type === type;
@@ -145,7 +193,49 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* Mobile: combined currency prefix + balance input */}
+              <div className="sm:hidden">
+                <label htmlFor="balance-mobile" className="block text-sm font-medium text-gray-700 mb-1.5">
+                  {formData.type === 'credit' ? 'Credit Limit' : formData.type === 'asset' ? 'Current Value' : 'Initial Balance'}
+                </label>
+                <div className="flex rounded-xl border border-gray-300 focus-within:ring-2 focus-within:ring-orange-500 focus-within:border-transparent transition-all duration-200 overflow-hidden">
+                  <select
+                    value={formData.currency}
+                    onChange={(e) => setFormData({ ...formData, currency: e.target.value as Currency })}
+                    disabled={formData.type === 'stock'}
+                    className="pl-3 pr-1 py-3 bg-gray-50 border-r border-gray-300 text-gray-700 text-sm font-medium focus:outline-none disabled:bg-gray-100 disabled:text-gray-500"
+                  >
+                    <option value="EUR">EUR</option>
+                    <option value="USD">USD</option>
+                    <option value="GBP">GBP</option>
+                    <option value="CHF">CHF</option>
+                    <option value="NOK">NOK</option>
+                    <option value="SEK">SEK</option>
+                    <option value="DKK">DKK</option>
+                    <option value="PLN">PLN</option>
+                    <option value="CZK">CZK</option>
+                    <option value="HUF">HUF</option>
+                    <option value="RON">RON</option>
+                    <option value="BGN">BGN</option>
+                    <option value="ALL">ALL</option>
+                  </select>
+                  <input
+                    id="balance-mobile"
+                    type="number"
+                    step="0.01"
+                    value={formData.initialBalance}
+                    onChange={(e) => setFormData({ ...formData, initialBalance: parseFloat(e.target.value) || 0 })}
+                    className="flex-1 min-w-0 px-3 py-3 bg-white text-gray-900 placeholder-gray-400 focus:outline-none"
+                    placeholder="0.00"
+                  />
+                </div>
+                {formData.type === 'stock' && (
+                  <p className="text-xs text-gray-500 mt-1.5">Stock accounts use USD</p>
+                )}
+              </div>
+
+              {/* Desktop: separate currency + balance fields */}
+              <div className="hidden sm:grid grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="currency" className="block text-sm font-medium text-gray-700 mb-1.5">
                     Currency
@@ -203,22 +293,22 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 flex gap-3 justify-end">
+        <div className="px-6 py-4 border-t border-gray-100 flex flex-col-reverse lg:flex-row gap-3 lg:justify-end">
           <button
             type="button"
             onClick={handleClose}
             disabled={loading}
-            className="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-all duration-200 disabled:opacity-50"
+            className="w-full lg:w-auto px-5 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-all duration-200 disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={loading || !formData.name}
-            className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40"
+            className="w-full lg:w-auto px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40"
           >
             {loading ? (
-              <span className="flex items-center gap-2">
+              <span className="flex items-center justify-center gap-2">
                 <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />

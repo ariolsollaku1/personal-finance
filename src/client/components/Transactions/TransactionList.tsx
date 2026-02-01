@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Transaction, transactionsApi } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
+import { useConfirm } from '../../hooks/useConfirm';
+import ConfirmModal from '../ConfirmModal';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -25,9 +27,10 @@ function formatDate(dateStr: string): string {
 export default function TransactionList({ transactions, onDelete }: TransactionListProps) {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const toast = useToast();
+  const { confirm, confirmState, handleConfirm, handleCancel } = useConfirm();
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this transaction?')) {
+    if (!await confirm({ title: 'Delete Transaction', message: 'Are you sure you want to delete this transaction?', confirmLabel: 'Delete', variant: 'danger' })) {
       return;
     }
 
@@ -36,7 +39,7 @@ export default function TransactionList({ transactions, onDelete }: TransactionL
       await transactionsApi.delete(id);
       onDelete();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete transaction');
+      toast.error('Transaction', error instanceof Error ? error.message : 'Failed to delete transaction');
     } finally {
       setDeletingId(null);
     }
@@ -131,6 +134,16 @@ export default function TransactionList({ transactions, onDelete }: TransactionL
           </tbody>
         </table>
       </div>
+
+      <ConfirmModal
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmLabel={confirmState.confirmLabel}
+        variant={confirmState.variant}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
     </div>
   );
 }

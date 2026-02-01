@@ -36,8 +36,20 @@ export default function ApplyRecurringModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm">
+    <div
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end lg:items-center lg:justify-center z-50 lg:p-4"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        className="bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl w-full lg:max-w-sm max-h-[90vh] overflow-hidden animate-slide-up lg:animate-none"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        {/* Drag handle - mobile only */}
+        <div className="flex justify-center pt-3 pb-2 lg:hidden flex-shrink-0">
+          <div className="w-10 h-1 bg-gray-300 rounded-full" />
+        </div>
+
+        <div className="p-6">
         <h2 className="text-lg font-semibold mb-1">Apply Transaction</h2>
         <p className="text-sm text-gray-500 mb-4">{getLabel(recurring)}</p>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -58,18 +70,18 @@ export default function ApplyRecurringModal({
               </p>
             )}
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-col-reverse lg:flex-row gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-md"
+              className="w-full lg:flex-1 px-4 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-all duration-200"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full lg:flex-1 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2"
             >
               {submitting && (
                 <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
@@ -81,6 +93,7 @@ export default function ApplyRecurringModal({
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );

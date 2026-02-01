@@ -163,7 +163,7 @@ All require `Authorization: Bearer <token>` except auth routes.
 | Gradient header | `px-6 py-4 bg-gradient-to-r from-green-500 to-emerald-600` → glass icon + title (white) |
 | List item | `px-6 py-4 flex justify-between hover:bg-gray-50 group` → content + hover actions |
 | Hover actions | `opacity-0 group-hover:opacity-100 transition-opacity` on button container |
-| Modal | Overlay (`fixed inset-0 bg-black/50 backdrop-blur-sm`) + panel (`bg-white rounded-2xl max-w-2xl`) |
+| Modal | **Desktop (lg+):** Overlay (`fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center`) + panel (`bg-white rounded-2xl max-w-2xl`). **Mobile (<lg):** Bottom sheet (`items-end` + `rounded-t-2xl animate-slide-up w-full`) with drag handle (`w-10 h-1 bg-gray-300 rounded-full`, `lg:hidden`), `env(safe-area-inset-bottom)` padding, full-width stacked buttons (`flex-col-reverse lg:flex-row`). Reference: `AddAccountModal.tsx` |
 | Empty state | `p-6 text-center` → icon circle (`w-12 h-12 bg-gray-100 rounded-full mx-auto`) + text |
 | Badge | `px-1.5 py-0.5 text-[10px] font-semibold rounded-full` + `bg-green-100 text-green-700` or `bg-red-100 text-red-700` |
 | Avatar | `w-9 h-9 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white font-semibold` |

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { HoldingWithQuote, holdingsApi } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
+import { useConfirm } from '../../hooks/useConfirm';
+import ConfirmModal from '../ConfirmModal';
 import SellForm from './SellForm';
 
 interface HoldingRowProps {
@@ -24,9 +26,10 @@ export default function HoldingRow({ holding, accountId, onUpdate }: HoldingRowP
   const [showSellForm, setShowSellForm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const toast = useToast();
+  const { confirm, confirmState, handleConfirm, handleCancel } = useConfirm();
 
   const handleDelete = async () => {
-    if (!confirm(`Are you sure you want to delete ${holding.symbol}?`)) {
+    if (!await confirm({ title: 'Delete Holding', message: `Are you sure you want to delete ${holding.symbol}?`, confirmLabel: 'Delete', variant: 'danger' })) {
       return;
     }
 
@@ -35,7 +38,7 @@ export default function HoldingRow({ holding, accountId, onUpdate }: HoldingRowP
       await holdingsApi.delete(holding.id);
       onUpdate();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete holding');
+      toast.error('Holdings', error instanceof Error ? error.message : 'Failed to delete holding');
     } finally {
       setDeleting(false);
     }
@@ -109,6 +112,15 @@ export default function HoldingRow({ holding, accountId, onUpdate }: HoldingRowP
           </td>
         </tr>
       )}
+      <ConfirmModal
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmLabel={confirmState.confirmLabel}
+        variant={confirmState.variant}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
     </>
   );
 }

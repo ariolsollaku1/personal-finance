@@ -417,24 +417,24 @@ export function CurrencySkeleton() {
 export function AccountSkeleton() {
   return (
     <div className="space-y-6 animate-pulse">
-      {/* Account Header */}
-      <div className="bg-white rounded-lg shadow p-6">
+      {/* Account Header - Gradient Hero */}
+      <div className="bg-gradient-to-br from-orange-400 via-orange-500 to-amber-500 rounded-2xl shadow-xl p-8">
         <div className="flex justify-between items-start">
-          <div>
-            <div className="flex items-center gap-3">
-              <Skeleton className="w-8 h-8 rounded" />
-              <Skeleton className="h-8 w-48 rounded" />
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-white/20 rounded-2xl" />
+            <div>
+              <Skeleton className="h-7 w-44 rounded bg-white/20" />
+              <Skeleton className="h-4 w-28 rounded bg-white/15 mt-1.5" />
             </div>
-            <Skeleton className="h-4 w-28 rounded mt-2" />
           </div>
-          <div className="text-right">
-            <Skeleton className="h-8 w-36 rounded mb-1" />
-            <Skeleton className="h-4 w-24 rounded" />
+          <div className="flex gap-2">
+            <div className="w-9 h-9 bg-white/15 rounded-xl" />
+            <div className="w-9 h-9 bg-white/15 rounded-xl" />
           </div>
         </div>
-        <div className="mt-4 flex gap-2">
-          <Skeleton className="h-4 w-20 rounded" />
-          <Skeleton className="h-4 w-24 rounded" />
+        <div className="mt-6">
+          <Skeleton className="h-4 w-24 rounded bg-white/15" />
+          <Skeleton className="h-10 w-52 rounded bg-white/20 mt-2" />
         </div>
       </div>
 

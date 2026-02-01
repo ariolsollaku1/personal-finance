@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Category, categoriesApi } from '../../lib/api';
 import { CategoriesSkeleton } from '../../components/Skeleton';
 import { useToast } from '../../contexts/ToastContext';
+import { useConfirm } from '../../hooks/useConfirm';
+import ConfirmModal from '../../components/ConfirmModal';
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -13,6 +15,7 @@ export default function CategoriesPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const toast = useToast();
+  const { confirm, confirmState, handleConfirm, handleCancel } = useConfirm();
 
   useEffect(() => {
     loadCategories();
@@ -40,7 +43,7 @@ export default function CategoriesPage() {
       setShowAddForm(false);
       loadCategories();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to add category');
+      toast.error('Category', err instanceof Error ? err.message : 'Failed to add category');
     } finally {
       setSubmitting(false);
     }
@@ -52,17 +55,17 @@ export default function CategoriesPage() {
       setEditingId(null);
       loadCategories();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update category');
+      toast.error('Category', err instanceof Error ? err.message : 'Failed to update category');
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Delete this category?')) return;
+    if (!await confirm({ title: 'Delete Category', message: 'Are you sure you want to delete this category?', confirmLabel: 'Delete', variant: 'danger' })) return;
     try {
       await categoriesApi.delete(id);
       loadCategories();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete category');
+      toast.error('Category', err instanceof Error ? err.message : 'Failed to delete category');
     }
   };
 
@@ -238,6 +241,16 @@ export default function CategoriesPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmLabel={confirmState.confirmLabel}
+        variant={confirmState.variant}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
     </div>
   );
 }

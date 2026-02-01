@@ -48,7 +48,7 @@ export default function CurrencyPage() {
       await dashboardApi.setCurrency(currency);
       setMainCurrency(currency);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save currency setting');
+      toast.error('Currency', err instanceof Error ? err.message : 'Failed to save currency setting');
     } finally {
       setSaving(false);
     }

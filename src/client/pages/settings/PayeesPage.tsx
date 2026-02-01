@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Payee, payeesApi } from '../../lib/api';
 import { PayeesSkeleton } from '../../components/Skeleton';
 import { useToast } from '../../contexts/ToastContext';
+import { useConfirm } from '../../hooks/useConfirm';
+import ConfirmModal from '../../components/ConfirmModal';
 
 export default function PayeesPage() {
   const [payees, setPayees] = useState<Payee[]>([]);
@@ -16,6 +18,7 @@ export default function PayeesPage() {
   const [mergeSource, setMergeSource] = useState<number | null>(null);
   const [mergeTarget, setMergeTarget] = useState<number | null>(null);
   const toast = useToast();
+  const { confirm, confirmState, handleConfirm, handleCancel } = useConfirm();
 
   useEffect(() => {
     loadPayees();
@@ -43,7 +46,7 @@ export default function PayeesPage() {
       setShowAddForm(false);
       loadPayees();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to add payee');
+      toast.error('Payee', err instanceof Error ? err.message : 'Failed to add payee');
     } finally {
       setSubmitting(false);
     }
@@ -55,34 +58,34 @@ export default function PayeesPage() {
       setEditingId(null);
       loadPayees();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update payee');
+      toast.error('Payee', err instanceof Error ? err.message : 'Failed to update payee');
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Delete this payee?')) return;
+    if (!await confirm({ title: 'Delete Payee', message: 'Are you sure you want to delete this payee?', confirmLabel: 'Delete', variant: 'danger' })) return;
     try {
       await payeesApi.delete(id);
       loadPayees();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete payee');
+      toast.error('Payee', err instanceof Error ? err.message : 'Failed to delete payee');
     }
   };
 
   const handleMerge = async () => {
     if (!mergeSource || !mergeTarget) {
-      toast.warning('Please select both source and target payees');
+      toast.warning('Payees', 'Please select both source and target payees');
       return;
     }
     if (mergeSource === mergeTarget) {
-      toast.warning('Cannot merge payee with itself');
+      toast.warning('Payees', 'Cannot merge payee with itself');
       return;
     }
 
     const sourceName = payees.find((p) => p.id === mergeSource)?.name;
     const targetName = payees.find((p) => p.id === mergeTarget)?.name;
 
-    if (!confirm(`Merge "${sourceName}" into "${targetName}"? All transactions will be updated.`)) {
+    if (!await confirm({ title: 'Merge Payees', message: `Merge "${sourceName}" into "${targetName}"? All transactions will be updated.`, confirmLabel: 'Merge' })) {
       return;
     }
 
@@ -93,7 +96,7 @@ export default function PayeesPage() {
       setMergeTarget(null);
       loadPayees();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to merge payees');
+      toast.error('Payees', err instanceof Error ? err.message : 'Failed to merge payees');
     }
   };
 
@@ -347,6 +350,16 @@ export default function PayeesPage() {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmLabel={confirmState.confirmLabel}
+        variant={confirmState.variant}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
     </div>
   );
 }

@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
 import { Dividend, dividendsApi } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
+import { useConfirm } from '../../hooks/useConfirm';
+import ConfirmModal from '../ConfirmModal';
 
 interface DividendListProps {
   dividends: Dividend[];
@@ -32,11 +34,12 @@ function formatPercent(value: number): string {
 export default function DividendList({ dividends, onDelete }: DividendListProps) {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const toast = useToast();
+  const { confirm, confirmState, handleConfirm, handleCancel } = useConfirm();
   const [sortColumn, setSortColumn] = useState<SortColumn>('ex_date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this dividend?')) {
+    if (!await confirm({ title: 'Delete Dividend', message: 'Are you sure you want to delete this dividend?', confirmLabel: 'Delete', variant: 'danger' })) {
       return;
     }
 
@@ -45,7 +48,7 @@ export default function DividendList({ dividends, onDelete }: DividendListProps)
       await dividendsApi.delete(id);
       onDelete();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete dividend');
+      toast.error('Dividend', error instanceof Error ? error.message : 'Failed to delete dividend');
     } finally {
       setDeletingId(null);
     }
@@ -233,6 +236,16 @@ export default function DividendList({ dividends, onDelete }: DividendListProps)
           </tbody>
         </table>
       </div>
+
+      <ConfirmModal
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmLabel={confirmState.confirmLabel}
+        variant={confirmState.variant}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
     </div>
   );
 }
