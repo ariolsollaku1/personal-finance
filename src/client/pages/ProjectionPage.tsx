@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import {
   LineChart,
   Line,
@@ -14,42 +13,16 @@ import {
   Legend,
   ReferenceLine,
 } from 'recharts';
-import { ProjectionData, projectionApi } from '../lib/api';
+import { projectionApi } from '../lib/api';
 import { formatCurrency } from '../lib/currency';
 import { ProjectionSkeleton } from '../components/Skeleton';
+import { useSWR } from '../hooks/useSWR';
 
 export default function ProjectionPage() {
-  const [data, setData] = useState<ProjectionData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadProjection();
-  }, []);
-
-  const loadProjection = async () => {
-    try {
-      setLoading(true);
-      const projectionData = await projectionApi.get();
-      setData(projectionData);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load projection');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data, loading } = useSWR('/projection', () => projectionApi.get());
 
   if (loading) {
     return <ProjectionSkeleton />;
-  }
-
-  if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-        {error}
-      </div>
-    );
   }
 
   if (!data) return null;

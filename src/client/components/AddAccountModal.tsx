@@ -41,8 +41,6 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
       setFormData({ name: '', type: 'bank', currency: 'ALL', initialBalance: 0 });
       // Navigate to the new account
       navigate(`/accounts/${account.id}`);
-      // Trigger sidebar refresh
-      window.dispatchEvent(new Event('accounts-changed'));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create account');
     } finally {

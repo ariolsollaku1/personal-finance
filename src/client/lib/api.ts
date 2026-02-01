@@ -49,6 +49,8 @@ import type {
   PnLDetail as PnLMonthDetail,
 } from '../../shared/types';
 
+import { invalidateCache, clearAllCache } from './apiCache';
+
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 /**
@@ -83,6 +85,7 @@ export const AUTH_EVENTS = {
  * to handle navigation using React Router instead of hard redirects
  */
 function dispatchAuthExpired(reason: string) {
+  clearAllCache();
   window.dispatchEvent(
     new CustomEvent(AUTH_EVENTS.SESSION_EXPIRED, { detail: { reason } })
   );
@@ -202,28 +205,52 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
   throw lastError || new Error('Request failed after retries');
 }
 
+/** Wraps a mutation function to invalidate cache prefixes after success */
+function withInvalidation<A extends unknown[], R>(
+  fn: (...args: A) => Promise<R>,
+  ...prefixes: string[]
+): (...args: A) => Promise<R> {
+  return async (...args: A) => {
+    const result = await fn(...args);
+    invalidateCache(...prefixes);
+    return result;
+  };
+}
+
 // Accounts API
 export const accountsApi = {
   getAll: () => fetchApi<Account[]>('/accounts'),
   get: (id: number) => fetchApi<Account>(`/accounts/${id}`),
   getPortfolio: (id: number) => fetchApi<PortfolioSummary>(`/accounts/${id}/portfolio`),
-  create: (data: { name: string; type: AccountType; currency: Currency; initialBalance?: number }) =>
-    fetchApi<Account>('/accounts', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-  update: (id: number, data: { name?: string; currency?: Currency; initialBalance?: number }) =>
-    fetchApi<Account>(`/accounts/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
-  delete: (id: number) =>
-    fetchApi<{ success: boolean }>(`/accounts/${id}`, { method: 'DELETE' }),
-  setFavorite: (id: number, isFavorite: boolean) =>
-    fetchApi<{ success: boolean; isFavorite: boolean }>(`/accounts/${id}/favorite`, {
-      method: 'PUT',
-      body: JSON.stringify({ isFavorite }),
-    }),
+  create: withInvalidation(
+    (data: { name: string; type: AccountType; currency: Currency; initialBalance?: number }) =>
+      fetchApi<Account>('/accounts', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    '/accounts', '/dashboard'
+  ),
+  update: withInvalidation(
+    (id: number, data: { name?: string; currency?: Currency; initialBalance?: number }) =>
+      fetchApi<Account>(`/accounts/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    '/accounts', '/dashboard'
+  ),
+  delete: withInvalidation(
+    (id: number) =>
+      fetchApi<{ success: boolean }>(`/accounts/${id}`, { method: 'DELETE' }),
+    '/accounts', '/dashboard'
+  ),
+  setFavorite: withInvalidation(
+    (id: number, isFavorite: boolean) =>
+      fetchApi<{ success: boolean; isFavorite: boolean }>(`/accounts/${id}/favorite`, {
+        method: 'PUT',
+        body: JSON.stringify({ isFavorite }),
+      }),
+    '/accounts', '/dashboard'
+  ),
 };
 
 // Pagination types
@@ -247,83 +274,113 @@ export const accountTransactionsApi = {
     fetchApi<AccountTransaction[]>(`/accounts/${accountId}/transactions`),
   getByAccountPaginated: (accountId: number, page: number = 1, limit: number = 50) =>
     fetchApi<PaginatedTransactions>(`/accounts/${accountId}/transactions?page=${page}&limit=${limit}`),
-  create: (
-    accountId: number,
-    data: {
-      type: TransactionType;
-      amount: number;
-      date: string;
-      payee?: string;
-      payeeId?: number;
-      category?: string;
-      categoryId?: number;
-      notes?: string;
-    }
-  ) =>
-    fetchApi<AccountTransaction>(`/accounts/${accountId}/transactions`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-  update: (
-    accountId: number,
-    txId: number,
-    data: {
-      type?: TransactionType;
-      amount?: number;
-      date?: string;
-      payee?: string;
-      payeeId?: number;
-      category?: string;
-      categoryId?: number;
-      notes?: string;
-    }
-  ) =>
-    fetchApi<AccountTransaction>(`/accounts/${accountId}/transactions/${txId}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
-  delete: (accountId: number, txId: number) =>
-    fetchApi<{ success: boolean }>(`/accounts/${accountId}/transactions/${txId}`, { method: 'DELETE' }),
+  create: withInvalidation(
+    (
+      accountId: number,
+      data: {
+        type: TransactionType;
+        amount: number;
+        date: string;
+        payee?: string;
+        payeeId?: number;
+        category?: string;
+        categoryId?: number;
+        notes?: string;
+      }
+    ) =>
+      fetchApi<AccountTransaction>(`/accounts/${accountId}/transactions`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    '/accounts', '/dashboard', '/pnl', '/projection'
+  ),
+  update: withInvalidation(
+    (
+      accountId: number,
+      txId: number,
+      data: {
+        type?: TransactionType;
+        amount?: number;
+        date?: string;
+        payee?: string;
+        payeeId?: number;
+        category?: string;
+        categoryId?: number;
+        notes?: string;
+      }
+    ) =>
+      fetchApi<AccountTransaction>(`/accounts/${accountId}/transactions/${txId}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    '/accounts', '/dashboard', '/pnl', '/projection'
+  ),
+  delete: withInvalidation(
+    (accountId: number, txId: number) =>
+      fetchApi<{ success: boolean }>(`/accounts/${accountId}/transactions/${txId}`, { method: 'DELETE' }),
+    '/accounts', '/dashboard', '/pnl', '/projection'
+  ),
 };
 
 // Categories API
 export const categoriesApi = {
   getAll: () => fetchApi<Category[]>('/categories'),
-  create: (data: { name: string; type?: 'income' | 'expense' }) =>
-    fetchApi<Category>('/categories', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-  update: (id: number, data: { name: string }) =>
-    fetchApi<Category>(`/categories/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
-  delete: (id: number) =>
-    fetchApi<{ success: boolean }>(`/categories/${id}`, { method: 'DELETE' }),
+  create: withInvalidation(
+    (data: { name: string; type?: 'income' | 'expense' }) =>
+      fetchApi<Category>('/categories', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    '/categories'
+  ),
+  update: withInvalidation(
+    (id: number, data: { name: string }) =>
+      fetchApi<Category>(`/categories/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    '/categories'
+  ),
+  delete: withInvalidation(
+    (id: number) =>
+      fetchApi<{ success: boolean }>(`/categories/${id}`, { method: 'DELETE' }),
+    '/categories'
+  ),
 };
 
 // Payees API
 export const payeesApi = {
   getAll: () => fetchApi<Payee[]>('/payees'),
   search: (query: string) => fetchApi<Payee[]>(`/payees/search?q=${encodeURIComponent(query)}`),
-  create: (data: { name: string }) =>
-    fetchApi<Payee>('/payees', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-  update: (id: number, data: { name: string }) =>
-    fetchApi<Payee>(`/payees/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
-  delete: (id: number) =>
-    fetchApi<{ success: boolean }>(`/payees/${id}`, { method: 'DELETE' }),
-  merge: (sourceId: number, targetId: number) =>
-    fetchApi<{ success: boolean; message: string }>('/payees/merge', {
-      method: 'POST',
-      body: JSON.stringify({ sourceId, targetId }),
-    }),
+  create: withInvalidation(
+    (data: { name: string }) =>
+      fetchApi<Payee>('/payees', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    '/payees'
+  ),
+  update: withInvalidation(
+    (id: number, data: { name: string }) =>
+      fetchApi<Payee>(`/payees/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    '/payees'
+  ),
+  delete: withInvalidation(
+    (id: number) =>
+      fetchApi<{ success: boolean }>(`/payees/${id}`, { method: 'DELETE' }),
+    '/payees'
+  ),
+  merge: withInvalidation(
+    (sourceId: number, targetId: number) =>
+      fetchApi<{ success: boolean; message: string }>('/payees/merge', {
+        method: 'POST',
+        body: JSON.stringify({ sourceId, targetId }),
+      }),
+    '/payees'
+  ),
 };
 
 // Recurring Transactions API
@@ -331,73 +388,91 @@ export const recurringApi = {
   getByAccount: (accountId: number) =>
     fetchApi<RecurringTransaction[]>(`/recurring/accounts/${accountId}/recurring`),
   getDue: () => fetchApi<RecurringTransaction[]>('/recurring/due'),
-  create: (
-    accountId: number,
-    data: {
-      type: TransactionType;
-      amount: number;
-      payee?: string;
-      payeeId?: number;
-      category?: string;
-      categoryId?: number;
-      notes?: string;
-      frequency: Frequency;
-      nextDueDate: string;
-    }
-  ) =>
-    fetchApi<RecurringTransaction>(`/recurring/accounts/${accountId}/recurring`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-  update: (
-    id: number,
-    data: {
-      type?: TransactionType;
-      amount?: number;
-      payee?: string;
-      payeeId?: number;
-      category?: string;
-      categoryId?: number;
-      notes?: string;
-      frequency?: Frequency;
-      nextDueDate?: string;
-      isActive?: boolean;
-    }
-  ) =>
-    fetchApi<RecurringTransaction>(`/recurring/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
-  delete: (id: number) =>
-    fetchApi<{ success: boolean }>(`/recurring/${id}`, { method: 'DELETE' }),
-  apply: (id: number, date?: string, amount?: number) =>
-    fetchApi<{ transaction: AccountTransaction; recurring: RecurringTransaction; message: string }>(
-      `/recurring/${id}/apply`,
-      {
-        method: 'POST',
-        body: JSON.stringify({ date, amount }),
+  create: withInvalidation(
+    (
+      accountId: number,
+      data: {
+        type: TransactionType;
+        amount: number;
+        payee?: string;
+        payeeId?: number;
+        category?: string;
+        categoryId?: number;
+        notes?: string;
+        frequency: Frequency;
+        nextDueDate: string;
       }
-    ),
+    ) =>
+      fetchApi<RecurringTransaction>(`/recurring/accounts/${accountId}/recurring`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    '/recurring', '/accounts', '/dashboard', '/projection', '/pnl'
+  ),
+  update: withInvalidation(
+    (
+      id: number,
+      data: {
+        type?: TransactionType;
+        amount?: number;
+        payee?: string;
+        payeeId?: number;
+        category?: string;
+        categoryId?: number;
+        notes?: string;
+        frequency?: Frequency;
+        nextDueDate?: string;
+        isActive?: boolean;
+      }
+    ) =>
+      fetchApi<RecurringTransaction>(`/recurring/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    '/recurring', '/accounts', '/dashboard', '/projection', '/pnl'
+  ),
+  delete: withInvalidation(
+    (id: number) =>
+      fetchApi<{ success: boolean }>(`/recurring/${id}`, { method: 'DELETE' }),
+    '/recurring', '/accounts', '/dashboard', '/projection', '/pnl'
+  ),
+  apply: withInvalidation(
+    (id: number, date?: string, amount?: number) =>
+      fetchApi<{ transaction: AccountTransaction; recurring: RecurringTransaction; message: string }>(
+        `/recurring/${id}/apply`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ date, amount }),
+        }
+      ),
+    '/recurring', '/accounts', '/dashboard', '/projection', '/pnl'
+  ),
 };
 
 // Transfers API
 export const transfersApi = {
   getAll: () => fetchApi<Transfer[]>('/transfers'),
   get: (id: number) => fetchApi<Transfer>(`/transfers/${id}`),
-  create: (data: {
-    fromAccountId: number;
-    toAccountId: number;
-    fromAmount: number;
-    toAmount?: number;
-    date: string;
-    notes?: string;
-  }) =>
-    fetchApi<Transfer>('/transfers', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-  delete: (id: number) =>
-    fetchApi<{ success: boolean }>(`/transfers/${id}`, { method: 'DELETE' }),
+  create: withInvalidation(
+    (data: {
+      fromAccountId: number;
+      toAccountId: number;
+      fromAmount: number;
+      toAmount?: number;
+      date: string;
+      notes?: string;
+    }) =>
+      fetchApi<Transfer>('/transfers', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    '/transfers', '/accounts', '/dashboard'
+  ),
+  delete: withInvalidation(
+    (id: number) =>
+      fetchApi<{ success: boolean }>(`/transfers/${id}`, { method: 'DELETE' }),
+    '/transfers', '/accounts', '/dashboard'
+  ),
 };
 
 // Dashboard API
@@ -455,18 +530,27 @@ export const holdingsApi = {
   getByAccount: (accountId: number) => fetchApi<Holding[]>(`/holdings/account/${accountId}`),
   get: (symbol: string, accountId?: number) =>
     fetchApi<Holding>(`/holdings/${symbol}${accountId ? `?accountId=${accountId}` : ''}`),
-  create: (data: { symbol: string; shares: number; price: number; fees?: number; date?: string; accountId: number }) =>
-    fetchApi<Holding>('/holdings', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-  delete: (id: number) =>
-    fetchApi<{ success: boolean }>(`/holdings/${id}`, { method: 'DELETE' }),
-  sell: (symbol: string, data: { shares: number; price: number; fees?: number; date?: string; accountId: number }) =>
-    fetchApi<{ success: boolean; holding: Holding | null }>(`/holdings/${symbol}/sell`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
+  create: withInvalidation(
+    (data: { symbol: string; shares: number; price: number; fees?: number; date?: string; accountId: number }) =>
+      fetchApi<Holding>('/holdings', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    '/holdings', '/accounts', '/dashboard'
+  ),
+  delete: withInvalidation(
+    (id: number) =>
+      fetchApi<{ success: boolean }>(`/holdings/${id}`, { method: 'DELETE' }),
+    '/holdings', '/accounts', '/dashboard'
+  ),
+  sell: withInvalidation(
+    (symbol: string, data: { shares: number; price: number; fees?: number; date?: string; accountId: number }) =>
+      fetchApi<{ success: boolean; holding: Holding | null }>(`/holdings/${symbol}/sell`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    '/holdings', '/accounts', '/dashboard'
+  ),
 };
 
 // Transactions API (StockTransaction type)
@@ -516,20 +600,26 @@ export const dividendsApi = {
     return fetchApi<Dividend[]>(`/dividends${query ? `?${query}` : ''}`);
   },
   getByAccount: (accountId: number) => fetchApi<Dividend[]>(`/dividends/account/${accountId}`),
-  create: (data: {
-    symbol: string;
-    amountPerShare: number;
-    sharesHeld?: number;
-    exDate: string;
-    payDate?: string;
-    accountId: number;
-  }) =>
-    fetchApi<Dividend>('/dividends', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-  delete: (id: number) =>
-    fetchApi<{ success: boolean }>(`/dividends/${id}`, { method: 'DELETE' }),
+  create: withInvalidation(
+    (data: {
+      symbol: string;
+      amountPerShare: number;
+      sharesHeld?: number;
+      exDate: string;
+      payDate?: string;
+      accountId: number;
+    }) =>
+      fetchApi<Dividend>('/dividends', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    '/dividends', '/accounts', '/dashboard'
+  ),
+  delete: withInvalidation(
+    (id: number) =>
+      fetchApi<{ success: boolean }>(`/dividends/${id}`, { method: 'DELETE' }),
+    '/dividends', '/accounts', '/dashboard'
+  ),
   getTaxSummary: (year?: number, accountId?: number) => {
     const params = new URLSearchParams();
     if (year) params.set('year', year.toString());
@@ -537,28 +627,34 @@ export const dividendsApi = {
     const query = params.toString();
     return fetchApi<TaxSummary>(`/dividends/tax${query ? `?${query}` : ''}`);
   },
-  setTaxRate: (rate: number) =>
-    fetchApi<{ success: boolean; rate: number }>('/dividends/tax-rate', {
-      method: 'PUT',
-      body: JSON.stringify({ rate }),
-    }),
-  checkDividends: (accountId: number) =>
-    fetchApi<{
-      message: string;
-      dividendsFound: number;
-      dividendsCreated: number;
-      transactionsCreated: number;
-      newDividends: Array<{
-        id: number;
-        symbol: string;
-        exDate: string;
-        payDate: string;
-        sharesHeld: number;
-        grossAmount: number;
-        netAmount: number;
-        transactionCreated: boolean;
-      }>;
-    }>(`/dividends/check/${accountId}`, { method: 'POST' }),
+  setTaxRate: withInvalidation(
+    (rate: number) =>
+      fetchApi<{ success: boolean; rate: number }>('/dividends/tax-rate', {
+        method: 'PUT',
+        body: JSON.stringify({ rate }),
+      }),
+    '/dividends', '/accounts', '/dashboard'
+  ),
+  checkDividends: withInvalidation(
+    (accountId: number) =>
+      fetchApi<{
+        message: string;
+        dividendsFound: number;
+        dividendsCreated: number;
+        transactionsCreated: number;
+        newDividends: Array<{
+          id: number;
+          symbol: string;
+          exDate: string;
+          payDate: string;
+          sharesHeld: number;
+          grossAmount: number;
+          netAmount: number;
+          transactionCreated: boolean;
+        }>;
+      }>(`/dividends/check/${accountId}`, { method: 'POST' }),
+    '/dividends', '/accounts', '/dashboard'
+  ),
 };
 
 // Projection API (types imported from shared)

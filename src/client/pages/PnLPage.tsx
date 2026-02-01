@@ -1,34 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { PnLSummary, PnLMonthDetail, MonthlyPnL, pnlApi } from '../lib/api';
+import { PnLMonthDetail, MonthlyPnL, pnlApi } from '../lib/api';
 import { useBottomSheet } from '../hooks/useBottomSheet';
 import { formatCurrency } from '../lib/currency';
 import { PnLSkeleton } from '../components/Skeleton';
+import { useSWR } from '../hooks/useSWR';
 
 export default function PnLPage() {
-  const [summary, setSummary] = useState<PnLSummary | null>(null);
+  const { data: summary, loading } = useSWR('/pnl', () => pnlApi.getSummary());
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [monthDetail, setMonthDetail] = useState<PnLMonthDetail | null>(null);
-  const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadSummary();
-  }, []);
-
-  const loadSummary = async () => {
-    try {
-      setLoading(true);
-      const data = await pnlApi.getSummary();
-      setSummary(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load P&L data');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const loadMonthDetail = async (month: string) => {
     try {
@@ -50,17 +32,6 @@ export default function PnLPage() {
 
   if (loading) {
     return <PnLSkeleton />;
-  }
-
-  if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-2">
-        <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <span>{error}</span>
-      </div>
-    );
   }
 
   if (!summary) return null;
@@ -364,9 +335,10 @@ function MonthDetailModal({ isOpen, detail, loading, currency, onClose }: MonthD
                       {detail.transactions.map((tx) => (
                         <tr key={tx.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                            {new Date(tx.date).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
+                            {new Date(tx.date).toLocaleDateString('en-GB', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
                             })}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">

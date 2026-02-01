@@ -67,8 +67,8 @@ export default function RecurringList({
                     <p className="text-xs text-gray-500">
                       {rec.frequency} • Next:{' '}
                       {new Date(rec.next_due_date).toLocaleDateString('en-GB', {
-                        day: 'numeric',
-                        month: 'short',
+                        day: '2-digit',
+                        month: '2-digit',
                         year: 'numeric',
                       })}
                     </p>

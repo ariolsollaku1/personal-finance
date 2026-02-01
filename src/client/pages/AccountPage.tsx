@@ -99,7 +99,6 @@ export default function AccountPage() {
     try {
       await accountTransactionsApi.delete(accountId, txId);
       refreshData();
-      window.dispatchEvent(new Event('accounts-changed'));
     } catch (err) {
       toast.error('Transaction', err instanceof Error ? err.message : 'Failed to delete transaction');
     }
@@ -135,7 +134,6 @@ export default function AccountPage() {
       await recurringApi.apply(id, undefined, amount);
       setApplyingRecurring(null);
       refreshData();
-      window.dispatchEvent(new Event('accounts-changed'));
     } catch (err) {
       toast.error('Recurring', err instanceof Error ? err.message : 'Failed to apply recurring transaction');
     }
@@ -165,7 +163,6 @@ export default function AccountPage() {
       });
       modals.setEditingTransaction(null);
       refreshData();
-      window.dispatchEvent(new Event('accounts-changed'));
     } catch (err) {
       toast.error('Transaction', err instanceof Error ? err.message : 'Failed to update transaction');
     }
@@ -197,7 +194,6 @@ export default function AccountPage() {
       await accountsApi.update(accountId, editAccountData);
       modals.setShowEditAccount(false);
       refreshData();
-      window.dispatchEvent(new Event('accounts-changed'));
     } catch (err) {
       toast.error('Account', err instanceof Error ? err.message : 'Failed to update account');
     }
@@ -421,7 +417,6 @@ export default function AccountPage() {
         isStockAccount={isStockAccount}
         onSuccess={() => {
           refreshData();
-          window.dispatchEvent(new Event('accounts-changed'));
         }}
       />
 

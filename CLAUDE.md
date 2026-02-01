@@ -214,7 +214,9 @@ Muted: text-sm text-gray-500
 ### Key Files
 | File | Purpose |
 |------|---------|
-| `lib/api.ts` | API client with token caching, retry logic, envelope unwrap |
+| `lib/api.ts` | API client with token caching, retry logic, envelope unwrap, mutation invalidation |
+| `lib/apiCache.ts` | localStorage cache utilities (`getCache`, `setCache`, `invalidateCache`, `clearAllCache`) |
+| `hooks/useSWR.ts` | Stale-while-revalidate hook for GET requests |
 | `hooks/useAccountPage.ts` | Consolidated state for AccountPage (20+ useState → 1 hook) |
 | `components/ErrorBoundary.tsx` | Catches React errors, shows fallback UI |
 | `contexts/AuthContext.tsx` | Auth state (user, session, signIn, signOut) |
@@ -224,12 +226,52 @@ Muted: text-sm text-gray-500
 - **Retry logic**: 3 retries with exponential backoff (1s, 2s, 4s) for 5xx/429
 - **Envelope unwrap**: `{ success: true, data }` → `data`
 - **Auth events**: Dispatches `AUTH_EVENTS.SESSION_EXPIRED` on 401 (no hard reload)
+- **Mutation invalidation**: All mutations wrapped with `withInvalidation()` — automatically clears relevant cache keys and dispatches `cache:invalidated` event after success
+- **Auth cache clear**: `clearAllCache()` called on session expiration
+
+### SWR Caching (Stale-While-Revalidate)
+
+All GET data is cached in localStorage and served instantly on revisit, with a background revalidation fetch.
+
+**How it works:**
+1. `useSWR(key, fetcher)` reads localStorage synchronously on mount → instant render
+2. Always fires background fetch → updates state + localStorage on success
+3. `loading` = `true` only when no cache exists (first visit). Shows skeleton.
+4. `refreshing` = `true` during background fetch when cached data is already displayed
+5. Listens for `cache:invalidated` events → auto-refetches when key matches
+
+**Usage:**
+```typescript
+// In a page or component — replaces useState + useEffect + loadData pattern
+const { data, loading, refreshing, refresh } = useSWR('/dashboard', () => dashboardApi.get());
+if (loading) return <Skeleton />;
+if (!data) return null;
+```
+
+**Cache invalidation** happens automatically via `withInvalidation()` in `api.ts`:
+
+| Mutation group | Invalidates |
+|---|---|
+| `accountsApi` (create/update/delete/setFavorite) | `/accounts`, `/dashboard` |
+| `accountTransactionsApi` (create/update/delete) | `/accounts`, `/dashboard`, `/pnl`, `/projection` |
+| `recurringApi` (create/update/delete/apply) | `/recurring`, `/accounts`, `/dashboard`, `/projection`, `/pnl` |
+| `transfersApi` (create/delete) | `/transfers`, `/accounts`, `/dashboard` |
+| `categoriesApi` (create/update/delete) | `/categories` |
+| `payeesApi` (create/update/delete/merge) | `/payees` |
+| `holdingsApi` (create/sell/delete) | `/holdings`, `/accounts`, `/dashboard` |
+| `dividendsApi` (create/delete/setTaxRate/check) | `/dividends`, `/accounts`, `/dashboard` |
+
+**NOT cached** (always fetched live):
+- `/quotes/*` — stock prices must be real-time
+- `/quotes/search*` — transient search results
+- `/dashboard/settings/*` — tiny payloads, need immediate feedback
+
+**localStorage keys** use `api:` prefix (e.g., `api:/dashboard`). `clearAllCache()` removes all `api:*` keys on logout. `QuotaExceededError` handled by evicting oldest entries.
+
+**Pages using useSWR:** Dashboard, TransfersPage, PnLPage, ProjectionPage, Sidebar, MobileAccountList
 
 ### Component Patterns
 ```typescript
-// Trigger sidebar refresh after data change
-window.dispatchEvent(new Event('accounts-changed'));
-
 // Auto-refresh with visibility pause
 useEffect(() => {
   const interval = setInterval(loadData, 60000);

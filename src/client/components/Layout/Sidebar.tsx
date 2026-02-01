@@ -1,6 +1,7 @@
-import { NavLink, useLocation } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { NavLink } from 'react-router-dom';
+import { useState } from 'react';
 import { Account, accountsApi, Currency } from '../../lib/api';
+import { useSWR } from '../../hooks/useSWR';
 import AddAccountModal from '../AddAccountModal';
 
 // Compact currency formatter for sidebar (e.g., 494k L, 1.5M €)
@@ -47,7 +48,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
-  const [accounts, setAccounts] = useState<Account[]>([]);
+  const { data: accounts } = useSWR('/accounts', () => accountsApi.getAll());
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
     favorites: true,
     bank: false,
@@ -58,40 +59,19 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     asset: false,
   });
   const [showAddModal, setShowAddModal] = useState(false);
-  const location = useLocation();
-
-  // Reload accounts on route change (e.g., after creating/deleting an account)
-  useEffect(() => {
-    loadAccounts();
-  }, [location.pathname]);
-
-  // Listen for account changes (edit, delete) that don't change the route
-  useEffect(() => {
-    const handleAccountsChanged = () => loadAccounts();
-    window.addEventListener('accounts-changed', handleAccountsChanged);
-    return () => window.removeEventListener('accounts-changed', handleAccountsChanged);
-  }, []);
-
-  const loadAccounts = async () => {
-    try {
-      const data = await accountsApi.getAll();
-      setAccounts(data);
-    } catch (error) {
-      console.error('Failed to load accounts:', error);
-    }
-  };
 
   const toggleGroup = (group: string) => {
     setExpandedGroups((prev) => ({ ...prev, [group]: !prev[group] }));
   };
 
-  const favoriteAccounts = accounts.filter((a) => a.is_favorite);
-  const bankAccounts = accounts.filter((a) => a.type === 'bank');
-  const cashAccounts = accounts.filter((a) => a.type === 'cash');
-  const stockAccounts = accounts.filter((a) => a.type === 'stock');
-  const loanAccounts = accounts.filter((a) => a.type === 'loan');
-  const creditAccounts = accounts.filter((a) => a.type === 'credit');
-  const assetAccounts = accounts.filter((a) => a.type === 'asset');
+  const allAccounts = accounts ?? [];
+  const favoriteAccounts = allAccounts.filter((a) => a.is_favorite);
+  const bankAccounts = allAccounts.filter((a) => a.type === 'bank');
+  const cashAccounts = allAccounts.filter((a) => a.type === 'cash');
+  const stockAccounts = allAccounts.filter((a) => a.type === 'stock');
+  const loanAccounts = allAccounts.filter((a) => a.type === 'loan');
+  const creditAccounts = allAccounts.filter((a) => a.type === 'credit');
+  const assetAccounts = allAccounts.filter((a) => a.type === 'asset');
 
   const accountGroups = [
     { key: 'bank', label: 'Bank Accounts', accounts: bankAccounts, icon: '🏦' },
@@ -119,7 +99,6 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     e.stopPropagation();
     try {
       await accountsApi.setFavorite(account.id, !account.is_favorite);
-      loadAccounts();
     } catch (error) {
       console.error('Failed to toggle favorite:', error);
     }

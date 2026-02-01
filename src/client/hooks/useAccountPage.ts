@@ -289,7 +289,6 @@ export function useDividendCheck(accountId: number, refreshData: () => Promise<v
           `Found ${result.dividendsCreated} new dividend(s). ${result.transactionsCreated} transaction(s) created.`
         );
         refreshData();
-        window.dispatchEvent(new Event('accounts-changed'));
       } else {
         setDividendCheckResult('No new dividends found.');
       }

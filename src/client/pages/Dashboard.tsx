@@ -1,36 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { DashboardData, DueRecurring, dashboardApi, recurringApi } from '../lib/api';
+import { DueRecurring, dashboardApi, recurringApi } from '../lib/api';
 import { formatCurrency } from '../lib/currency';
 import AddAccountModal from '../components/AddAccountModal';
 import { ApplyRecurringModal } from '../components/Account';
 import { DashboardSkeleton } from '../components/Skeleton';
 import { useToast } from '../contexts/ToastContext';
+import { useSWR } from '../hooks/useSWR';
 
 export default function Dashboard() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, loading } = useSWR('/dashboard', () => dashboardApi.get());
   const [showAddAccount, setShowAddAccount] = useState(false);
   const [applyingRecurring, setApplyingRecurring] = useState<DueRecurring | null>(null);
   const toast = useToast();
-
-  useEffect(() => {
-    loadDashboard();
-  }, []);
-
-  const loadDashboard = async () => {
-    try {
-      setLoading(true);
-      const dashboardData = await dashboardApi.get();
-      setData(dashboardData);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load dashboard');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleApplyRecurring = (recurring: DueRecurring) => {
     setApplyingRecurring(recurring);
@@ -40,25 +22,13 @@ export default function Dashboard() {
     try {
       await recurringApi.apply(id, undefined, amount);
       setApplyingRecurring(null);
-      loadDashboard();
     } catch (err) {
       toast.error('Recurring', err instanceof Error ? err.message : 'Failed to apply recurring transaction');
     }
   };
 
-  if (loading && !data) {
+  if (loading) {
     return <DashboardSkeleton />;
-  }
-
-  if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-2">
-        <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <span>{error}</span>
-      </div>
-    );
   }
 
   if (!data) return null;
@@ -192,7 +162,7 @@ export default function Dashboard() {
                     {recurring.payee || recurring.category || 'Recurring Transaction'}
                   </p>
                   <p className="text-sm text-gray-500">
-                    {recurring.accountName} • Due: {new Date(recurring.nextDueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    {recurring.accountName} • Due: {new Date(recurring.nextDueDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                   </p>
                 </div>
                 <div className="flex items-center gap-4">
@@ -301,7 +271,7 @@ export default function Dashboard() {
                         {tx.payee || tx.category || 'Transaction'}
                       </p>
                       <p className="text-xs text-gray-400">
-                        {tx.accountName} • {new Date(tx.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        {tx.accountName} • {new Date(tx.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                       </p>
                     </div>
                   </div>

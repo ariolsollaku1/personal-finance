@@ -57,21 +57,27 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
   return (
     <div className="h-dvh bg-gradient-to-br from-gray-50 via-orange-50/30 to-gray-50 flex flex-col overflow-hidden">
       {/* Top Navbar */}
-      <TopNavbar />
+      <TopNavbar
+        onBurgerClick={() => {
+          setMoreOpen(false);
+          setMobileOpen(!mobileOpen);
+        }}
+        isMobileMenuOpen={mobileOpen}
+      />
 
       {/* Main content area with sidebar */}
       <div className="flex-1 flex overflow-hidden">
         {/* Mobile accounts bottom sheet overlay */}
         {mobileOpen && (
           <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-20 lg:hidden"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 lg:hidden"
             onClick={() => setMobileOpen(false)}
           />
         )}
 
         {/* Mobile accounts bottom sheet */}
         <div
-          className={`fixed bottom-0 left-0 right-0 z-30 lg:hidden transition-transform duration-300 ${
+          className={`fixed bottom-0 left-0 right-0 z-50 lg:hidden transition-transform duration-300 ${
             mobileOpen ? 'translate-y-0' : 'translate-y-full'
           }`}
           style={{ maxHeight: '80vh', paddingBottom: 'env(safe-area-inset-bottom)' }}

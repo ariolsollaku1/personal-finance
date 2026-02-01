@@ -89,7 +89,6 @@ export default function AddTransactionModal({
 
       onSuccess();
       onClose();
-      window.dispatchEvent(new Event('accounts-changed'));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add transaction');
     } finally {

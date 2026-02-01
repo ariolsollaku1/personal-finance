@@ -35,9 +35,9 @@ export default function PerformanceChart({ symbol }: PerformanceChartProps) {
   const { history, loading, error } = useHistoricalPrices(symbol, period);
 
   const chartData = history.map((item) => ({
-    date: new Date(item.date).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
+    date: new Date(item.date).toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
       year: period === '5y' ? '2-digit' : undefined,
     }),
     price: item.close,

@@ -56,8 +56,8 @@ export default function TransactionList({
           </p>
           <p className="text-xs text-gray-500">
             {new Date(tx.date).toLocaleDateString('en-GB', {
-              day: 'numeric',
-              month: 'short',
+              day: '2-digit',
+              month: '2-digit',
               year: 'numeric',
             })}
             {tx.notes &&

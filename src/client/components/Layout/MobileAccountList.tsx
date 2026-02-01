@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Account, accountsApi, Currency } from '../../lib/api';
+import { useSWR } from '../../hooks/useSWR';
 import AddAccountModal from '../AddAccountModal';
 
 function formatCompactCurrency(amount: number, currency: Currency): string {
@@ -54,22 +55,11 @@ interface MobileAccountListProps {
 }
 
 export default function MobileAccountList({ onSelect }: MobileAccountListProps) {
-  const [accounts, setAccounts] = useState<Account[]>([]);
+  const { data: accounts } = useSWR('/accounts', () => accountsApi.getAll());
   const [showAddModal, setShowAddModal] = useState(false);
 
-  useEffect(() => {
-    accountsApi.getAll().then(setAccounts).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    const handleChanged = () => {
-      accountsApi.getAll().then(setAccounts).catch(() => {});
-    };
-    window.addEventListener('accounts-changed', handleChanged);
-    return () => window.removeEventListener('accounts-changed', handleChanged);
-  }, []);
-
-  const grouped = accounts.reduce<Record<string, Account[]>>((acc, account) => {
+  const allAccounts = accounts ?? [];
+  const grouped = allAccounts.reduce<Record<string, Account[]>>((acc, account) => {
     const key = account.type;
     if (!acc[key]) acc[key] = [];
     acc[key].push(account);
@@ -97,7 +87,7 @@ export default function MobileAccountList({ onSelect }: MobileAccountListProps) 
 
       {/* Account List */}
       <div className="px-4 pb-5">
-        {accounts.length === 0 && (
+        {allAccounts.length === 0 && (
           <div className="py-10 text-center">
             <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
               <svg className="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
