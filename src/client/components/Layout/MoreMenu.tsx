@@ -23,10 +23,10 @@ export default function MoreMenu({ isOpen, onClose }: MoreMenuProps) {
   if (!shouldRender) return null;
 
   return createPortal(
-    <div className={`fixed inset-0 z-50 lg:hidden transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+    <div className={`fixed inset-0 z-50 lg:hidden ${isVisible ? '' : 'pointer-events-none'}`}>
       {/* Overlay */}
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-md"
+        className={`absolute inset-0 bg-black/40 backdrop-blur-md transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
         onClick={onClose}
       />
 

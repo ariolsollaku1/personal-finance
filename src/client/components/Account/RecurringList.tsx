@@ -1,6 +1,8 @@
 import { RecurringTransaction, Currency } from '../../lib/api';
 import { formatCurrency } from '../../lib/currency';
 import { getRecurringRowStyle } from '../../hooks/useAccountPage';
+import SwipeableRow from '../SwipeableRow';
+import ActionDropdown from '../ActionDropdown';
 
 interface RecurringListProps {
   recurring: RecurringTransaction[];
@@ -35,57 +37,54 @@ export default function RecurringList({
       ) : (
         <div className="divide-y divide-gray-200">
           {recurring.map((rec) => (
-            <div
+            <SwipeableRow
               key={rec.id}
-              className={`py-2 px-4 flex justify-between items-center ${getRecurringRowStyle(rec.next_due_date)}`}
+              actions={[
+                { label: 'Apply', onClick: () => onApply(rec.id), color: 'bg-orange-500' },
+                { label: 'Edit', onClick: () => onEdit(rec), color: 'bg-blue-500' },
+                { label: 'Delete', onClick: () => onDelete(rec.id), color: 'bg-red-500' },
+              ]}
             >
-              <div className="flex items-center gap-4 min-w-0">
-                <span
-                  className={`text-sm font-medium w-20 ${
-                    rec.type === 'inflow' ? 'text-green-600' : 'text-red-600'
-                  }`}
-                >
-                  {rec.type === 'inflow' ? '+' : ''}
-                  {formatCurrency(rec.type === 'inflow' ? rec.amount : -rec.amount, currency)}
-                </span>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
-                    {rec.payee_name || 'No payee'}
-                    {rec.category_name && (
-                      <span className="text-gray-400 font-normal"> • {rec.category_name}</span>
-                    )}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {rec.frequency} • Next:{' '}
-                    {new Date(rec.next_due_date).toLocaleDateString('en-GB', {
-                      day: 'numeric',
-                      month: 'short',
-                      year: 'numeric',
-                    })}
-                  </p>
+              <div
+                className={`py-3 px-4 flex justify-between items-center ${getRecurringRowStyle(rec.next_due_date)}`}
+              >
+                <div className="flex items-center gap-4 min-w-0">
+                  <span
+                    className={`text-sm font-medium w-20 ${
+                      rec.type === 'inflow' ? 'text-green-600' : 'text-red-600'
+                    }`}
+                  >
+                    {rec.type === 'inflow' ? '+' : ''}
+                    {formatCurrency(rec.type === 'inflow' ? rec.amount : -rec.amount, currency)}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {rec.payee_name || 'No payee'}
+                      {rec.category_name && (
+                        <span className="text-gray-400 font-normal"> • {rec.category_name}</span>
+                      )}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {rec.frequency} • Next:{' '}
+                      {new Date(rec.next_due_date).toLocaleDateString('en-GB', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex-shrink-0">
+                  <ActionDropdown
+                    actions={[
+                      { label: 'Apply', onClick: () => onApply(rec.id) },
+                      { label: 'Edit', onClick: () => onEdit(rec) },
+                      { label: 'Delete', onClick: () => onDelete(rec.id), variant: 'danger' },
+                    ]}
+                  />
                 </div>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <button
-                  onClick={() => onApply(rec.id)}
-                  className="px-2 py-1 text-xs bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg hover:from-orange-600 hover:to-amber-600 shadow-sm shadow-orange-500/20 transition-all duration-200"
-                >
-                  Apply
-                </button>
-                <button
-                  onClick={() => onEdit(rec)}
-                  className="text-xs text-orange-600 hover:text-orange-800"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => onDelete(rec.id)}
-                  className="text-xs text-red-600 hover:text-red-800"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
+            </SwipeableRow>
           ))}
         </div>
       )}

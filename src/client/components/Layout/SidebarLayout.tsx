@@ -23,14 +23,14 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
     setMoreOpen(false);
   }, [location.pathname]);
 
-  // Lock body scroll when mobile accounts sheet is open
+  // Lock scroll when mobile accounts sheet is open
   useEffect(() => {
     if (mobileOpen) {
-      document.body.style.overflow = 'hidden';
+      document.body.classList.add('scroll-locked');
     } else {
-      document.body.style.overflow = '';
+      document.body.classList.remove('scroll-locked');
     }
-    return () => { document.body.style.overflow = ''; };
+    return () => { document.body.classList.remove('scroll-locked'); };
   }, [mobileOpen]);
 
   useEffect(() => {
@@ -93,7 +93,7 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
         </div>
 
         {/* Page content */}
-        <main className="flex-1 p-4 lg:p-8 pb-20 lg:pb-8 overflow-auto">
+        <main className="flex-1 p-4 lg:p-8 overflow-auto pb-safe-bottom">
           <div className="max-w-7xl mx-auto">{children}</div>
         </main>
       </div>
