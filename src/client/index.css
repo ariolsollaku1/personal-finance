@@ -90,8 +90,10 @@
   }
 }
 
-body {
+html, body {
   @apply bg-gray-100 text-gray-900;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 body.scroll-locked,
@@ -134,15 +136,4 @@ body.scroll-locked main {
 
 .animate-slide-in {
   animation: slide-in 0.25s ease-out;
-}
-
-/* Bottom padding that clears the fixed tab bar + safe area */
-.pb-safe-bottom {
-  padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
-}
-
-@media (min-width: 1024px) {
-  .pb-safe-bottom {
-    padding-bottom: 2rem;
-  }
 }

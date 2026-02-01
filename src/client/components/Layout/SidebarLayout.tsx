@@ -55,7 +55,7 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
   };
 
   return (
-    <div className="h-screen bg-gradient-to-br from-gray-50 via-orange-50/30 to-gray-50 flex flex-col overflow-hidden">
+    <div className="h-dvh bg-gradient-to-br from-gray-50 via-orange-50/30 to-gray-50 flex flex-col overflow-hidden">
       {/* Top Navbar */}
       <TopNavbar />
 
@@ -93,8 +93,8 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
         </div>
 
         {/* Page content */}
-        <main className="flex-1 p-4 lg:p-8 overflow-auto pb-safe-bottom">
-          <div className="max-w-7xl mx-auto">{children}</div>
+        <main className="flex-1 overflow-auto">
+          <div className="max-w-7xl mx-auto p-4 lg:p-8 pb-20 lg:pb-8">{children}</div>
         </main>
       </div>
 
