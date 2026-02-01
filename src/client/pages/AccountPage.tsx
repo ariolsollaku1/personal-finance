@@ -425,14 +425,12 @@ export default function AccountPage() {
         }}
       />
 
-      {applyingRecurring && (
-        <ApplyRecurringModal
-          recurring={applyingRecurring}
-          currency={account.currency}
-          onConfirm={handleConfirmApply}
-          onClose={() => setApplyingRecurring(null)}
-        />
-      )}
+      <ApplyRecurringModal
+        recurring={applyingRecurring}
+        currency={account.currency}
+        onConfirm={handleConfirmApply}
+        onClose={() => setApplyingRecurring(null)}
+      />
 
       <ConfirmModal
         isOpen={confirmState.isOpen}

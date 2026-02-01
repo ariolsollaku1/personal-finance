@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { PnLSummary, PnLMonthDetail, MonthlyPnL, pnlApi } from '../lib/api';
+import { useBottomSheet } from '../hooks/useBottomSheet';
 import { formatCurrency } from '../lib/currency';
 import { PnLSkeleton } from '../components/Skeleton';
 
@@ -143,14 +144,13 @@ export default function PnLPage() {
       )}
 
       {/* Detail Modal */}
-      {selectedMonth && (
-        <MonthDetailModal
-          detail={monthDetail}
-          loading={detailLoading}
-          currency={currency}
-          onClose={closeModal}
-        />
-      )}
+      <MonthDetailModal
+        isOpen={!!selectedMonth}
+        detail={monthDetail}
+        loading={detailLoading}
+        currency={currency}
+        onClose={closeModal}
+      />
     </div>
   );
 }
@@ -223,20 +223,25 @@ function MonthCard({ month, currency, onClick }: MonthCardProps) {
 
 // Month Detail Modal Component
 interface MonthDetailModalProps {
+  isOpen: boolean;
   detail: PnLMonthDetail | null;
   loading: boolean;
   currency: string;
   onClose: () => void;
 }
 
-function MonthDetailModal({ detail, loading, currency, onClose }: MonthDetailModalProps) {
+function MonthDetailModal({ isOpen, detail, loading, currency, onClose }: MonthDetailModalProps) {
+  const { shouldRender, isVisible } = useBottomSheet(isOpen);
+
+  if (!shouldRender) return null;
+
   return createPortal(
     <div
-      className="fixed inset-0 !mt-0 bg-black/50 backdrop-blur-sm z-50 flex items-end lg:items-center lg:justify-center lg:p-4"
+      className={`fixed inset-0 !mt-0 bg-black/50 backdrop-blur-sm z-50 flex items-end lg:items-center lg:justify-center lg:p-4 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl w-full lg:max-w-4xl max-h-[90vh] flex flex-col animate-slide-up lg:animate-none"
+        className={`bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl w-full lg:max-w-4xl max-h-[90vh] flex flex-col transition-transform duration-300 lg:transition-none ${isVisible ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         onClick={(e) => e.stopPropagation()}
       >

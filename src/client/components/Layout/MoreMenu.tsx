@@ -1,5 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useBottomSheet } from '../../hooks/useBottomSheet';
 
 interface MoreMenuProps {
   isOpen: boolean;
@@ -16,10 +18,12 @@ export default function MoreMenu({ isOpen, onClose }: MoreMenuProps) {
     navigate('/login');
   };
 
-  if (!isOpen) return null;
+  const { shouldRender, isVisible } = useBottomSheet(isOpen);
 
-  return (
-    <div className="fixed inset-0 z-50 lg:hidden">
+  if (!shouldRender) return null;
+
+  return createPortal(
+    <div className={`fixed inset-0 z-50 lg:hidden transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
       {/* Overlay */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -28,7 +32,7 @@ export default function MoreMenu({ isOpen, onClose }: MoreMenuProps) {
 
       {/* Panel */}
       <div
-        className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-xl animate-slide-up"
+        className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-xl transition-transform duration-300 ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {/* Drag handle */}
@@ -119,6 +123,7 @@ export default function MoreMenu({ isOpen, onClose }: MoreMenuProps) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

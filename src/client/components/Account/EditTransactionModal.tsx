@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AccountTransaction, Category, Payee } from '../../lib/api';
+import { useBottomSheet } from '../../hooks/useBottomSheet';
 
 interface EditTransactionModalProps {
   editingTransaction: AccountTransaction | null;
@@ -22,8 +23,13 @@ export default function EditTransactionModal({
   isStockAccount,
 }: EditTransactionModalProps) {
   const [submitting, setSubmitting] = useState(false);
+  const { shouldRender, isVisible } = useBottomSheet(!!editingTransaction);
+  const dataRef = useRef(editingTransaction);
+  if (editingTransaction) dataRef.current = editingTransaction;
 
-  if (!editingTransaction) return null;
+  if (!shouldRender || !dataRef.current) return null;
+
+  const tx = editingTransaction || dataRef.current;
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,16 +42,16 @@ export default function EditTransactionModal({
   };
 
   const filteredCategories = categories.filter((c) =>
-    editingTransaction.type === 'inflow' ? c.type === 'income' : c.type === 'expense'
+    tx.type === 'inflow' ? c.type === 'income' : c.type === 'expense'
   );
 
   return createPortal(
     <div
-      className="fixed inset-0 !mt-0 bg-black/50 backdrop-blur-sm flex items-end lg:items-center lg:justify-center z-50 lg:p-4"
+      className={`fixed inset-0 !mt-0 bg-black/50 backdrop-blur-sm flex items-end lg:items-center lg:justify-center z-50 lg:p-4 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl w-full lg:max-w-md max-h-[90vh] overflow-hidden animate-slide-up lg:animate-none"
+        className={`bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl w-full lg:max-w-md max-h-[90vh] overflow-hidden transition-transform duration-300 lg:transition-none ${isVisible ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {/* Drag handle - mobile only */}
@@ -60,8 +66,8 @@ export default function EditTransactionModal({
             <label className="flex items-center">
               <input
                 type="radio"
-                checked={editingTransaction.type === 'inflow'}
-                onChange={() => setEditingTransaction({ ...editingTransaction, type: 'inflow' })}
+                checked={tx.type === 'inflow'}
+                onChange={() => setEditingTransaction({ ...tx, type: 'inflow' })}
                 className="mr-2"
               />
               {isStockAccount ? 'Deposit' : 'Income'}
@@ -69,8 +75,8 @@ export default function EditTransactionModal({
             <label className="flex items-center">
               <input
                 type="radio"
-                checked={editingTransaction.type === 'outflow'}
-                onChange={() => setEditingTransaction({ ...editingTransaction, type: 'outflow' })}
+                checked={tx.type === 'outflow'}
+                onChange={() => setEditingTransaction({ ...tx, type: 'outflow' })}
                 className="mr-2"
               />
               {isStockAccount ? 'Withdrawal' : 'Expense'}
@@ -81,10 +87,10 @@ export default function EditTransactionModal({
             <input
               type="number"
               step="0.01"
-              value={editingTransaction.amount}
+              value={tx.amount}
               onChange={(e) =>
                 setEditingTransaction({
-                  ...editingTransaction,
+                  ...tx,
                   amount: parseFloat(e.target.value) || 0,
                 })
               }
@@ -96,9 +102,9 @@ export default function EditTransactionModal({
             <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
             <input
               type="date"
-              value={editingTransaction.date}
+              value={tx.date}
               onChange={(e) =>
-                setEditingTransaction({ ...editingTransaction, date: e.target.value })
+                setEditingTransaction({ ...tx, date: e.target.value })
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-md"
               required
@@ -110,9 +116,9 @@ export default function EditTransactionModal({
                 <label className="block text-sm font-medium text-gray-700 mb-1">Payee</label>
                 <input
                   type="text"
-                  value={editingTransaction.payee_name || ''}
+                  value={tx.payee_name || ''}
                   onChange={(e) =>
-                    setEditingTransaction({ ...editingTransaction, payee_name: e.target.value })
+                    setEditingTransaction({ ...tx, payee_name: e.target.value })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   list="payees-edit-tx"
@@ -126,9 +132,9 @@ export default function EditTransactionModal({
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                 <select
-                  value={editingTransaction.category_name || ''}
+                  value={tx.category_name || ''}
                   onChange={(e) =>
-                    setEditingTransaction({ ...editingTransaction, category_name: e.target.value })
+                    setEditingTransaction({ ...tx, category_name: e.target.value })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 >
@@ -146,9 +152,9 @@ export default function EditTransactionModal({
             <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
             <input
               type="text"
-              value={editingTransaction.notes || ''}
+              value={tx.notes || ''}
               onChange={(e) =>
-                setEditingTransaction({ ...editingTransaction, notes: e.target.value })
+                setEditingTransaction({ ...tx, notes: e.target.value })
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-md"
             />

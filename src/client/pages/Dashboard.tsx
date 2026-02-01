@@ -319,14 +319,12 @@ export default function Dashboard() {
       {/* Add Account Modal */}
       <AddAccountModal isOpen={showAddAccount} onClose={() => setShowAddAccount(false)} />
 
-      {applyingRecurring && (
-        <ApplyRecurringModal
-          recurring={applyingRecurring}
-          currency={applyingRecurring.currency}
-          onConfirm={handleConfirmApply}
-          onClose={() => setApplyingRecurring(null)}
-        />
-      )}
+      <ApplyRecurringModal
+        recurring={applyingRecurring}
+        currency={applyingRecurring?.currency ?? 'EUR'}
+        onConfirm={handleConfirmApply}
+        onClose={() => setApplyingRecurring(null)}
+      />
     </div>
   );
 }

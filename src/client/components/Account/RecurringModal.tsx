@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { RecurringTransaction, Category, Payee, Frequency } from '../../lib/api';
+import { useBottomSheet } from '../../hooks/useBottomSheet';
 import { NewRecurringForm } from '../../hooks/useAccountPage';
 
 interface AddRecurringModalProps {
@@ -25,8 +26,9 @@ export function AddRecurringModal({
   isStockAccount,
 }: AddRecurringModalProps) {
   const [submitting, setSubmitting] = useState(false);
+  const { shouldRender, isVisible } = useBottomSheet(isOpen);
 
-  if (!isOpen) return null;
+  if (!shouldRender) return null;
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,11 +46,11 @@ export function AddRecurringModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 !mt-0 bg-black/50 backdrop-blur-sm flex items-end lg:items-center lg:justify-center z-50 lg:p-4"
+      className={`fixed inset-0 !mt-0 bg-black/50 backdrop-blur-sm flex items-end lg:items-center lg:justify-center z-50 lg:p-4 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl w-full lg:max-w-md max-h-[90vh] overflow-hidden animate-slide-up lg:animate-none"
+        className={`bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl w-full lg:max-w-md max-h-[90vh] overflow-hidden transition-transform duration-300 lg:transition-none ${isVisible ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {/* Drag handle - mobile only */}
@@ -211,8 +213,13 @@ export function EditRecurringModal({
   isStockAccount,
 }: EditRecurringModalProps) {
   const [submitting, setSubmitting] = useState(false);
+  const { shouldRender, isVisible } = useBottomSheet(!!editingRecurring);
+  const dataRef = useRef(editingRecurring);
+  if (editingRecurring) dataRef.current = editingRecurring;
 
-  if (!editingRecurring) return null;
+  if (!shouldRender || !dataRef.current) return null;
+
+  const rec = editingRecurring || dataRef.current;
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -225,16 +232,16 @@ export function EditRecurringModal({
   };
 
   const filteredCategories = categories.filter((c) =>
-    editingRecurring.type === 'inflow' ? c.type === 'income' : c.type === 'expense'
+    rec.type === 'inflow' ? c.type === 'income' : c.type === 'expense'
   );
 
   return createPortal(
     <div
-      className="fixed inset-0 !mt-0 bg-black/50 backdrop-blur-sm flex items-end lg:items-center lg:justify-center z-50 lg:p-4"
+      className={`fixed inset-0 !mt-0 bg-black/50 backdrop-blur-sm flex items-end lg:items-center lg:justify-center z-50 lg:p-4 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl w-full lg:max-w-md max-h-[90vh] overflow-hidden animate-slide-up lg:animate-none"
+        className={`bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl w-full lg:max-w-md max-h-[90vh] overflow-hidden transition-transform duration-300 lg:transition-none ${isVisible ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {/* Drag handle - mobile only */}
@@ -249,8 +256,8 @@ export function EditRecurringModal({
             <label className="flex items-center">
               <input
                 type="radio"
-                checked={editingRecurring.type === 'inflow'}
-                onChange={() => setEditingRecurring({ ...editingRecurring, type: 'inflow' })}
+                checked={rec.type === 'inflow'}
+                onChange={() => setEditingRecurring({ ...rec, type: 'inflow' })}
                 className="mr-2"
               />
               {isStockAccount ? 'Deposit' : 'Income'}
@@ -258,8 +265,8 @@ export function EditRecurringModal({
             <label className="flex items-center">
               <input
                 type="radio"
-                checked={editingRecurring.type === 'outflow'}
-                onChange={() => setEditingRecurring({ ...editingRecurring, type: 'outflow' })}
+                checked={rec.type === 'outflow'}
+                onChange={() => setEditingRecurring({ ...rec, type: 'outflow' })}
                 className="mr-2"
               />
               {isStockAccount ? 'Withdrawal' : 'Expense'}
@@ -270,10 +277,10 @@ export function EditRecurringModal({
             <input
               type="number"
               step="0.01"
-              value={editingRecurring.amount}
+              value={rec.amount}
               onChange={(e) =>
                 setEditingRecurring({
-                  ...editingRecurring,
+                  ...rec,
                   amount: parseFloat(e.target.value) || 0,
                 })
               }
@@ -287,9 +294,9 @@ export function EditRecurringModal({
                 <label className="block text-sm font-medium text-gray-700 mb-1">Payee</label>
                 <input
                   type="text"
-                  value={editingRecurring.payee_name || ''}
+                  value={rec.payee_name || ''}
                   onChange={(e) =>
-                    setEditingRecurring({ ...editingRecurring, payee_name: e.target.value })
+                    setEditingRecurring({ ...rec, payee_name: e.target.value })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   list="payees-edit-rec"
@@ -303,9 +310,9 @@ export function EditRecurringModal({
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                 <select
-                  value={editingRecurring.category_name || ''}
+                  value={rec.category_name || ''}
                   onChange={(e) =>
-                    setEditingRecurring({ ...editingRecurring, category_name: e.target.value })
+                    setEditingRecurring({ ...rec, category_name: e.target.value })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 >
@@ -324,9 +331,9 @@ export function EditRecurringModal({
               <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
               <input
                 type="text"
-                value={editingRecurring.notes || ''}
+                value={rec.notes || ''}
                 onChange={(e) =>
-                  setEditingRecurring({ ...editingRecurring, notes: e.target.value })
+                  setEditingRecurring({ ...rec, notes: e.target.value })
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
               />
@@ -335,10 +342,10 @@ export function EditRecurringModal({
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
             <select
-              value={editingRecurring.frequency}
+              value={rec.frequency}
               onChange={(e) =>
                 setEditingRecurring({
-                  ...editingRecurring,
+                  ...rec,
                   frequency: e.target.value as Frequency,
                 })
               }
@@ -354,9 +361,9 @@ export function EditRecurringModal({
             <label className="block text-sm font-medium text-gray-700 mb-1">Next Due Date</label>
             <input
               type="date"
-              value={editingRecurring.next_due_date}
+              value={rec.next_due_date}
               onChange={(e) =>
-                setEditingRecurring({ ...editingRecurring, next_due_date: e.target.value })
+                setEditingRecurring({ ...rec, next_due_date: e.target.value })
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-md"
               required

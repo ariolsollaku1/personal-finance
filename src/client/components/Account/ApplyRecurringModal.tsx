@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { RecurringTransaction, DueRecurring, Currency } from '../../lib/api';
 import { formatCurrency } from '../../lib/currency';
+import { useBottomSheet } from '../../hooks/useBottomSheet';
 
 interface ApplyRecurringModalProps {
-  recurring: RecurringTransaction | DueRecurring;
+  recurring: RecurringTransaction | DueRecurring | null;
   currency: Currency;
   onConfirm: (id: number, amount: number) => void;
   onClose: () => void;
@@ -21,28 +22,40 @@ export default function ApplyRecurringModal({
   onConfirm,
   onClose,
 }: ApplyRecurringModalProps) {
-  const [amount, setAmount] = useState(recurring.amount.toString());
+  const { shouldRender, isVisible } = useBottomSheet(!!recurring);
+  const dataRef = useRef(recurring);
+  if (recurring) dataRef.current = recurring;
+
+  const [amount, setAmount] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (recurring) setAmount(recurring.amount.toString());
+  }, [recurring]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const parsed = parseFloat(amount);
-    if (isNaN(parsed) || parsed <= 0) return;
+    if (isNaN(parsed) || parsed <= 0 || !dataRef.current) return;
     setSubmitting(true);
     try {
-      await Promise.resolve(onConfirm(recurring.id, parsed));
+      await Promise.resolve(onConfirm(dataRef.current.id, parsed));
     } finally {
       setSubmitting(false);
     }
   };
 
+  if (!shouldRender || !dataRef.current) return null;
+
+  const data = dataRef.current;
+
   return createPortal(
     <div
-      className="fixed inset-0 !mt-0 bg-black/50 backdrop-blur-sm flex items-end lg:items-center lg:justify-center z-50 lg:p-4"
+      className={`fixed inset-0 !mt-0 bg-black/50 backdrop-blur-sm flex items-end lg:items-center lg:justify-center z-50 lg:p-4 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl w-full lg:max-w-sm max-h-[90vh] overflow-hidden animate-slide-up lg:animate-none"
+        className={`bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl w-full lg:max-w-sm max-h-[90vh] overflow-hidden transition-transform duration-300 lg:transition-none ${isVisible ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {/* Drag handle - mobile only */}
@@ -52,7 +65,7 @@ export default function ApplyRecurringModal({
 
         <div className="p-6">
         <h2 className="text-lg font-semibold mb-1">Apply Transaction</h2>
-        <p className="text-sm text-gray-500 mb-4">{getLabel(recurring)}</p>
+        <p className="text-sm text-gray-500 mb-4">{getLabel(data)}</p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
@@ -65,9 +78,9 @@ export default function ApplyRecurringModal({
               required
               autoFocus={window.matchMedia('(min-width: 1024px)').matches}
             />
-            {parseFloat(amount) !== recurring.amount && (
+            {parseFloat(amount) !== data.amount && (
               <p className="text-xs text-gray-500 mt-1">
-                Original: {formatCurrency(recurring.amount, currency)}
+                Original: {formatCurrency(data.amount, currency)}
               </p>
             )}
           </div>

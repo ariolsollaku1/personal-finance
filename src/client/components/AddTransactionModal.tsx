@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useBottomSheet } from '../hooks/useBottomSheet';
 import { Combobox, ComboboxInput, ComboboxButton, ComboboxOptions, ComboboxOption } from '@headlessui/react';
 import { accountTransactionsApi, categoriesApi, payeesApi, Category, Payee, TransactionType, Currency } from '../lib/api';
 import { getCurrencySymbol } from '../lib/currency';
@@ -158,13 +159,17 @@ export default function AddTransactionModal({
     .filter((c) => formData.type === 'inflow' ? c.type === 'income' : c.type === 'expense')
     .some((c) => c.name.toLowerCase() === categoryQuery.toLowerCase());
 
+  const { shouldRender, isVisible } = useBottomSheet(isOpen);
+
+  if (!shouldRender) return null;
+
   return createPortal(
     <div
-      className="fixed inset-0 !mt-0 bg-black/50 backdrop-blur-sm flex items-end lg:items-center lg:justify-center z-50 lg:p-4"
+      className={`fixed inset-0 !mt-0 bg-black/50 backdrop-blur-sm flex items-end lg:items-center lg:justify-center z-50 lg:p-4 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
       onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
     >
       <div
-        className="bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl w-full lg:max-w-md max-h-[90vh] overflow-hidden animate-slide-up lg:animate-none"
+        className={`bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl w-full lg:max-w-md max-h-[90vh] overflow-hidden transition-transform duration-300 lg:transition-none ${isVisible ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {/* Drag handle - mobile only */}
