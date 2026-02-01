@@ -20,7 +20,7 @@ export default function RecurringList({
   onAdd,
 }: RecurringListProps) {
   return (
-    <div className="bg-white rounded-lg shadow">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100/80">
       <div className="p-6 border-b border-gray-200 flex justify-between items-center">
         <h2 className="text-lg font-semibold text-gray-700">Recurring Transactions</h2>
         <button
@@ -68,7 +68,7 @@ export default function RecurringList({
               <div className="flex items-center gap-2 flex-shrink-0">
                 <button
                   onClick={() => onApply(rec.id)}
-                  className="px-2 py-1 text-xs bg-orange-600 text-white rounded hover:bg-orange-700"
+                  className="px-2 py-1 text-xs bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg hover:from-orange-600 hover:to-amber-600 shadow-sm shadow-orange-500/20 transition-all duration-200"
                 >
                   Apply
                 </button>

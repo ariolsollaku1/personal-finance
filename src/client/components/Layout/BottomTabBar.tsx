@@ -17,7 +17,7 @@ export default function BottomTabBar({ onAccountsClick, onMoreClick, onTabClick,
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-200"
+      className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white/80 backdrop-blur-md border-t border-gray-200/60"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="flex items-center justify-around h-16">

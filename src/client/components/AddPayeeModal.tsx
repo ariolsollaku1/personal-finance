@@ -45,11 +45,11 @@ export default function AddPayeeModal({ isOpen, onClose, onAdded }: AddPayeeModa
 
   return createPortal(
     <div
-      className={`fixed inset-0 !mt-0 bg-black/50 backdrop-blur-sm flex items-end lg:items-center lg:justify-center z-50 lg:p-4 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+      className={`fixed inset-0 !mt-0 bg-black/40 backdrop-blur-md flex items-end lg:items-center lg:justify-center z-50 lg:p-4 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
       onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
     >
       <div
-        className={`bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl w-full lg:max-w-md max-h-[90vh] overflow-hidden transition-transform duration-300 lg:transition-none ${isVisible ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}`}
+        className={`bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl shadow-black/20 ring-1 ring-gray-200/50 w-full lg:max-w-md max-h-[90vh] overflow-hidden transition-transform duration-300 lg:transition-none ${isVisible ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {/* Drag handle - mobile only */}
@@ -117,7 +117,7 @@ export default function AddPayeeModal({ isOpen, onClose, onAdded }: AddPayeeModa
           <button
             onClick={handleSubmit}
             disabled={loading || !name.trim()}
-            className="w-full lg:w-auto px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40"
+            className="w-full lg:w-auto px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40"
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">

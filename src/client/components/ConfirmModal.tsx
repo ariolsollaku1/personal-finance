@@ -28,11 +28,11 @@ export default function ConfirmModal({
 
   return createPortal(
     <div
-      className={`fixed inset-0 !mt-0 bg-black/50 backdrop-blur-sm flex items-end lg:items-center lg:justify-center z-50 lg:p-4 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+      className={`fixed inset-0 !mt-0 bg-black/40 backdrop-blur-md flex items-end lg:items-center lg:justify-center z-50 lg:p-4 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
       onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
     >
       <div
-        className={`bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl w-full lg:max-w-sm overflow-hidden transition-transform duration-300 lg:transition-none ${isVisible ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}`}
+        className={`bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl shadow-black/20 ring-1 ring-gray-200/50 w-full lg:max-w-sm overflow-hidden transition-transform duration-300 lg:transition-none ${isVisible ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {/* Drag handle - mobile only */}
@@ -70,8 +70,8 @@ export default function ConfirmModal({
               onClick={onConfirm}
               className={`w-full lg:flex-1 px-4 py-2.5 font-semibold rounded-xl transition-all duration-200 ${
                 isDanger
-                  ? 'bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-500/25'
-                  : 'bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/25'
+                  ? 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-lg shadow-red-500/30'
+                  : 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-lg shadow-orange-500/30'
               }`}
             >
               {confirmLabel}

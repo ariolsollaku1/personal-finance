@@ -55,7 +55,7 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
   };
 
   return (
-    <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
+    <div className="h-screen bg-gradient-to-br from-gray-50 via-orange-50/30 to-gray-50 flex flex-col overflow-hidden">
       {/* Top Navbar */}
       <TopNavbar />
 

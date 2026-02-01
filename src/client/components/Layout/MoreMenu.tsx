@@ -26,7 +26,7 @@ export default function MoreMenu({ isOpen, onClose }: MoreMenuProps) {
     <div className={`fixed inset-0 z-50 lg:hidden transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
       {/* Overlay */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/40 backdrop-blur-md"
         onClick={onClose}
       />
 

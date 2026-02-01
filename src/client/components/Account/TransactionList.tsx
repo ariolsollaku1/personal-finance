@@ -35,12 +35,12 @@ export default function TransactionList({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100/80">
       <div className="p-6 border-b border-gray-200 flex justify-between items-center">
         <h2 className="text-lg font-semibold text-gray-700">Transactions</h2>
         <button
           onClick={onAdd}
-          className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700"
+          className="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl hover:from-orange-600 hover:to-amber-600 shadow-sm shadow-orange-500/25 font-medium transition-all duration-200"
         >
           + Add Transaction
         </button>

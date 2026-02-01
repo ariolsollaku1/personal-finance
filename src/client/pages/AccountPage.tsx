@@ -281,7 +281,7 @@ export default function AccountPage() {
               <div className="flex justify-end">
                 <button
                   onClick={() => modals.setShowAddHolding(!modals.showAddHolding)}
-                  className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700"
+                  className="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl hover:from-orange-600 hover:to-amber-600 shadow-sm shadow-orange-500/25 font-medium transition-all duration-200"
                 >
                   {modals.showAddHolding ? 'Cancel' : 'Add Holding'}
                 </button>

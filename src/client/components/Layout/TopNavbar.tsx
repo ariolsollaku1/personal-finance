@@ -25,7 +25,7 @@ export default function TopNavbar() {
   };
 
   return (
-    <header className="h-16 bg-white border-b border-gray-100 shadow-sm sticky top-0 z-25">
+    <header className="h-16 bg-white/80 backdrop-blur-md border-b border-gray-200/60 shadow-sm sticky top-0 z-25">
       <div className="h-full px-4 lg:px-6 flex items-center justify-between">
         {/* Left: Mobile menu + Logo */}
         <div className="flex items-center gap-3">
@@ -135,7 +135,7 @@ export default function TopNavbar() {
 
           {/* Dropdown Menu */}
           {profileOpen && (
-            <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
+            <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg shadow-gray-200/50 ring-1 ring-gray-200/50 py-2 z-50">
               {/* User Info */}
               <div className="px-4 py-3 border-b border-gray-100">
                 <p className="text-sm font-medium text-gray-900 truncate">{user?.email || 'User'}</p>

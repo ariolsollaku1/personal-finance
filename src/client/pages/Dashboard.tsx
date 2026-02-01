@@ -73,7 +73,7 @@ export default function Dashboard() {
         </div>
         <button
           onClick={() => setShowAddAccount(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40"
+          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 hover:-translate-y-0.5 active:translate-y-0"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -83,7 +83,7 @@ export default function Dashboard() {
       </div>
 
       {/* Net Worth Card */}
-      <div className="bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 rounded-2xl shadow-xl p-8 text-white">
+      <div className="bg-gradient-to-br from-orange-400 via-orange-600 to-rose-600 rounded-2xl shadow-2xl shadow-orange-500/30 p-8 text-white">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -110,7 +110,7 @@ export default function Dashboard() {
           { label: 'Loans', value: data.byType.loan.total, count: data.byType.loan.count, icon: '📋', color: 'text-red-600', negative: true },
           { label: 'Credit', value: data.byType.credit.owed, count: data.byType.credit.count, icon: '💳', color: data.byType.credit.owed > 0 ? 'text-red-600' : 'text-gray-900', negative: data.byType.credit.owed > 0 },
         ].map((item) => (
-          <div key={item.label} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 p-4">
+          <div key={item.label} className="bg-white rounded-xl shadow-sm border border-gray-100/80 hover:shadow-lg hover:shadow-orange-500/5 hover:-translate-y-0.5 transition-all duration-300 p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-2xl">{item.icon}</span>
               <span className="text-xs text-gray-400">{item.count}</span>
@@ -126,9 +126,9 @@ export default function Dashboard() {
 
       {/* Stock Portfolio Summary */}
       {data.stockPortfolio.holdingsCount > 0 && (
-        <div className="bg-white rounded-xl shadow-sm p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100/80 p-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-br from-orange-100 to-amber-200/80 shadow-sm shadow-orange-500/10 rounded-xl flex items-center justify-center">
               <span className="text-xl">📊</span>
             </div>
             <div>
@@ -175,9 +175,9 @@ export default function Dashboard() {
 
       {/* Due Recurring Transactions */}
       {data.dueRecurring.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl overflow-hidden">
-          <div className="px-6 py-4 border-b border-amber-200 flex items-center gap-3">
-            <div className="w-8 h-8 bg-amber-200 rounded-lg flex items-center justify-center">
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-xl overflow-hidden shadow-sm">
+          <div className="px-6 py-4 border-b border-amber-200/60 flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-amber-200 to-orange-300/80 shadow-sm shadow-amber-500/10 rounded-lg flex items-center justify-center">
               <svg className="w-5 h-5 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -202,7 +202,7 @@ export default function Dashboard() {
                   </span>
                   <button
                     onClick={() => handleApplyRecurring(recurring)}
-                    className="px-4 py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-all duration-200 font-medium"
+                    className="px-4 py-2 text-sm bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 shadow-sm shadow-amber-500/25 hover:shadow-amber-500/40 transition-all duration-200 font-medium"
                   >
                     Apply
                   </button>
@@ -216,7 +216,7 @@ export default function Dashboard() {
       {/* Accounts List & Recent Activity - Side by Side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Accounts List */}
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100/80 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
             <h2 className="text-lg font-semibold text-gray-900">All Accounts</h2>
             <button onClick={() => setShowAddAccount(true)} className="text-sm font-medium text-orange-600 hover:text-orange-500 transition-colors">
@@ -269,7 +269,7 @@ export default function Dashboard() {
         </div>
 
         {/* Recent Transactions */}
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100/80 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100">
             <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
           </div>
@@ -287,7 +287,7 @@ export default function Dashboard() {
               data.recentTransactions.map((tx) => (
                 <div key={`${tx.accountId}-${tx.id}`} className="flex items-center justify-between px-6 py-3">
                   <div className="flex items-center gap-4 min-w-0">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${tx.type === 'inflow' ? 'bg-green-100' : 'bg-red-100'}`}>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${tx.type === 'inflow' ? 'bg-gradient-to-br from-green-100 to-emerald-200/80 shadow-sm shadow-green-500/10' : 'bg-gradient-to-br from-red-100 to-rose-200/80 shadow-sm shadow-red-500/10'}`}>
                       <svg className={`w-5 h-5 ${tx.type === 'inflow' ? 'text-green-600' : 'text-red-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         {tx.type === 'inflow' ? (
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />

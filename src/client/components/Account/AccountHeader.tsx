@@ -32,7 +32,7 @@ function useAccountDisplay(account: Account, portfolio: PortfolioData | null) {
 function GradientHero({ account, portfolio, onEdit, onDelete }: AccountHeaderProps) {
   const { icon, balance, balanceLabel, typeLabel } = useAccountDisplay(account, portfolio);
   return (
-    <div className="bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 rounded-2xl shadow-xl p-8 text-white">
+    <div className="bg-gradient-to-br from-orange-400 via-orange-600 to-rose-600 rounded-2xl shadow-2xl shadow-orange-500/30 p-8 text-white">
       <div className="flex justify-between items-start">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center">
@@ -67,7 +67,7 @@ function GradientHero({ account, portfolio, onEdit, onDelete }: AccountHeaderPro
 function DarkCard({ account, portfolio, onEdit, onDelete }: AccountHeaderProps) {
   const { icon, balance, balanceLabel, typeLabel } = useAccountDisplay(account, portfolio);
   return (
-    <div className="bg-gray-900 rounded-2xl shadow-xl p-8 text-white relative overflow-hidden">
+    <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl shadow-2xl shadow-gray-900/50 ring-1 ring-gray-700/50 p-8 text-white relative overflow-hidden">
       <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '24px 24px' }} />
       <div className="relative">
         <div className="flex justify-between items-start">

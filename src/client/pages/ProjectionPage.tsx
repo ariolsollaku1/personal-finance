@@ -84,25 +84,25 @@ export default function ProjectionPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100/80 p-4 hover:shadow-lg hover:shadow-green-500/5 hover:-translate-y-0.5 transition-all duration-300">
           <p className="text-sm text-gray-500">Monthly Income</p>
           <p className="text-xl font-semibold text-green-600">
             {formatCurrency(data.summary.monthlyIncome, currency)}
           </p>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100/80 p-4 hover:shadow-lg hover:shadow-red-500/5 hover:-translate-y-0.5 transition-all duration-300">
           <p className="text-sm text-gray-500">Monthly Expenses</p>
           <p className="text-xl font-semibold text-red-600">
             {formatCurrency(data.summary.monthlyExpenses, currency)}
           </p>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100/80 p-4 hover:shadow-lg hover:shadow-orange-500/5 hover:-translate-y-0.5 transition-all duration-300">
           <p className="text-sm text-gray-500">Monthly Savings</p>
           <p className={`text-xl font-semibold ${data.summary.monthlySavings >= 0 ? 'text-orange-600' : 'text-red-600'}`}>
             {formatCurrency(data.summary.monthlySavings, currency)}
           </p>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100/80 p-4 hover:shadow-lg hover:shadow-orange-500/5 hover:-translate-y-0.5 transition-all duration-300">
           <p className="text-sm text-gray-500">Savings Rate</p>
           <p className={`text-xl font-semibold ${data.summary.savingsRate >= 0 ? 'text-orange-600' : 'text-red-600'}`}>
             {data.summary.savingsRate.toFixed(1)}%
@@ -111,7 +111,7 @@ export default function ProjectionPage() {
       </div>
 
       {/* Year-End Projection */}
-      <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg shadow p-6 text-white">
+      <div className="bg-gradient-to-r from-orange-400 via-orange-600 to-rose-600 rounded-2xl shadow-2xl shadow-orange-500/30 p-6 text-white">
         <h2 className="text-lg font-semibold mb-2">Year-End Projection</h2>
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -131,7 +131,7 @@ export default function ProjectionPage() {
       </div>
 
       {/* YTD Net Worth Chart */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100/80 p-6">
         <h2 className="text-lg font-semibold text-gray-700 mb-4">Year-To-Date Net Worth</h2>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
@@ -168,7 +168,7 @@ export default function ProjectionPage() {
       </div>
 
       {/* Future 12 Months Projection */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100/80 p-6">
         <h2 className="text-lg font-semibold text-gray-700 mb-4">Next 12 Months Projection</h2>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
@@ -209,7 +209,7 @@ export default function ProjectionPage() {
       </div>
 
       {/* Asset Breakdown Over Time */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100/80 p-6">
         <h2 className="text-lg font-semibold text-gray-700 mb-4">Asset Composition (YTD)</h2>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
@@ -265,7 +265,7 @@ export default function ProjectionPage() {
       </div>
 
       {/* Liquid Assets vs Debt */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100/80 p-6">
         <h2 className="text-lg font-semibold text-gray-700 mb-4">Liquid Assets vs Total Debt</h2>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
@@ -306,7 +306,7 @@ export default function ProjectionPage() {
       </div>
 
       {/* Monthly Cash Flow */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100/80 p-6">
         <h2 className="text-lg font-semibold text-gray-700 mb-4">Monthly Cash Flow</h2>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
@@ -327,7 +327,7 @@ export default function ProjectionPage() {
       {/* Recurring Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Income Breakdown */}
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100/80 p-6">
           <h2 className="text-lg font-semibold text-gray-700 mb-4">Monthly Income Sources</h2>
           {data.recurringBreakdown.income.length === 0 ? (
             <p className="text-gray-500 text-sm">No recurring income configured</p>
@@ -355,7 +355,7 @@ export default function ProjectionPage() {
         </div>
 
         {/* Expense Breakdown */}
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100/80 p-6">
           <h2 className="text-lg font-semibold text-gray-700 mb-4">Monthly Expenses</h2>
           {data.recurringBreakdown.expenses.length === 0 ? (
             <p className="text-gray-500 text-sm">No recurring expenses configured</p>
@@ -384,7 +384,7 @@ export default function ProjectionPage() {
       </div>
 
       {/* Financial Health Indicators */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100/80 p-6">
         <h2 className="text-lg font-semibold text-gray-700 mb-4">Financial Health Indicators</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Savings Rate Gauge */}

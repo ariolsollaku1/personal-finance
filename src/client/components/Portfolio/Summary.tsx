@@ -53,7 +53,7 @@ export default function Summary({ portfolio, lastUpdated, refreshing, onRefresh 
   const { cashBalance, totalValue, totalCost, totalGain, totalGainPercent, dayChange, dayChangePercent } = portfolio;
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100/80 p-6">
       {/* Header with refresh */}
       {(lastUpdated || onRefresh) && (
         <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">

@@ -74,11 +74,11 @@ export default function MergePayeesModal({ isOpen, onClose, onMerged, payees }: 
   return createPortal(
     <>
       <div
-        className={`fixed inset-0 !mt-0 bg-black/50 backdrop-blur-sm flex items-end lg:items-center lg:justify-center z-50 lg:p-4 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+        className={`fixed inset-0 !mt-0 bg-black/40 backdrop-blur-md flex items-end lg:items-center lg:justify-center z-50 lg:p-4 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
         onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
       >
         <div
-          className={`bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl w-full lg:max-w-lg max-h-[90vh] overflow-hidden transition-transform duration-300 lg:transition-none ${isVisible ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}`}
+          className={`bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl shadow-black/20 ring-1 ring-gray-200/50 w-full lg:max-w-lg max-h-[90vh] overflow-hidden transition-transform duration-300 lg:transition-none ${isVisible ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}`}
           style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         >
           {/* Drag handle - mobile only */}
@@ -182,7 +182,7 @@ export default function MergePayeesModal({ isOpen, onClose, onMerged, payees }: 
             <button
               onClick={handleMerge}
               disabled={loading || !mergeSource || !mergeTarget}
-              className="w-full lg:w-auto px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full lg:w-auto px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-500/25"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">

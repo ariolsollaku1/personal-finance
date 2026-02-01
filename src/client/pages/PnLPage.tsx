@@ -87,7 +87,7 @@ export default function PnLPage() {
 
       {/* Year Summary Card */}
       {summary.months.length > 0 && (
-        <div className="bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 rounded-2xl shadow-xl p-6 text-white">
+        <div className="bg-gradient-to-br from-orange-400 via-orange-600 to-rose-600 rounded-2xl shadow-2xl shadow-orange-500/30 p-6 text-white">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -132,7 +132,7 @@ export default function PnLPage() {
       </div>
 
       {summary.months.length === 0 && (
-        <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100/80 p-12 text-center">
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -168,14 +168,14 @@ function MonthCard({ month, currency, onClick }: MonthCardProps) {
   return (
     <button
       onClick={onClick}
-      className="bg-white rounded-xl shadow-sm p-5 text-left hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 group"
+      className="bg-white rounded-xl shadow-sm border border-gray-100/80 p-5 text-left hover:shadow-lg hover:shadow-orange-500/5 hover:-translate-y-0.5 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 group"
     >
       <div className="flex justify-between items-start mb-4">
         <div>
           <h3 className="font-semibold text-gray-900 text-lg">{month.label}</h3>
           <span className="text-xs text-gray-400">{month.transactionCount} transactions</span>
         </div>
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isPositive ? 'bg-green-100' : 'bg-red-100'}`}>
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isPositive ? 'bg-gradient-to-br from-green-100 to-emerald-200/80 shadow-sm shadow-green-500/10' : 'bg-gradient-to-br from-red-100 to-rose-200/80 shadow-sm shadow-red-500/10'}`}>
           <svg className={`w-5 h-5 ${isPositive ? 'text-green-600' : 'text-red-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             {isPositive ? (
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
@@ -237,11 +237,11 @@ function MonthDetailModal({ isOpen, detail, loading, currency, onClose }: MonthD
 
   return createPortal(
     <div
-      className={`fixed inset-0 !mt-0 bg-black/50 backdrop-blur-sm z-50 flex items-end lg:items-center lg:justify-center lg:p-4 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+      className={`fixed inset-0 !mt-0 bg-black/40 backdrop-blur-md z-50 flex items-end lg:items-center lg:justify-center lg:p-4 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
       onClick={onClose}
     >
       <div
-        className={`bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl w-full lg:max-w-4xl max-h-[90vh] flex flex-col transition-transform duration-300 lg:transition-none ${isVisible ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}`}
+        className={`bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl shadow-black/20 ring-1 ring-gray-200/50 w-full lg:max-w-4xl max-h-[90vh] flex flex-col transition-transform duration-300 lg:transition-none ${isVisible ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -286,7 +286,7 @@ function MonthDetailModal({ isOpen, detail, loading, currency, onClose }: MonthD
             <>
               {/* Summary Cards */}
               <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="bg-green-50 rounded-xl p-4">
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 ring-1 ring-green-100/60">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
                       <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -299,7 +299,7 @@ function MonthDetailModal({ isOpen, detail, loading, currency, onClose }: MonthD
                     +{formatCurrency(detail.income, currency as 'ALL' | 'EUR' | 'USD')}
                   </p>
                 </div>
-                <div className="bg-red-50 rounded-xl p-4">
+                <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-xl p-4 ring-1 ring-red-100/60">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
                       <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

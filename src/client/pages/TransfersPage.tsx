@@ -114,7 +114,7 @@ export default function TransfersPage() {
         <h1 className="text-2xl font-bold text-gray-900">Transfers</h1>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="px-4 py-2 bg-orange-600 text-white rounded-xl hover:bg-orange-700"
+          className="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl hover:from-orange-600 hover:to-amber-600 shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 font-semibold transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0"
         >
           {showAddForm ? 'Cancel' : 'New Transfer'}
         </button>
@@ -127,7 +127,7 @@ export default function TransfersPage() {
       )}
 
       {showAddForm && accounts.length >= 2 && (
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100/80 p-6">
           <h2 className="text-lg font-semibold text-gray-700 mb-4">New Transfer</h2>
           <form onSubmit={handleAddTransfer} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -225,7 +225,7 @@ export default function TransfersPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="px-4 py-2 bg-orange-600 text-white rounded-xl hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl hover:from-orange-600 hover:to-amber-600 shadow-sm shadow-orange-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium transition-all duration-200"
               >
                 {submitting && (
                   <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
@@ -241,7 +241,7 @@ export default function TransfersPage() {
       )}
 
       {/* Transfers List */}
-      <div className="bg-white rounded-lg shadow">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100/80">
         <div className="p-6 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-700">Transfer History</h2>
         </div>

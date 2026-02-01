@@ -128,7 +128,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   return (
     <>
     <aside
-      className={`bg-white border-r border-gray-100 flex flex-col h-full transition-all duration-300 shadow-sm ${
+      className={`bg-gradient-to-b from-white to-gray-50/80 border-r border-gray-200/60 flex flex-col h-full transition-all duration-300 shadow-sm ${
         collapsed ? 'w-16' : 'w-64'
       }`}
     >
