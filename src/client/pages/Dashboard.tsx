@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { DueRecurring, dashboardApi, recurringApi } from '../lib/api';
 import { formatCurrency } from '../lib/currency';
@@ -26,6 +26,20 @@ export default function Dashboard() {
       toast.error('Recurring', err instanceof Error ? err.message : 'Failed to apply recurring transaction');
     }
   };
+
+  const { overdue, dueSoon } = useMemo(() => {
+    if (!data) return { overdue: [], dueSoon: [] };
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const o: DueRecurring[] = [];
+    const d: DueRecurring[] = [];
+    for (const r of data.dueRecurring) {
+      const due = new Date(r.nextDueDate);
+      due.setHours(0, 0, 0, 0);
+      (due < today ? o : d).push(r);
+    }
+    return { overdue: o, dueSoon: d };
+  }, [data]);
 
   if (loading) {
     return <DashboardSkeleton />;
@@ -143,8 +157,48 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Overdue Recurring Transactions */}
+      {overdue.length > 0 && (
+        <div className="bg-gradient-to-r from-red-50 to-rose-50 border border-red-200/80 rounded-xl overflow-hidden shadow-sm">
+          <div className="px-6 py-4 border-b border-red-200/60 flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-red-200 to-rose-300/80 shadow-sm shadow-red-500/10 rounded-lg flex items-center justify-center">
+              <svg className="w-5 h-5 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-semibold text-red-800">Overdue Recurring Transactions</h2>
+          </div>
+          <div className="divide-y divide-red-200/60">
+            {overdue.map((recurring) => (
+              <div key={recurring.id} className="flex items-center justify-between px-6 py-4">
+                <div>
+                  <p className="font-medium text-gray-900">
+                    {recurring.payee || recurring.category || 'Recurring Transaction'}
+                  </p>
+                  <p className="text-sm text-red-600">
+                    {recurring.accountName} • Overdue: {new Date(recurring.nextDueDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                  </p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className={`font-semibold ${recurring.type === 'inflow' ? 'text-green-600' : 'text-red-600'}`}>
+                    {recurring.type === 'inflow' ? '+' : '-'}
+                    {formatCurrency(recurring.amount, recurring.currency)}
+                  </span>
+                  <button
+                    onClick={() => handleApplyRecurring(recurring)}
+                    className="px-4 py-2 text-sm bg-gradient-to-r from-red-500 to-rose-500 text-white rounded-lg hover:from-red-600 hover:to-rose-600 shadow-sm shadow-red-500/25 hover:shadow-red-500/40 transition-all duration-200 font-medium"
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Due Recurring Transactions */}
-      {data.dueRecurring.length > 0 && (
+      {dueSoon.length > 0 && (
         <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-xl overflow-hidden shadow-sm">
           <div className="px-6 py-4 border-b border-amber-200/60 flex items-center gap-3">
             <div className="w-8 h-8 bg-gradient-to-br from-amber-200 to-orange-300/80 shadow-sm shadow-amber-500/10 rounded-lg flex items-center justify-center">
@@ -155,7 +209,7 @@ export default function Dashboard() {
             <h2 className="text-lg font-semibold text-amber-800">Due Recurring Transactions</h2>
           </div>
           <div className="divide-y divide-amber-200">
-            {data.dueRecurring.map((recurring) => (
+            {dueSoon.map((recurring) => (
               <div key={recurring.id} className="flex items-center justify-between px-6 py-4">
                 <div>
                   <p className="font-medium text-gray-900">
