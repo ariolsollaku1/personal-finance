@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Transfer, Account, transfersApi, accountsApi } from '../lib/api';
 import { formatCurrency } from '../lib/currency';
 import { TransfersSkeleton } from '../components/Skeleton';
+import { useToast } from '../contexts/ToastContext';
 
 export default function TransfersPage() {
   const [transfers, setTransfers] = useState<Transfer[]>([]);
@@ -10,6 +11,7 @@ export default function TransfersPage() {
   const [error, setError] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const toast = useToast();
 
   const [newTransfer, setNewTransfer] = useState({
     fromAccountId: '',
@@ -71,7 +73,7 @@ export default function TransfersPage() {
       });
       loadData();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to create transfer');
+      toast.error(err instanceof Error ? err.message : 'Failed to create transfer');
     } finally {
       setSubmitting(false);
     }
@@ -83,7 +85,7 @@ export default function TransfersPage() {
       await transfersApi.delete(id);
       loadData();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to delete transfer');
+      toast.error(err instanceof Error ? err.message : 'Failed to delete transfer');
     }
   };
 

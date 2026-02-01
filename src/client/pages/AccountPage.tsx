@@ -29,6 +29,7 @@ import DividendList from '../components/Dividends/DividendList';
 import TaxSummary from '../components/Dividends/TaxSummary';
 import AddTransactionModal from '../components/AddTransactionModal';
 import { AccountSkeleton } from '../components/Skeleton';
+import { useToast } from '../contexts/ToastContext';
 
 type StockTab = 'holdings' | 'dividends' | 'transactions';
 
@@ -51,6 +52,7 @@ export default function AccountPage() {
   const [applyingRecurring, setApplyingRecurring] = useState<RecurringTransaction | null>(null);
 
   // Custom hooks for state management
+  const toast = useToast();
   const accountState = useAccountPage(accountId);
   const modals = useAccountModals();
   const dividendCheck = useDividendCheck(accountId, accountState.refreshData);
@@ -95,7 +97,7 @@ export default function AccountPage() {
       refreshData();
       window.dispatchEvent(new Event('accounts-changed'));
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to delete transaction');
+      toast.error(err instanceof Error ? err.message : 'Failed to delete transaction');
     }
   };
 
@@ -115,7 +117,7 @@ export default function AccountPage() {
       recurringForm.resetForm();
       refreshData();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to add recurring transaction');
+      toast.error(err instanceof Error ? err.message : 'Failed to add recurring transaction');
     }
   };
 
@@ -131,7 +133,7 @@ export default function AccountPage() {
       refreshData();
       window.dispatchEvent(new Event('accounts-changed'));
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to apply recurring transaction');
+      toast.error(err instanceof Error ? err.message : 'Failed to apply recurring transaction');
     }
   };
 
@@ -141,7 +143,7 @@ export default function AccountPage() {
       await recurringApi.delete(recurringId);
       refreshData();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to delete recurring transaction');
+      toast.error(err instanceof Error ? err.message : 'Failed to delete recurring transaction');
     }
   };
 
@@ -161,7 +163,7 @@ export default function AccountPage() {
       refreshData();
       window.dispatchEvent(new Event('accounts-changed'));
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to update transaction');
+      toast.error(err instanceof Error ? err.message : 'Failed to update transaction');
     }
   };
 
@@ -181,7 +183,7 @@ export default function AccountPage() {
       modals.setEditingRecurring(null);
       refreshData();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to update recurring transaction');
+      toast.error(err instanceof Error ? err.message : 'Failed to update recurring transaction');
     }
   };
 
@@ -193,7 +195,7 @@ export default function AccountPage() {
       refreshData();
       window.dispatchEvent(new Event('accounts-changed'));
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to update account');
+      toast.error(err instanceof Error ? err.message : 'Failed to update account');
     }
   };
 
@@ -203,7 +205,7 @@ export default function AccountPage() {
       await accountsApi.delete(accountId);
       navigate('/');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to delete account');
+      toast.error(err instanceof Error ? err.message : 'Failed to delete account');
     }
   };
 

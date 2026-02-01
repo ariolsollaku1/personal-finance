@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { TaxSummary, dividendsApi } from '../../lib/api';
+import { useToast } from '../../contexts/ToastContext';
 
 interface TaxSummaryCardProps {
   taxSummary: TaxSummary | null;
@@ -21,6 +22,7 @@ export default function TaxSummaryCard({ taxSummary, onUpdate }: TaxSummaryCardP
   const [editingRate, setEditingRate] = useState(false);
   const [newRate, setNewRate] = useState('');
   const [saving, setSaving] = useState(false);
+  const toast = useToast();
 
   if (!taxSummary) {
     return null;
@@ -29,7 +31,7 @@ export default function TaxSummaryCard({ taxSummary, onUpdate }: TaxSummaryCardP
   const handleSaveRate = async () => {
     const rate = parseFloat(newRate) / 100;
     if (isNaN(rate) || rate < 0 || rate > 1) {
-      alert('Please enter a valid percentage between 0 and 100');
+      toast.warning('Please enter a valid percentage between 0 and 100');
       return;
     }
 
@@ -39,7 +41,7 @@ export default function TaxSummaryCard({ taxSummary, onUpdate }: TaxSummaryCardP
       setEditingRate(false);
       onUpdate();
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to update tax rate');
+      toast.error(error instanceof Error ? error.message : 'Failed to update tax rate');
     } finally {
       setSaving(false);
     }

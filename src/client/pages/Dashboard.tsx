@@ -5,6 +5,7 @@ import { formatCurrency } from '../lib/currency';
 import AddAccountModal from '../components/AddAccountModal';
 import { ApplyRecurringModal } from '../components/Account';
 import { DashboardSkeleton } from '../components/Skeleton';
+import { useToast } from '../contexts/ToastContext';
 
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -12,6 +13,7 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [showAddAccount, setShowAddAccount] = useState(false);
   const [applyingRecurring, setApplyingRecurring] = useState<DueRecurring | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     loadDashboard();
@@ -40,7 +42,7 @@ export default function Dashboard() {
       setApplyingRecurring(null);
       loadDashboard();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to apply recurring transaction');
+      toast.error(err instanceof Error ? err.message : 'Failed to apply recurring transaction');
     }
   };
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Currency, dashboardApi } from '../../lib/api';
 import { formatCurrency, getCurrencySymbol } from '../../lib/currency';
 import { CurrencySkeleton } from '../../components/Skeleton';
+import { useToast } from '../../contexts/ToastContext';
 
 export default function CurrencyPage() {
   const [mainCurrency, setMainCurrency] = useState<Currency>('EUR');
@@ -22,6 +23,7 @@ export default function CurrencyPage() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     loadSettings();
@@ -46,7 +48,7 @@ export default function CurrencyPage() {
       await dashboardApi.setCurrency(currency);
       setMainCurrency(currency);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to save currency setting');
+      toast.error(err instanceof Error ? err.message : 'Failed to save currency setting');
     } finally {
       setSaving(false);
     }

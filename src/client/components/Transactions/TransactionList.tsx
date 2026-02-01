@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Transaction, transactionsApi } from '../../lib/api';
+import { useToast } from '../../contexts/ToastContext';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -23,6 +24,7 @@ function formatDate(dateStr: string): string {
 
 export default function TransactionList({ transactions, onDelete }: TransactionListProps) {
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const toast = useToast();
 
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this transaction?')) {
@@ -34,7 +36,7 @@ export default function TransactionList({ transactions, onDelete }: TransactionL
       await transactionsApi.delete(id);
       onDelete();
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to delete transaction');
+      toast.error(error instanceof Error ? error.message : 'Failed to delete transaction');
     } finally {
       setDeletingId(null);
     }

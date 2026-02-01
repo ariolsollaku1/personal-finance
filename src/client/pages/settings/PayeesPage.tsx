@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Payee, payeesApi } from '../../lib/api';
 import { PayeesSkeleton } from '../../components/Skeleton';
+import { useToast } from '../../contexts/ToastContext';
 
 export default function PayeesPage() {
   const [payees, setPayees] = useState<Payee[]>([]);
@@ -14,6 +15,7 @@ export default function PayeesPage() {
   const [mergeMode, setMergeMode] = useState(false);
   const [mergeSource, setMergeSource] = useState<number | null>(null);
   const [mergeTarget, setMergeTarget] = useState<number | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     loadPayees();
@@ -41,7 +43,7 @@ export default function PayeesPage() {
       setShowAddForm(false);
       loadPayees();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to add payee');
+      toast.error(err instanceof Error ? err.message : 'Failed to add payee');
     } finally {
       setSubmitting(false);
     }
@@ -53,7 +55,7 @@ export default function PayeesPage() {
       setEditingId(null);
       loadPayees();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to update payee');
+      toast.error(err instanceof Error ? err.message : 'Failed to update payee');
     }
   };
 
@@ -63,17 +65,17 @@ export default function PayeesPage() {
       await payeesApi.delete(id);
       loadPayees();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to delete payee');
+      toast.error(err instanceof Error ? err.message : 'Failed to delete payee');
     }
   };
 
   const handleMerge = async () => {
     if (!mergeSource || !mergeTarget) {
-      alert('Please select both source and target payees');
+      toast.warning('Please select both source and target payees');
       return;
     }
     if (mergeSource === mergeTarget) {
-      alert('Cannot merge payee with itself');
+      toast.warning('Cannot merge payee with itself');
       return;
     }
 
@@ -91,7 +93,7 @@ export default function PayeesPage() {
       setMergeTarget(null);
       loadPayees();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to merge payees');
+      toast.error(err instanceof Error ? err.message : 'Failed to merge payees');
     }
   };
 

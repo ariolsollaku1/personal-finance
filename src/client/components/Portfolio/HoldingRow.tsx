@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { HoldingWithQuote, holdingsApi } from '../../lib/api';
+import { useToast } from '../../contexts/ToastContext';
 import SellForm from './SellForm';
 
 interface HoldingRowProps {
@@ -22,6 +23,7 @@ function formatPercent(value: number): string {
 export default function HoldingRow({ holding, accountId, onUpdate }: HoldingRowProps) {
   const [showSellForm, setShowSellForm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const toast = useToast();
 
   const handleDelete = async () => {
     if (!confirm(`Are you sure you want to delete ${holding.symbol}?`)) {
@@ -33,7 +35,7 @@ export default function HoldingRow({ holding, accountId, onUpdate }: HoldingRowP
       await holdingsApi.delete(holding.id);
       onUpdate();
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to delete holding');
+      toast.error(error instanceof Error ? error.message : 'Failed to delete holding');
     } finally {
       setDeleting(false);
     }

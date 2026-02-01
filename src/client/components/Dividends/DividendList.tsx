@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Dividend, dividendsApi } from '../../lib/api';
+import { useToast } from '../../contexts/ToastContext';
 
 interface DividendListProps {
   dividends: Dividend[];
@@ -30,6 +31,7 @@ function formatPercent(value: number): string {
 
 export default function DividendList({ dividends, onDelete }: DividendListProps) {
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const toast = useToast();
   const [sortColumn, setSortColumn] = useState<SortColumn>('ex_date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
@@ -43,7 +45,7 @@ export default function DividendList({ dividends, onDelete }: DividendListProps)
       await dividendsApi.delete(id);
       onDelete();
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to delete dividend');
+      toast.error(error instanceof Error ? error.message : 'Failed to delete dividend');
     } finally {
       setDeletingId(null);
     }

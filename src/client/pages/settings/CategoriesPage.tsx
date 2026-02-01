@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Category, categoriesApi } from '../../lib/api';
 import { CategoriesSkeleton } from '../../components/Skeleton';
+import { useToast } from '../../contexts/ToastContext';
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -11,6 +12,7 @@ export default function CategoriesPage() {
   const [newCategory, setNewCategory] = useState({ name: '', type: 'expense' as 'income' | 'expense' });
   const [showAddForm, setShowAddForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     loadCategories();
@@ -38,7 +40,7 @@ export default function CategoriesPage() {
       setShowAddForm(false);
       loadCategories();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to add category');
+      toast.error(err instanceof Error ? err.message : 'Failed to add category');
     } finally {
       setSubmitting(false);
     }
@@ -50,7 +52,7 @@ export default function CategoriesPage() {
       setEditingId(null);
       loadCategories();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to update category');
+      toast.error(err instanceof Error ? err.message : 'Failed to update category');
     }
   };
 
@@ -60,7 +62,7 @@ export default function CategoriesPage() {
       await categoriesApi.delete(id);
       loadCategories();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to delete category');
+      toast.error(err instanceof Error ? err.message : 'Failed to delete category');
     }
   };
 
