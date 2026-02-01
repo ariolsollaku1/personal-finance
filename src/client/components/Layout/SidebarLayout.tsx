@@ -23,6 +23,16 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
     setMoreOpen(false);
   }, [location.pathname]);
 
+  // Lock body scroll when mobile accounts sheet is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileOpen]);
+
   useEffect(() => {
     // Load sidebar state from server
     dashboardApi.getSidebarCollapsed().then((data) => {
