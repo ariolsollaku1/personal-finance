@@ -3,7 +3,7 @@ import { SidebarLayout } from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import Dashboard from './pages/Dashboard';
-import AccountPage from './pages/AccountPage';
+import SwipeAccountPage from './pages/SwipeAccountPage';
 import TransfersPage from './pages/TransfersPage';
 import CategoriesPage from './pages/settings/CategoriesPage';
 import PayeesPage from './pages/settings/PayeesPage';
@@ -31,7 +31,7 @@ function App() {
               <SidebarLayout>
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
-                  <Route path="/accounts/:id" element={<AccountPage />} />
+                  <Route path="/accounts/:id" element={<SwipeAccountPage />} />
                   <Route path="/transfers" element={<TransfersPage />} />
                   <Route path="/projection" element={<ProjectionPage />} />
                   <Route path="/pnl" element={<PnLPage />} />

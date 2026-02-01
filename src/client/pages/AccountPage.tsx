@@ -1,3 +1,5 @@
+/** @deprecated Use SwipeAccountPage instead. */
+
 import { useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useConfirm } from '../hooks/useConfirm';
