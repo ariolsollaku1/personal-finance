@@ -68,7 +68,7 @@ export default function SellForm({ symbol, maxShares, currentPrice, accountId, o
             min="0"
             max={maxShares}
             required
-            className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+            className="w-32 px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
           />
         </div>
 
@@ -81,7 +81,7 @@ export default function SellForm({ symbol, maxShares, currentPrice, accountId, o
             step="any"
             min="0"
             required
-            className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+            className="w-32 px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
           />
         </div>
 
@@ -93,7 +93,7 @@ export default function SellForm({ symbol, maxShares, currentPrice, accountId, o
             onChange={(e) => setFees(e.target.value)}
             step="any"
             min="0"
-            className="w-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+            className="w-24 px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
           />
         </div>
 
@@ -104,7 +104,7 @@ export default function SellForm({ symbol, maxShares, currentPrice, accountId, o
             value={date}
             onChange={(e) => setDate(e.target.value)}
             required
-            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+            className="px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
           />
         </div>
 
@@ -112,14 +112,14 @@ export default function SellForm({ symbol, maxShares, currentPrice, accountId, o
           <button
             type="button"
             onClick={onCancel}
-            className="px-3 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+            className="px-3 py-2 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading || !shares || !price}
-            className="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            className="px-3 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
           >
             {loading && (
               <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">

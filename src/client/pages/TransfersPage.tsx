@@ -114,7 +114,7 @@ export default function TransfersPage() {
         <h1 className="text-2xl font-bold text-gray-900">Transfers</h1>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700"
+          className="px-4 py-2 bg-orange-600 text-white rounded-xl hover:bg-orange-700"
         >
           {showAddForm ? 'Cancel' : 'New Transfer'}
         </button>
@@ -138,7 +138,7 @@ export default function TransfersPage() {
                 <select
                   value={newTransfer.fromAccountId}
                   onChange={(e) => setNewTransfer({ ...newTransfer, fromAccountId: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
                   required
                 >
                   <option value="">Select account</option>
@@ -158,7 +158,7 @@ export default function TransfersPage() {
                 <select
                   value={newTransfer.toAccountId}
                   onChange={(e) => setNewTransfer({ ...newTransfer, toAccountId: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
                   required
                 >
                   <option value="">Select account</option>
@@ -180,7 +180,7 @@ export default function TransfersPage() {
                   step="0.01"
                   value={newTransfer.fromAmount}
                   onChange={(e) => setNewTransfer({ ...newTransfer, fromAmount: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
                   required
                 />
               </div>
@@ -194,7 +194,7 @@ export default function TransfersPage() {
                     step="0.01"
                     value={newTransfer.toAmount}
                     onChange={(e) => setNewTransfer({ ...newTransfer, toAmount: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
                     required
                     placeholder="Amount in destination currency"
                   />
@@ -206,7 +206,7 @@ export default function TransfersPage() {
                   type="date"
                   value={newTransfer.date}
                   onChange={(e) => setNewTransfer({ ...newTransfer, date: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
                   required
                 />
               </div>
@@ -216,7 +216,7 @@ export default function TransfersPage() {
                   type="text"
                   value={newTransfer.notes}
                   onChange={(e) => setNewTransfer({ ...newTransfer, notes: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
                   placeholder="Optional notes"
                 />
               </div>
@@ -225,7 +225,7 @@ export default function TransfersPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="px-4 py-2 bg-orange-600 text-white rounded-xl hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {submitting && (
                   <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">

@@ -207,7 +207,7 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
                     value={formData.currency}
                     onChange={(e) => setFormData({ ...formData, currency: e.target.value as Currency })}
                     disabled={formData.type === 'stock'}
-                    className="pl-3 pr-1 py-3 bg-gray-50 border-r border-gray-300 text-gray-700 text-sm font-medium focus:outline-none disabled:bg-gray-100 disabled:text-gray-500"
+                    className="appearance-none pl-3 pr-1 py-3 bg-gray-50 border-r border-gray-300 text-gray-700 text-sm font-medium focus:outline-none disabled:bg-gray-100 disabled:text-gray-500"
                   >
                     <option value="EUR">EUR</option>
                     <option value="USD">USD</option>
@@ -248,7 +248,7 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
                     id="currency"
                     value={formData.currency}
                     onChange={(e) => setFormData({ ...formData, currency: e.target.value as Currency })}
-                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 disabled:bg-gray-100 disabled:text-gray-500"
+                    className="appearance-none w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 disabled:bg-gray-100 disabled:text-gray-500"
                     disabled={formData.type === 'stock'}
                   >
                     <option value="EUR">EUR - Euro</option>

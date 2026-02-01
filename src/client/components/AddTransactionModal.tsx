@@ -39,6 +39,8 @@ export default function AddTransactionModal({
   const [payeeQuery, setPayeeQuery] = useState('');
   const [categoryQuery, setCategoryQuery] = useState('');
 
+  const { shouldRender, isVisible } = useBottomSheet(isOpen);
+
   useEffect(() => {
     if (isOpen) {
       loadData();
@@ -137,7 +139,7 @@ export default function AddTransactionModal({
     }
   };
 
-  if (!isOpen) return null;
+  if (!shouldRender) return null;
 
   const currencySymbol = getCurrencySymbol(accountCurrency);
 
@@ -158,10 +160,6 @@ export default function AddTransactionModal({
   const categoryExists = categories
     .filter((c) => formData.type === 'inflow' ? c.type === 'income' : c.type === 'expense')
     .some((c) => c.name.toLowerCase() === categoryQuery.toLowerCase());
-
-  const { shouldRender, isVisible } = useBottomSheet(isOpen);
-
-  if (!shouldRender) return null;
 
   return createPortal(
     <div

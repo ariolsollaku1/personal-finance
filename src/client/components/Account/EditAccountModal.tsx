@@ -58,7 +58,7 @@ export default function EditAccountModal({
               type="text"
               value={editAccountData.name}
               onChange={(e) => setEditAccountData({ ...editAccountData, name: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
               required
             />
           </div>
@@ -77,7 +77,7 @@ export default function EditAccountModal({
                     initialBalance: parseFloat(e.target.value) || 0,
                   })
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
               />
             </div>
           )}

@@ -210,7 +210,7 @@ function CategoryItem({ category, editingId, editName, setEditingId, setEditName
           type="text"
           value={editName}
           onChange={(e) => setEditName(e.target.value)}
-          className="flex-1 px-3 py-2 bg-white border border-orange-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          className="flex-1 px-4 py-3 bg-white border border-orange-300 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
           autoFocus
         />
         <button

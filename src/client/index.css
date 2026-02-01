@@ -2,6 +2,94 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  /* Remove default appearance from selects, date and number inputs */
+  select,
+  input[type="date"],
+  input[type="number"] {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+  }
+
+  /* Hide number input spinners */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+
+  /* Custom select chevron */
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+  }
+
+  /* Radio button reset */
+  input[type="radio"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid #d1d5db;
+    border-radius: 50%;
+    background-color: white;
+    transition: all 150ms ease-in-out;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  input[type="radio"]:checked {
+    border-color: #f97316;
+    background-color: #f97316;
+    box-shadow: inset 0 0 0 3px white;
+  }
+
+  input[type="radio"]:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px white, 0 0 0 4px #f97316;
+  }
+
+  input[type="radio"]:checked:focus {
+    box-shadow: inset 0 0 0 3px white, 0 0 0 2px white, 0 0 0 4px #f97316;
+  }
+
+  /* Checkbox reset (future-proofing) */
+  input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid #d1d5db;
+    border-radius: 0.25rem;
+    background-color: white;
+    transition: all 150ms ease-in-out;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  input[type="checkbox"]:checked {
+    border-color: #f97316;
+    background-color: #f97316;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='white'%3E%3Cpath fill-rule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clip-rule='evenodd'/%3E%3C/svg%3E");
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  input[type="checkbox"]:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px white, 0 0 0 4px #f97316;
+  }
+}
+
 body {
   @apply bg-gray-100 text-gray-900;
 }

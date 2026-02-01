@@ -68,7 +68,7 @@ export default function EditTransactionModal({
                 type="radio"
                 checked={tx.type === 'inflow'}
                 onChange={() => setEditingTransaction({ ...tx, type: 'inflow' })}
-                className="mr-2"
+                className="w-4 h-4 mr-2"
               />
               {isStockAccount ? 'Deposit' : 'Income'}
             </label>
@@ -77,7 +77,7 @@ export default function EditTransactionModal({
                 type="radio"
                 checked={tx.type === 'outflow'}
                 onChange={() => setEditingTransaction({ ...tx, type: 'outflow' })}
-                className="mr-2"
+                className="w-4 h-4 mr-2"
               />
               {isStockAccount ? 'Withdrawal' : 'Expense'}
             </label>
@@ -94,7 +94,7 @@ export default function EditTransactionModal({
                   amount: parseFloat(e.target.value) || 0,
                 })
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
               required
             />
           </div>
@@ -106,7 +106,7 @@ export default function EditTransactionModal({
               onChange={(e) =>
                 setEditingTransaction({ ...tx, date: e.target.value })
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
               required
             />
           </div>
@@ -120,7 +120,7 @@ export default function EditTransactionModal({
                   onChange={(e) =>
                     setEditingTransaction({ ...tx, payee_name: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
                   list="payees-edit-tx"
                 />
                 <datalist id="payees-edit-tx">
@@ -136,7 +136,7 @@ export default function EditTransactionModal({
                   onChange={(e) =>
                     setEditingTransaction({ ...tx, category_name: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
                 >
                   <option value="">Select category</option>
                   {filteredCategories.map((c) => (
@@ -156,7 +156,7 @@ export default function EditTransactionModal({
               onChange={(e) =>
                 setEditingTransaction({ ...tx, notes: e.target.value })
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
             />
           </div>
           <div className="flex flex-col-reverse lg:flex-row gap-3">

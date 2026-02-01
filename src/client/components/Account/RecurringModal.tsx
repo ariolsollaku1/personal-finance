@@ -67,7 +67,7 @@ export function AddRecurringModal({
                 type="radio"
                 checked={newRecurring.type === 'inflow'}
                 onChange={() => setNewRecurring({ ...newRecurring, type: 'inflow' })}
-                className="mr-2"
+                className="w-4 h-4 mr-2"
               />
               {isStockAccount ? 'Deposit' : 'Income'}
             </label>
@@ -76,7 +76,7 @@ export function AddRecurringModal({
                 type="radio"
                 checked={newRecurring.type === 'outflow'}
                 onChange={() => setNewRecurring({ ...newRecurring, type: 'outflow' })}
-                className="mr-2"
+                className="w-4 h-4 mr-2"
               />
               {isStockAccount ? 'Withdrawal' : 'Expense'}
             </label>
@@ -88,7 +88,7 @@ export function AddRecurringModal({
               step="0.01"
               value={newRecurring.amount}
               onChange={(e) => setNewRecurring({ ...newRecurring, amount: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
               required
             />
           </div>
@@ -100,7 +100,7 @@ export function AddRecurringModal({
                   type="text"
                   value={newRecurring.payee}
                   onChange={(e) => setNewRecurring({ ...newRecurring, payee: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
                   list="payees-add"
                 />
                 <datalist id="payees-add">
@@ -114,7 +114,7 @@ export function AddRecurringModal({
                 <select
                   value={newRecurring.category}
                   onChange={(e) => setNewRecurring({ ...newRecurring, category: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
                 >
                   <option value="">Select category</option>
                   {filteredCategories.map((c) => (
@@ -133,7 +133,7 @@ export function AddRecurringModal({
                 type="text"
                 value={newRecurring.notes}
                 onChange={(e) => setNewRecurring({ ...newRecurring, notes: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
                 placeholder="e.g., Monthly deposit"
               />
             </div>
@@ -145,7 +145,7 @@ export function AddRecurringModal({
               onChange={(e) =>
                 setNewRecurring({ ...newRecurring, frequency: e.target.value as Frequency })
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
             >
               <option value="weekly">Weekly</option>
               <option value="biweekly">Bi-weekly</option>
@@ -159,7 +159,7 @@ export function AddRecurringModal({
               type="date"
               value={newRecurring.nextDueDate}
               onChange={(e) => setNewRecurring({ ...newRecurring, nextDueDate: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
               required
             />
           </div>
@@ -258,7 +258,7 @@ export function EditRecurringModal({
                 type="radio"
                 checked={rec.type === 'inflow'}
                 onChange={() => setEditingRecurring({ ...rec, type: 'inflow' })}
-                className="mr-2"
+                className="w-4 h-4 mr-2"
               />
               {isStockAccount ? 'Deposit' : 'Income'}
             </label>
@@ -267,7 +267,7 @@ export function EditRecurringModal({
                 type="radio"
                 checked={rec.type === 'outflow'}
                 onChange={() => setEditingRecurring({ ...rec, type: 'outflow' })}
-                className="mr-2"
+                className="w-4 h-4 mr-2"
               />
               {isStockAccount ? 'Withdrawal' : 'Expense'}
             </label>
@@ -284,7 +284,7 @@ export function EditRecurringModal({
                   amount: parseFloat(e.target.value) || 0,
                 })
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
               required
             />
           </div>
@@ -298,7 +298,7 @@ export function EditRecurringModal({
                   onChange={(e) =>
                     setEditingRecurring({ ...rec, payee_name: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
                   list="payees-edit-rec"
                 />
                 <datalist id="payees-edit-rec">
@@ -314,7 +314,7 @@ export function EditRecurringModal({
                   onChange={(e) =>
                     setEditingRecurring({ ...rec, category_name: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
                 >
                   <option value="">Select category</option>
                   {filteredCategories.map((c) => (
@@ -335,7 +335,7 @@ export function EditRecurringModal({
                 onChange={(e) =>
                   setEditingRecurring({ ...rec, notes: e.target.value })
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
               />
             </div>
           )}
@@ -349,7 +349,7 @@ export function EditRecurringModal({
                   frequency: e.target.value as Frequency,
                 })
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
             >
               <option value="weekly">Weekly</option>
               <option value="biweekly">Bi-weekly</option>
@@ -365,7 +365,7 @@ export function EditRecurringModal({
               onChange={(e) =>
                 setEditingRecurring({ ...rec, next_due_date: e.target.value })
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
               required
             />
           </div>
