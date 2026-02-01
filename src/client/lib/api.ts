@@ -370,12 +370,12 @@ export const recurringApi = {
     }),
   delete: (id: number) =>
     fetchApi<{ success: boolean }>(`/recurring/${id}`, { method: 'DELETE' }),
-  apply: (id: number, date?: string) =>
+  apply: (id: number, date?: string, amount?: number) =>
     fetchApi<{ transaction: AccountTransaction; recurring: RecurringTransaction; message: string }>(
       `/recurring/${id}/apply`,
       {
         method: 'POST',
-        body: JSON.stringify({ date }),
+        body: JSON.stringify({ date, amount }),
       }
     ),
 };

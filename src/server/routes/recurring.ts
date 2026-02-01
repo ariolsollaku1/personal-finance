@@ -217,7 +217,7 @@ router.post('/:id/apply', async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
     const id = parseInt(req.params.id);
-    const { date } = req.body;
+    const { date, amount } = req.body;
 
     const recurring = await recurringQueries.getById(userId, id);
     if (!recurring) {
@@ -225,14 +225,14 @@ router.post('/:id/apply', async (req: Request, res: Response) => {
     }
 
     // Use provided date or the next due date
-    const transactionDate = date || recurring.next_due_date;
+    const transactionDate = date || (recurring.next_due_date instanceof Date ? format(recurring.next_due_date, 'yyyy-MM-dd') : recurring.next_due_date);
 
-    // Create the actual transaction
+    // Create the actual transaction (use overridden amount if provided)
     const txId = await accountTransactionQueries.create(
       userId,
       recurring.account_id,
       recurring.type as TransactionType,
-      recurring.amount,
+      amount || recurring.amount,
       transactionDate,
       recurring.payee_id,
       recurring.category_id,

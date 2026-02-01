@@ -4,6 +4,7 @@ import {
   accountsApi,
   accountTransactionsApi,
   recurringApi,
+  RecurringTransaction,
 } from '../lib/api';
 import {
   useAccountPage,
@@ -19,6 +20,7 @@ import {
   EditTransactionModal,
   AddRecurringModal,
   EditRecurringModal,
+  ApplyRecurringModal,
 } from '../components/Account';
 import AddHoldingForm from '../components/Portfolio/AddHoldingForm';
 import HoldingsList from '../components/Portfolio/HoldingsList';
@@ -46,6 +48,7 @@ export default function AccountPage() {
   };
 
   const [stockTab, setStockTab] = useState<StockTab>(getInitialTab);
+  const [applyingRecurring, setApplyingRecurring] = useState<RecurringTransaction | null>(null);
 
   // Custom hooks for state management
   const accountState = useAccountPage(accountId);
@@ -116,9 +119,15 @@ export default function AccountPage() {
     }
   };
 
-  const handleApplyRecurring = async (recurringId: number) => {
+  const handleApplyRecurring = (recurringId: number) => {
+    const item = recurring.find((r) => r.id === recurringId);
+    if (item) setApplyingRecurring(item);
+  };
+
+  const handleConfirmApply = async (id: number, amount: number) => {
     try {
-      await recurringApi.apply(recurringId);
+      await recurringApi.apply(id, undefined, amount);
+      setApplyingRecurring(null);
       refreshData();
       window.dispatchEvent(new Event('accounts-changed'));
     } catch (err) {
@@ -409,6 +418,15 @@ export default function AccountPage() {
           window.dispatchEvent(new Event('accounts-changed'));
         }}
       />
+
+      {applyingRecurring && (
+        <ApplyRecurringModal
+          recurring={applyingRecurring}
+          currency={account.currency}
+          onConfirm={handleConfirmApply}
+          onClose={() => setApplyingRecurring(null)}
+        />
+      )}
     </div>
   );
 }

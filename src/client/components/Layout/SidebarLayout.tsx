@@ -1,6 +1,10 @@
 import { ReactNode, useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopNavbar from './TopNavbar';
+import BottomTabBar from './BottomTabBar';
+import MoreMenu from './MoreMenu';
+import MobileAccountList from './MobileAccountList';
 import { dashboardApi } from '../../lib/api';
 
 interface SidebarLayoutProps {
@@ -10,6 +14,14 @@ interface SidebarLayoutProps {
 export default function SidebarLayout({ children }: SidebarLayoutProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const location = useLocation();
+
+  // Close mobile panels on navigation
+  useEffect(() => {
+    setMobileOpen(false);
+    setMoreOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     // Load sidebar state from server
@@ -35,11 +47,11 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
   return (
     <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
       {/* Top Navbar */}
-      <TopNavbar onMobileMenuClick={() => setMobileOpen(true)} />
+      <TopNavbar />
 
       {/* Main content area with sidebar */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Mobile overlay */}
+        {/* Mobile accounts bottom sheet overlay */}
         {mobileOpen && (
           <div
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-20 lg:hidden"
@@ -47,13 +59,22 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
           />
         )}
 
-        {/* Mobile sidebar */}
+        {/* Mobile accounts bottom sheet */}
         <div
-          className={`fixed inset-y-0 left-0 z-30 transform lg:hidden transition-transform duration-300 ${
-            mobileOpen ? 'translate-x-0' : '-translate-x-full'
+          className={`fixed bottom-0 left-0 right-0 z-30 lg:hidden transition-transform duration-300 ${
+            mobileOpen ? 'translate-y-0' : 'translate-y-full'
           }`}
+          style={{ maxHeight: '80vh', paddingBottom: 'env(safe-area-inset-bottom)' }}
         >
-          <Sidebar collapsed={false} onToggle={() => setMobileOpen(false)} />
+          <div className="bg-white rounded-t-2xl shadow-xl overflow-hidden flex flex-col" style={{ maxHeight: '80vh' }}>
+            {/* Drag handle */}
+            <div className="flex justify-center pt-3 pb-2 flex-shrink-0">
+              <div className="w-10 h-1 bg-gray-300 rounded-full" />
+            </div>
+            <div className="overflow-y-auto flex-1">
+              <MobileAccountList onSelect={() => setMobileOpen(false)} />
+            </div>
+          </div>
         </div>
 
         {/* Desktop sidebar */}
@@ -62,10 +83,31 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
         </div>
 
         {/* Page content */}
-        <main className="flex-1 p-4 lg:p-8 overflow-auto">
+        <main className="flex-1 p-4 lg:p-8 pb-20 lg:pb-8 overflow-auto">
           <div className="max-w-7xl mx-auto">{children}</div>
         </main>
       </div>
+
+      {/* Mobile bottom tab bar */}
+      <BottomTabBar
+        onAccountsClick={() => {
+          setMoreOpen(false);
+          setMobileOpen(!mobileOpen);
+        }}
+        onMoreClick={() => {
+          setMobileOpen(false);
+          setMoreOpen(!moreOpen);
+        }}
+        onTabClick={() => {
+          setMobileOpen(false);
+          setMoreOpen(false);
+        }}
+        isAccountsOpen={mobileOpen}
+        isMoreOpen={moreOpen}
+      />
+
+      {/* More menu */}
+      <MoreMenu isOpen={moreOpen} onClose={() => setMoreOpen(false)} />
     </div>
   );
 }

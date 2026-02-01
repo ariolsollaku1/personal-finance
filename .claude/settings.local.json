@@ -62,7 +62,10 @@
       "Bash(docker run --rm postgres:17-alpine psql \"postgresql://postgres:*$95lydtiDhdV!@207.180.192.49:5432/postgres\" -c \"\\\\l\")",
       "Bash(docker run --rm postgres:17-alpine psql \"postgresql://postgres:*$95lydtiDhdV!@207.180.192.49:5432/personal_finance\" -c \"\\\\dt\")",
       "Bash(docker run --rm postgres:17-alpine psql \"postgresql://postgres:*$95lydtiDhdV!@207.180.192.49:5432/postgres\" -c \"\\\\dt\")",
-      "Bash(docker run:*)"
+      "Bash(docker run:*)",
+      "Bash(npm run build:client:*)",
+      "Bash(dir:*)",
+      "Bash(node:*)"
     ]
   }
 }

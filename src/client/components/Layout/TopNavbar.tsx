@@ -2,11 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 
-interface TopNavbarProps {
-  onMobileMenuClick: () => void;
-}
-
-export default function TopNavbar({ onMobileMenuClick }: TopNavbarProps) {
+export default function TopNavbar() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
@@ -33,16 +29,6 @@ export default function TopNavbar({ onMobileMenuClick }: TopNavbarProps) {
       <div className="h-full px-4 lg:px-6 flex items-center justify-between">
         {/* Left: Mobile menu + Logo */}
         <div className="flex items-center gap-3">
-          {/* Mobile menu button */}
-          <button
-            onClick={onMobileMenuClick}
-            className="lg:hidden p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-all duration-200"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-
           {/* Logo */}
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/25">

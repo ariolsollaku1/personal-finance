@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { DashboardData, dashboardApi, recurringApi } from '../lib/api';
+import { DashboardData, DueRecurring, dashboardApi, recurringApi } from '../lib/api';
 import { formatCurrency } from '../lib/currency';
 import AddAccountModal from '../components/AddAccountModal';
+import { ApplyRecurringModal } from '../components/Account';
 import { DashboardSkeleton } from '../components/Skeleton';
 
 export default function Dashboard() {
@@ -10,6 +11,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddAccount, setShowAddAccount] = useState(false);
+  const [applyingRecurring, setApplyingRecurring] = useState<DueRecurring | null>(null);
 
   useEffect(() => {
     loadDashboard();
@@ -28,9 +30,14 @@ export default function Dashboard() {
     }
   };
 
-  const handleApplyRecurring = async (id: number) => {
+  const handleApplyRecurring = (recurring: DueRecurring) => {
+    setApplyingRecurring(recurring);
+  };
+
+  const handleConfirmApply = async (id: number, amount: number) => {
     try {
-      await recurringApi.apply(id);
+      await recurringApi.apply(id, undefined, amount);
+      setApplyingRecurring(null);
       loadDashboard();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to apply recurring transaction');
@@ -192,7 +199,7 @@ export default function Dashboard() {
                     {formatCurrency(recurring.amount, recurring.currency)}
                   </span>
                   <button
-                    onClick={() => handleApplyRecurring(recurring.id)}
+                    onClick={() => handleApplyRecurring(recurring)}
                     className="px-4 py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-all duration-200 font-medium"
                   >
                     Apply
@@ -309,6 +316,15 @@ export default function Dashboard() {
 
       {/* Add Account Modal */}
       <AddAccountModal isOpen={showAddAccount} onClose={() => setShowAddAccount(false)} />
+
+      {applyingRecurring && (
+        <ApplyRecurringModal
+          recurring={applyingRecurring}
+          currency={applyingRecurring.currency}
+          onConfirm={handleConfirmApply}
+          onClose={() => setApplyingRecurring(null)}
+        />
+      )}
     </div>
   );
 }
