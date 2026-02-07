@@ -92,7 +92,7 @@ export default function Dashboard() {
           { label: 'Stocks', value: data.byType.stock.total, count: data.byType.stock.count, icon: '📈', color: 'text-gray-900' },
           { label: 'Assets', value: data.byType.asset.total, count: data.byType.asset.count, icon: '🏠', color: 'text-gray-900' },
           { label: 'Loans', value: data.byType.loan.total, count: data.byType.loan.count, icon: '📋', color: 'text-red-600', negative: true },
-          { label: 'Credit', value: data.byType.credit.owed, count: data.byType.credit.count, icon: '💳', color: data.byType.credit.owed > 0 ? 'text-red-600' : 'text-gray-900', negative: data.byType.credit.owed > 0 },
+          { label: 'Credit', value: data.byType.credit.total - data.byType.credit.owed, count: data.byType.credit.count, icon: '💳', color: 'text-gray-900' },
         ].map((item) => (
           <div key={item.label} className="bg-white rounded-xl shadow-sm border border-gray-100/80 hover:shadow-lg hover:shadow-orange-500/5 hover:-translate-y-0.5 transition-all duration-300 p-4">
             <div className="flex items-center justify-between mb-2">

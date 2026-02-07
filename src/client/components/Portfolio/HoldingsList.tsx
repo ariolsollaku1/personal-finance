@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
 import { HoldingWithQuote } from '../../lib/api';
-import HoldingRow from './HoldingRow';
+import HoldingRow, { MobileHoldingCard } from './HoldingRow';
 
 interface HoldingsListProps {
   holdings: HoldingWithQuote[];
+  closedHoldings?: HoldingWithQuote[];
   accountId: number;
   onUpdate: () => void;
 }
@@ -11,12 +12,12 @@ interface HoldingsListProps {
 type SortColumn = 'symbol' | 'shares' | 'avgCost' | 'currentPrice' | 'marketValue' | 'gain' | 'dayChange';
 type SortDirection = 'asc' | 'desc';
 
-export default function HoldingsList({ holdings, accountId, onUpdate }: HoldingsListProps) {
+export default function HoldingsList({ holdings, closedHoldings = [], accountId, onUpdate }: HoldingsListProps) {
   const [sortColumn, setSortColumn] = useState<SortColumn>('symbol');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
-  const sortedHoldings = useMemo(() => {
-    return [...holdings].sort((a, b) => {
+  const sortHoldings = (list: HoldingWithQuote[]) => {
+    return [...list].sort((a, b) => {
       let aVal: number | string;
       let bVal: number | string;
 
@@ -63,7 +64,10 @@ export default function HoldingsList({ holdings, accountId, onUpdate }: Holdings
         ? (aVal as number) - (bVal as number)
         : (bVal as number) - (aVal as number);
     });
-  }, [holdings, sortColumn, sortDirection]);
+  };
+
+  const sortedActive = useMemo(() => sortHoldings(holdings), [holdings, sortColumn, sortDirection]);
+  const sortedClosed = useMemo(() => sortHoldings(closedHoldings), [closedHoldings, sortColumn, sortDirection]);
 
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
@@ -85,7 +89,7 @@ export default function HoldingsList({ holdings, accountId, onUpdate }: Holdings
 
   const headerClass = "px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none";
 
-  if (holdings.length === 0) {
+  if (holdings.length === 0 && closedHoldings.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
         No holdings yet. Add your first stock to get started.
@@ -95,7 +99,8 @@ export default function HoldingsList({ holdings, accountId, onUpdate }: Holdings
 
   return (
     <div className="bg-white rounded-lg shadow overflow-hidden">
-      <div className="overflow-x-auto">
+      {/* Desktop table layout */}
+      <div className="hidden lg:block overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -147,11 +152,36 @@ export default function HoldingsList({ holdings, accountId, onUpdate }: Holdings
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {sortedHoldings.map((holding) => (
+            {sortedActive.map((holding) => (
+              <HoldingRow key={holding.id} holding={holding} accountId={accountId} onUpdate={onUpdate} />
+            ))}
+            {sortedClosed.length > 0 && sortedActive.length > 0 && (
+              <tr>
+                <td colSpan={8} className="px-6 py-2 bg-gray-50 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  Closed Positions
+                </td>
+              </tr>
+            )}
+            {sortedClosed.map((holding) => (
               <HoldingRow key={holding.id} holding={holding} accountId={accountId} onUpdate={onUpdate} />
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile card layout */}
+      <div className="lg:hidden divide-y divide-gray-200">
+        {sortedActive.map((holding) => (
+          <MobileHoldingCard key={holding.id} holding={holding} accountId={accountId} onUpdate={onUpdate} />
+        ))}
+        {sortedClosed.length > 0 && sortedActive.length > 0 && (
+          <div className="px-4 py-2 bg-gray-50 text-xs font-medium text-gray-400 uppercase tracking-wider">
+            Closed Positions
+          </div>
+        )}
+        {sortedClosed.map((holding) => (
+          <MobileHoldingCard key={holding.id} holding={holding} accountId={accountId} onUpdate={onUpdate} />
+        ))}
       </div>
     </div>
   );

@@ -131,6 +131,7 @@ export async function getMonthlySummaries(userId: string): Promise<PnLSummary> {
   const mainCurrency = await settingsQueries.getMainCurrency(userId);
   const accounts = await accountQueries.getAll(userId);
   const accountIds = accounts.map(a => a.id);
+  const stockAccountIds = new Set(accounts.filter(a => a.type === 'stock').map(a => a.id));
 
   if (accountIds.length === 0) {
     return {
@@ -169,6 +170,8 @@ export async function getMonthlySummaries(userId: string): Promise<PnLSummary> {
   for (const tx of transactions) {
     // Skip transfers to avoid double counting
     if (tx.transfer_id) continue;
+    // Skip stock account transactions unless they are dividend payments
+    if (stockAccountIds.has(tx.account_id) && !tx.notes?.startsWith('Dividend: ')) continue;
 
     const dateStr = formatDateString(tx.date);
     const monthKey = dateStr.substring(0, 7); // YYYY-MM
@@ -256,6 +259,7 @@ export async function getMonthDetail(userId: string, month: string): Promise<PnL
 
   const accounts = await accountQueries.getAll(userId);
   const accountIds = accounts.map(a => a.id);
+  const stockAccountIds = new Set(accounts.filter(a => a.type === 'stock').map(a => a.id));
 
   const [year, monthNum] = month.split('-').map(Number);
   const monthDate = new Date(year, monthNum - 1, 1);
@@ -306,6 +310,8 @@ export async function getMonthDetail(userId: string, month: string): Promise<PnL
   for (const tx of transactions) {
     // Skip transfers
     if (tx.transfer_id) continue;
+    // Skip stock account transactions unless they are dividend payments
+    if (stockAccountIds.has(tx.account_id) && !tx.notes?.startsWith('Dividend: ')) continue;
 
     const amountInMain = convertToMainCurrency(
       Number(tx.amount),

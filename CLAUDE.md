@@ -217,7 +217,7 @@ Muted: text-sm text-gray-500
 | `lib/api.ts` | API client with token caching, retry logic, envelope unwrap, mutation invalidation |
 | `lib/apiCache.ts` | localStorage cache utilities (`getCache`, `setCache`, `invalidateCache`, `clearAllCache`) |
 | `hooks/useSWR.ts` | Stale-while-revalidate hook for GET requests |
-| `hooks/useAccountPage.ts` | Consolidated state for AccountPage (20+ useState → 1 hook) |
+| `hooks/useAccountPage.ts` | Consolidated state for SwipeAccountPage (20+ useState → 1 hook) |
 | `components/ErrorBoundary.tsx` | Catches React errors, shows fallback UI |
 | `contexts/AuthContext.tsx` | Auth state (user, session, signIn, signOut) |
 

@@ -218,10 +218,34 @@ function withInvalidation<A extends unknown[], R>(
 }
 
 // Accounts API
+export interface PerformancePoint {
+  date: string;
+  value: number;
+  changePercent: number;
+}
+
+export interface PerformanceEvent {
+  date: string;
+  type: 'buy' | 'sell' | 'dividend';
+  symbol: string;
+  shares?: number;
+  price?: number;
+  amount?: number;
+}
+
+export interface PerformanceData {
+  portfolio: PerformancePoint[];
+  benchmark: PerformancePoint[];
+  events?: PerformanceEvent[];
+}
+
 export const accountsApi = {
   getAll: () => fetchApi<Account[]>('/accounts'),
   get: (id: number) => fetchApi<Account>(`/accounts/${id}`),
   getPortfolio: (id: number) => fetchApi<PortfolioSummary>(`/accounts/${id}/portfolio`),
+  getPerformance: (id: number, period: string) =>
+    fetchApi<PerformanceData>(`/accounts/${id}/performance?period=${period}`),
+  getArchived: () => fetchApi<Account[]>('/accounts/archived'),
   create: withInvalidation(
     (data: { name: string; type: AccountType; currency: Currency; initialBalance?: number }) =>
       fetchApi<Account>('/accounts', {
@@ -250,6 +274,16 @@ export const accountsApi = {
         body: JSON.stringify({ isFavorite }),
       }),
     '/accounts', '/dashboard'
+  ),
+  archive: withInvalidation(
+    (id: number) =>
+      fetchApi<{ archived: boolean }>(`/accounts/${id}/archive`, { method: 'PUT' }),
+    '/accounts', '/dashboard', '/accounts/archived'
+  ),
+  unarchive: withInvalidation(
+    (id: number) =>
+      fetchApi<{ unarchived: boolean }>(`/accounts/${id}/unarchive`, { method: 'PUT' }),
+    '/accounts', '/dashboard', '/accounts/archived'
   ),
 };
 
@@ -507,6 +541,7 @@ export interface HoldingWithQuote {
   dayChange: number;
   dayChangePercent: number;
   name: string;
+  realizedGain?: number;
 }
 
 export interface PortfolioSummary {
@@ -518,6 +553,7 @@ export interface PortfolioSummary {
   dayChange: number;
   dayChangePercent: number;
   holdings: HoldingWithQuote[];
+  closedHoldings: HoldingWithQuote[];
 }
 
 export const portfolioApi = {
@@ -551,6 +587,17 @@ export const holdingsApi = {
       }),
     '/holdings', '/accounts', '/dashboard'
   ),
+  getTransactions: (symbol: string, accountId: number) =>
+    fetchApi<Transaction[]>(`/holdings/${symbol}/transactions?accountId=${accountId}`),
+  updateTransaction: (symbol: string, txId: number, data: { shares?: number; price?: number; fees?: number }) =>
+    fetchApi<Transaction>(`/holdings/${symbol}/transactions/${txId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deleteTransaction: (symbol: string, txId: number) =>
+    fetchApi<{ deleted: boolean }>(`/holdings/${symbol}/transactions/${txId}`, {
+      method: 'DELETE',
+    }),
 };
 
 // Transactions API (StockTransaction type)

@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmModal from '../components/ConfirmModal';
+import PayLoanModal from '../components/PayLoanModal';
+import LoanPaidOffModal from '../components/LoanPaidOffModal';
 import {
   Account,
   accountsApi,
@@ -32,6 +34,7 @@ import {
 import AddHoldingForm from '../components/Portfolio/AddHoldingForm';
 import HoldingsList from '../components/Portfolio/HoldingsList';
 import Summary from '../components/Portfolio/Summary';
+import PortfolioPerformanceChart from '../components/Charts/PortfolioPerformanceChart';
 import DividendList from '../components/Dividends/DividendList';
 import TaxSummary from '../components/Dividends/TaxSummary';
 import AddTransactionModal from '../components/AddTransactionModal';
@@ -125,6 +128,8 @@ export default function SwipeAccountPage() {
   // ── Hooks ──
   const [stockTab, setStockTab] = useState<StockTab>('holdings');
   const [applyingRecurring, setApplyingRecurring] = useState<RecurringTransaction | null>(null);
+  const [showPayLoanModal, setShowPayLoanModal] = useState(false);
+  const [showPaidOffModal, setShowPaidOffModal] = useState(false);
   const toast = useToast();
   const modals = useAccountModals();
   const recurringForm = useNewRecurringForm();
@@ -271,6 +276,40 @@ export default function SwipeAccountPage() {
     }
   };
 
+  const handleArchiveAccount = async () => {
+    if (!await confirm({ title: 'Archive Account', message: `Archive "${account?.name}"? It will be hidden from your accounts list but can be restored from Settings > Archived.`, confirmLabel: 'Archive' })) return;
+    try {
+      await accountsApi.archive(accountId);
+      toast.success('Account', 'Account archived');
+      navigate('/');
+    } catch (err) {
+      toast.error('Account', err instanceof Error ? err.message : 'Failed to archive account');
+    }
+  };
+
+  // Loan payment handlers
+  const handlePayLoanSuccess = (newBalance: number) => {
+    setShowPayLoanModal(false);
+    // Check if loan is fully paid off (balance >= 0)
+    if (newBalance >= 0) {
+      setShowPaidOffModal(true);
+    }
+  };
+
+  const handleLoanArchived = () => {
+    setShowPaidOffModal(false);
+    toast.success('Account', 'Loan archived successfully');
+    navigate('/');
+  };
+
+  // Filter source accounts for loan payments (bank/cash only, not the loan itself)
+  const sourceAccountsForLoan = useMemo(() => {
+    if (!allAccounts) return [];
+    return allAccounts.filter(
+      (a) => (a.type === 'bank' || a.type === 'cash') && a.id !== accountId && (a.balance || 0) > 0
+    );
+  }, [allAccounts, accountId]);
+
   // ── Loading states ──
   // No cached accounts at all — first visit ever
   if (!allAccounts) {
@@ -297,7 +336,9 @@ export default function SwipeAccountPage() {
         portfolio={portfolio}
         onEdit={() => modals.setShowEditAccount(true)}
         onDelete={handleDeleteAccount}
+        onArchive={handleArchiveAccount}
         onAccountChange={setActiveAccountId}
+        onPayLoan={account?.type === 'loan' ? () => setShowPayLoanModal(true) : undefined}
       />
 
       {contentLoading ? (
@@ -332,6 +373,8 @@ export default function SwipeAccountPage() {
                 refreshing={portfolioRefreshing}
                 onRefresh={() => refreshPortfolio()}
               />
+
+              <PortfolioPerformanceChart accountId={accountId} />
 
               {/* Tabs */}
               <div className="border-b border-gray-200">
@@ -374,7 +417,7 @@ export default function SwipeAccountPage() {
                     />
                   )}
 
-                  <HoldingsList holdings={portfolio.holdings} accountId={accountId} onUpdate={refreshData} />
+                  <HoldingsList holdings={portfolio.holdings} closedHoldings={portfolio.closedHoldings} accountId={accountId} onUpdate={refreshData} />
                 </div>
               )}
 
@@ -516,6 +559,25 @@ export default function SwipeAccountPage() {
         onConfirm={handleConfirm}
         onCancel={handleCancel}
       />
+
+      {/* Loan Payment Modals */}
+      {account && account.type === 'loan' && (
+        <>
+          <PayLoanModal
+            isOpen={showPayLoanModal}
+            onClose={() => setShowPayLoanModal(false)}
+            loanAccount={account}
+            sourceAccounts={sourceAccountsForLoan}
+            onSuccess={handlePayLoanSuccess}
+          />
+          <LoanPaidOffModal
+            isOpen={showPaidOffModal}
+            onClose={() => setShowPaidOffModal(false)}
+            loanAccount={account}
+            onArchive={handleLoanArchived}
+          />
+        </>
+      )}
     </div>
   );
 }

@@ -44,8 +44,7 @@ function getDisplayBalance(account: Account): { value: string; negative: boolean
     return { value: formatCompactCurrency(account.costBasis || 0, 'USD'), negative: false };
   }
   if (account.type === 'credit') {
-    const owed = account.initial_balance - (account.balance || 0);
-    return { value: formatCompactCurrency(owed, account.currency), negative: owed > 0 };
+    return { value: formatCompactCurrency(account.balance || 0, account.currency), negative: false };
   }
   return { value: formatCompactCurrency(account.balance || 0, account.currency), negative: (account.balance || 0) < 0 };
 }

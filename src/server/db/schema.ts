@@ -4,6 +4,12 @@ import { migrations, type Migration } from './migrations/index.js';
 
 dotenv.config();
 
+// Parse NUMERIC/DECIMAL columns as JavaScript numbers instead of strings
+pg.types.setTypeParser(1700, (val: string) => parseFloat(val));
+// Return DATE columns as 'YYYY-MM-DD' strings instead of Date objects
+// This avoids broken comparisons (Date <= string → NaN → always false)
+pg.types.setTypeParser(1082, (val: string) => val);
+
 const { Pool } = pg;
 
 // Create connection pool

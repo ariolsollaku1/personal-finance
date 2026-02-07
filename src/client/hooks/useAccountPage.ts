@@ -27,6 +27,7 @@ export interface PortfolioData {
   dayChange: number;
   dayChangePercent: number;
   holdings: HoldingWithQuote[];
+  closedHoldings: HoldingWithQuote[];
 }
 
 export interface NewRecurringForm {

@@ -8,6 +8,7 @@ import TransfersPage from './pages/TransfersPage';
 import CategoriesPage from './pages/settings/CategoriesPage';
 import PayeesPage from './pages/settings/PayeesPage';
 import CurrencyPage from './pages/settings/CurrencyPage';
+import ArchivedAccountsPage from './pages/settings/ArchivedAccountsPage';
 import ProjectionPage from './pages/ProjectionPage';
 import PnLPage from './pages/PnLPage';
 import LoginPage from './pages/LoginPage';
@@ -38,6 +39,7 @@ function App() {
                   <Route path="/settings/categories" element={<CategoriesPage />} />
                   <Route path="/settings/payees" element={<PayeesPage />} />
                   <Route path="/settings/currency" element={<CurrencyPage />} />
+                  <Route path="/settings/archived" element={<ArchivedAccountsPage />} />
                 </Routes>
               </SidebarLayout>
             </ErrorBoundary>

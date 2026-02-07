@@ -9,7 +9,9 @@ interface SwipeableAccountHeaderProps {
   portfolio: PortfolioData | null;
   onEdit: () => void;
   onDelete: () => void;
+  onArchive?: () => void;
   onAccountChange: (id: number) => void;
+  onPayLoan?: () => void;
 }
 
 export default function SwipeableAccountHeader({
@@ -18,7 +20,9 @@ export default function SwipeableAccountHeader({
   portfolio,
   onEdit,
   onDelete,
+  onArchive,
   onAccountChange,
+  onPayLoan,
 }: SwipeableAccountHeaderProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const startXRef = useRef(0);
@@ -142,6 +146,8 @@ export default function SwipeableAccountHeader({
         portfolio={portfolio}
         onEdit={onEdit}
         onDelete={onDelete}
+        onArchive={onArchive}
+        onPayLoan={onPayLoan}
       />
     );
   }
@@ -161,6 +167,8 @@ export default function SwipeableAccountHeader({
                 portfolio={i === activeIndex ? portfolio : null}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                onArchive={onArchive}
+                onPayLoan={i === activeIndex ? onPayLoan : undefined}
               />
             </div>
           ))}

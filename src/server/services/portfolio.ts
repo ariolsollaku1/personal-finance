@@ -16,6 +16,7 @@
 import {
   accountQueries,
   holdingsQueries,
+  transactionQueries,
   Holding,
 } from '../db/queries.js';
 import { getMultipleQuotes, Quote } from './yahoo.js';
@@ -37,6 +38,8 @@ export interface HoldingWithQuote {
   dayChange: number;
   dayChangePercent: number;
   name: string;
+  /** Realized gain for closed positions (total proceeds - total cost) */
+  realizedGain?: number;
 }
 
 /**
@@ -59,6 +62,8 @@ export interface AccountPortfolio {
   dayChangePercent: number;
   /** Individual holdings with live quotes */
   holdings: HoldingWithQuote[];
+  /** Fully sold holdings (0 shares) kept for history */
+  closedHoldings: HoldingWithQuote[];
 }
 
 /**
@@ -153,9 +158,11 @@ export async function getAccountPortfolio(
   const balanceInfo = await accountQueries.getBalance(userId, accountId);
   const cashBalance = balanceInfo?.balance || 0;
 
-  const holdings = await holdingsQueries.getByAccount(userId, accountId);
+  const allHoldings = await holdingsQueries.getByAccount(userId, accountId);
+  const activeHoldings = allHoldings.filter(h => Number(h.shares) > 0);
+  const closedHoldings = allHoldings.filter(h => Number(h.shares) <= 0);
 
-  if (holdings.length === 0) {
+  if (activeHoldings.length === 0 && closedHoldings.length === 0) {
     return {
       cashBalance: roundCurrency(cashBalance),
       totalValue: 0,
@@ -165,17 +172,19 @@ export async function getAccountPortfolio(
       dayChange: 0,
       dayChangePercent: 0,
       holdings: [],
+      closedHoldings: [],
     };
   }
 
-  const symbols = holdings.map((h) => h.symbol);
-  const quotes = await getMultipleQuotes(symbols);
+  // Only fetch quotes for active holdings (closed ones have no market value)
+  const symbols = activeHoldings.map((h) => h.symbol);
+  const quotes = symbols.length > 0 ? await getMultipleQuotes(symbols) : new Map<string, Quote>();
 
   let totalValue = 0;
   let totalCost = 0;
   let totalDayChange = 0;
 
-  const holdingsWithQuotes = holdings.map((holding) => {
+  const holdingsWithQuotes = activeHoldings.map((holding) => {
     const quote = quotes.get(holding.symbol);
     const metrics = calculateHoldingMetrics(holding, quote);
 
@@ -185,6 +194,40 @@ export async function getAccountPortfolio(
 
     return metrics;
   });
+
+  // Build closed holdings with realized gain calculated from transactions
+  const closedHoldingsWithQuotes = await Promise.all(closedHoldings.map(async (holding) => {
+    const txs = await transactionQueries.getBySymbol(userId, holding.symbol, accountId);
+    let totalBuyCost = 0;
+    let totalSellProceeds = 0;
+    for (const tx of txs) {
+      const shares = Number(tx.shares);
+      const price = Number(tx.price);
+      const fees = Number(tx.fees);
+      if (tx.type === 'buy') {
+        totalBuyCost += shares * price + fees;
+      } else {
+        totalSellProceeds += shares * price - fees;
+      }
+    }
+    const realizedGain = roundCurrency(totalSellProceeds - totalBuyCost);
+
+    return {
+      id: holding.id,
+      symbol: holding.symbol,
+      shares: 0,
+      avgCost: Number(holding.avg_cost),
+      currentPrice: 0,
+      marketValue: 0,
+      costBasis: 0,
+      gain: 0,
+      gainPercent: 0,
+      dayChange: 0,
+      dayChangePercent: 0,
+      name: holding.symbol,
+      realizedGain,
+    };
+  }));
 
   const totalGain = totalValue - totalCost;
   const totalGainPercent = totalCost > 0 ? (totalGain / totalCost) * 100 : 0;
@@ -202,6 +245,7 @@ export async function getAccountPortfolio(
     dayChange: roundCurrency(totalDayChange),
     dayChangePercent: roundCurrency(dayChangePercent),
     holdings: holdingsWithQuotes,
+    closedHoldings: closedHoldingsWithQuotes,
   };
 }
 
@@ -237,6 +281,8 @@ export async function getAggregatedPortfolio(
   for (const account of stockAccounts) {
     const holdings = await holdingsQueries.getByAccount(userId, account.id);
     for (const holding of holdings) {
+      // Skip closed positions (0 shares) from aggregated portfolio
+      if (Number(holding.shares) <= 0) continue;
       allHoldings.push({
         symbol: holding.symbol,
         shares: Number(holding.shares),
@@ -324,7 +370,7 @@ export async function getPortfolioQuotes(
   const allSymbols: string[] = [];
   for (const account of stockAccounts) {
     const holdings = await holdingsQueries.getByAccount(userId, account.id);
-    allSymbols.push(...holdings.map(h => h.symbol));
+    allSymbols.push(...holdings.filter(h => Number(h.shares) > 0).map(h => h.symbol));
   }
 
   const uniqueSymbols = [...new Set(allSymbols)];

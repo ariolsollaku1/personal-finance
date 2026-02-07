@@ -46,6 +46,71 @@ router.get('/:symbol', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * Recalculate a holding's shares and avg_cost from all its transactions.
+ * Replays buys/sells in date order to derive current state.
+ */
+async function recalcHolding(userId: string, symbol: string, accountId: number) {
+  const txs = await transactionQueries.getBySymbol(userId, symbol, accountId);
+
+  let shares = 0;
+  let totalCost = 0;
+
+  // Replay in chronological order (oldest first)
+  const sorted = [...txs].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.id - b.id);
+
+  for (const tx of sorted) {
+    const txShares = Number(tx.shares);
+    const txPrice = Number(tx.price);
+    const txFees = Number(tx.fees);
+    if (tx.type === 'buy') {
+      const buyCost = txShares * txPrice + txFees;
+      totalCost += buyCost;
+      shares += txShares;
+    } else {
+      // sell — reduce shares, reduce cost proportionally
+      if (shares > 0) {
+        const avgCostBefore = totalCost / shares;
+        shares -= txShares;
+        if (shares <= 0) {
+          shares = 0;
+          totalCost = 0;
+        } else {
+          totalCost = shares * avgCostBefore;
+        }
+      }
+    }
+  }
+
+  const avgCost = shares > 0 ? totalCost / shares : 0;
+
+  const holding = await holdingsQueries.getBySymbol(userId, symbol, accountId);
+  if (holding) {
+    await holdingsQueries.update(userId, holding.id, shares, avgCost);
+  } else if (shares > 0) {
+    await holdingsQueries.create(userId, symbol, shares, avgCost, accountId);
+  }
+}
+
+// GET /api/holdings/:symbol/transactions - Get stock transactions for a symbol
+router.get('/:symbol/transactions', async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const symbol = req.params.symbol.toUpperCase();
+    const accountId = req.query.accountId ? parseInt(req.query.accountId as string) : undefined;
+
+    if (!accountId) {
+      return badRequest(res, 'accountId query parameter is required');
+    }
+
+    const transactions = await transactionQueries.getBySymbol(userId, symbol, accountId);
+    sendSuccess(res, transactions);
+  } catch (error) {
+    console.error('Error fetching symbol transactions:', error);
+    internalError(res, 'Failed to fetch transactions');
+  }
+});
+
 // POST /api/holdings - Add new holding (buy shares) - requires accountId
 router.post('/', async (req: Request, res: Response) => {
   try {
@@ -200,9 +265,10 @@ router.post('/:symbol/sell', async (req: Request, res: Response) => {
     const remainingShares = Number(holding.shares) - shares;
 
     if (remainingShares <= 0) {
-      // Remove holding if no shares remain
-      await holdingsQueries.delete(userId, holding.id);
-      return sendSuccess(res, { holding: null });
+      // Keep holding with 0 shares for transaction history
+      await holdingsQueries.update(userId, holding.id, 0, Number(holding.avg_cost));
+      const updatedHolding = await holdingsQueries.getBySymbol(userId, symbol, accountId);
+      return sendSuccess(res, { holding: updatedHolding });
     } else {
       // Update holding with remaining shares (avg cost stays the same)
       await holdingsQueries.update(userId, holding.id, remainingShares, Number(holding.avg_cost));
@@ -212,6 +278,64 @@ router.post('/:symbol/sell', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error selling shares:', error);
     internalError(res, 'Failed to sell shares');
+  }
+});
+
+// PUT /api/holdings/:symbol/transactions/:id - Update a stock transaction
+router.put('/:symbol/transactions/:id', async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const symbol = req.params.symbol.toUpperCase();
+    const txId = parseInt(req.params.id);
+    const { shares, price, fees } = req.body;
+
+    // Verify the transaction exists and belongs to this user/symbol
+    const existing = await transactionQueries.getById(userId, txId);
+    if (!existing) {
+      return notFound(res, 'Transaction not found');
+    }
+    if (existing.symbol !== symbol) {
+      return badRequest(res, 'Transaction does not belong to this symbol');
+    }
+
+    const updated = await transactionQueries.update(userId, txId, { shares, price, fees });
+
+    // Recalculate the holding from all transactions
+    await recalcHolding(userId, symbol, existing.account_id!);
+
+    sendSuccess(res, updated);
+  } catch (error) {
+    console.error('Error updating transaction:', error);
+    internalError(res, 'Failed to update transaction');
+  }
+});
+
+// DELETE /api/holdings/:symbol/transactions/:id - Delete a stock transaction
+router.delete('/:symbol/transactions/:id', async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const symbol = req.params.symbol.toUpperCase();
+    const txId = parseInt(req.params.id);
+
+    // Verify the transaction exists and belongs to this user/symbol
+    const existing = await transactionQueries.getById(userId, txId);
+    if (!existing) {
+      return notFound(res, 'Transaction not found');
+    }
+    if (existing.symbol !== symbol) {
+      return badRequest(res, 'Transaction does not belong to this symbol');
+    }
+
+    const accountId = existing.account_id!;
+    await transactionQueries.delete(userId, txId);
+
+    // Recalculate the holding from remaining transactions
+    await recalcHolding(userId, symbol, accountId);
+
+    sendSuccess(res, { deleted: true });
+  } catch (error) {
+    console.error('Error deleting transaction:', error);
+    internalError(res, 'Failed to delete transaction');
   }
 });
 

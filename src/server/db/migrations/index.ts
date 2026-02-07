@@ -11,6 +11,11 @@ import type pg from 'pg';
 
 import * as m001 from './001_create_test_table.js';
 import * as m002 from './002_add_european_currencies.js';
+import * as m003 from './003_add_account_archived.js';
+import * as m004 from './004_recalc_holdings_from_transactions.js';
+import * as m005 from './005_unique_dividends_per_symbol_exdate.js';
+import * as m006 from './006_add_dividend_transaction_created.js';
+import * as m007 from './007_recalc_holdings_fix_string_coercion.js';
 
 export interface Migration {
   version: number;
@@ -35,5 +40,33 @@ export const migrations: Migration[] = [
     description: m002.description,
     up: m002.up,
     down: m002.down,
+  },
+  {
+    version: m003.version,
+    description: m003.description,
+    up: m003.up,
+    down: m003.down,
+  },
+  {
+    version: m004.version,
+    description: m004.description,
+    up: m004.up,
+  },
+  {
+    version: m005.version,
+    description: m005.description,
+    up: m005.up,
+    down: m005.down,
+  },
+  {
+    version: m006.version,
+    description: m006.description,
+    up: m006.up,
+    down: m006.down,
+  },
+  {
+    version: m007.version,
+    description: m007.description,
+    up: m007.up,
   },
 ];

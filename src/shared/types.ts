@@ -29,6 +29,7 @@ export interface AccountBase {
   initial_balance: number;
   is_favorite: boolean;
   created_at: string;
+  archived_at: string | null;
 }
 
 /**
@@ -172,6 +173,7 @@ export interface Dividend {
   tax_amount: number;
   net_amount: number;
   account_id: number | null;
+  transaction_created: boolean;
   created_at: string;
 }
 

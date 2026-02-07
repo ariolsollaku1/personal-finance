@@ -185,11 +185,9 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                       <span className="truncate">{account.name}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className={`text-xs font-medium flex-shrink-0 ${account.type === 'credit' && (account.initial_balance - (account.balance || 0)) > 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                      <span className="text-xs font-medium flex-shrink-0 text-gray-400">
                         {account.type === 'stock'
                           ? formatCompactCurrency(account.costBasis || 0, 'USD')
-                          : account.type === 'credit'
-                          ? formatCompactCurrency(account.initial_balance - (account.balance || 0), account.currency)
                           : formatCompactCurrency(account.balance || 0, account.currency)}
                       </span>
                       <button
@@ -266,11 +264,9 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                           )}
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <span className={`text-xs font-medium flex-shrink-0 ${account.type === 'credit' && (account.initial_balance - (account.balance || 0)) > 0 ? 'text-red-500' : 'text-gray-400'}`} title={account.type === 'stock' ? 'Cost Basis' : account.type === 'credit' ? 'Amount Owed' : 'Balance'}>
+                          <span className="text-xs font-medium flex-shrink-0 text-gray-400" title={account.type === 'stock' ? 'Cost Basis' : account.type === 'credit' ? 'Available Credit' : 'Balance'}>
                             {account.type === 'stock'
                               ? formatCompactCurrency(account.costBasis || 0, 'USD')
-                              : account.type === 'credit'
-                              ? formatCompactCurrency(account.initial_balance - (account.balance || 0), account.currency)
                               : formatCompactCurrency(account.balance || 0, account.currency)}
                           </span>
                           <button
@@ -310,7 +306,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   title={`${account.name}${account.type === 'stock'
                     ? ` (Cost: ${formatCompactCurrency(account.costBasis || 0, 'USD')})`
                     : account.type === 'credit'
-                    ? ` (Owed: ${formatCompactCurrency(account.initial_balance - (account.balance || 0), account.currency)})`
+                    ? ` (Available: ${formatCompactCurrency(account.balance || 0, account.currency)})`
                     : ` (${formatCompactCurrency(account.balance || 0, account.currency)})`}${(account.recurringInflow || 0) > 0 ? ` | ${account.recurringInflow} income` : ''}${(account.recurringOutflow || 0) > 0 ? ` | ${account.recurringOutflow} expense` : ''}`}
                 >
                   <span className="text-lg">{group.icon}</span>
@@ -405,6 +401,27 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
               />
             </svg>
             {!collapsed && <span className="ml-3">Currency</span>}
+          </NavLink>
+
+          <NavLink
+            to="/settings/archived"
+            className={({ isActive }) =>
+              `flex items-center px-4 py-2.5 rounded-xl text-sm transition-all duration-200 ${
+                isActive
+                  ? 'bg-orange-100 text-orange-700 font-medium'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              } ${collapsed ? 'justify-center' : ''}`
+            }
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+              />
+            </svg>
+            {!collapsed && <span className="ml-3">Archived</span>}
           </NavLink>
         </div>
       </nav>

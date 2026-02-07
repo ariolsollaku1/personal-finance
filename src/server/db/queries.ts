@@ -64,6 +64,7 @@ export const batchQueries = {
   /**
    * Get all accounts with their transaction totals in a single query
    * This replaces N+1 calls to accountQueries.getBalance
+   * Filters out archived accounts by default
    */
   getAllAccountsWithBalances: async (userId: string): Promise<AccountBalanceRow[]> => {
     return query<AccountBalanceRow>(
@@ -72,7 +73,7 @@ export const batchQueries = {
         COALESCE(SUM(CASE WHEN at.type = 'inflow' THEN at.amount ELSE -at.amount END), 0) as transaction_total
       FROM accounts a
       LEFT JOIN account_transactions at ON a.id = at.account_id
-      WHERE a.user_id = $1
+      WHERE a.user_id = $1 AND a.archived_at IS NULL
       GROUP BY a.id
       ORDER BY a.type, a.name`,
       [userId]
@@ -164,7 +165,7 @@ export const batchQueries = {
 // Account queries - all filtered by userId
 export const accountQueries = {
   getAll: async (userId: string) => {
-    return query<Account>('SELECT * FROM accounts WHERE user_id = $1 ORDER BY type, name', [userId]);
+    return query<Account>('SELECT * FROM accounts WHERE user_id = $1 AND archived_at IS NULL ORDER BY type, name', [userId]);
   },
 
   getById: async (userId: string, id: number) => {
@@ -217,7 +218,19 @@ export const accountQueries = {
   },
 
   getFavorites: async (userId: string) => {
-    return query<Account>('SELECT * FROM accounts WHERE user_id = $1 AND is_favorite = true ORDER BY type, name', [userId]);
+    return query<Account>('SELECT * FROM accounts WHERE user_id = $1 AND is_favorite = true AND archived_at IS NULL ORDER BY type, name', [userId]);
+  },
+
+  getArchived: async (userId: string) => {
+    return query<Account>('SELECT * FROM accounts WHERE user_id = $1 AND archived_at IS NOT NULL ORDER BY archived_at DESC', [userId]);
+  },
+
+  archive: async (userId: string, id: number) => {
+    await query('UPDATE accounts SET archived_at = CURRENT_TIMESTAMP WHERE id = $1 AND user_id = $2', [id, userId]);
+  },
+
+  unarchive: async (userId: string, id: number) => {
+    await query('UPDATE accounts SET archived_at = NULL WHERE id = $1 AND user_id = $2', [id, userId]);
   },
 };
 
@@ -693,8 +706,14 @@ export const transferQueries = {
     const transferId = result.id;
 
     // Create the linked account transactions
-    await accountTransactionQueries.create(userId, fromAccountId, 'outflow', fromAmount, date, null, null, notes ? `Transfer: ${notes}` : 'Transfer', transferId);
-    await accountTransactionQueries.create(userId, toAccountId, 'inflow', toAmount, date, null, null, notes ? `Transfer: ${notes}` : 'Transfer', transferId);
+    // For loan accounts, the logic is reversed:
+    // - Transferring TO a loan = paying it down = outflow (reduces debt)
+    // - Transferring FROM a loan = taking more debt = inflow (increases debt)
+    const fromType = fromAccount.type === 'loan' ? 'inflow' : 'outflow';
+    const toType = toAccount.type === 'loan' ? 'outflow' : 'inflow';
+
+    await accountTransactionQueries.create(userId, fromAccountId, fromType, fromAmount, date, null, null, notes ? `Transfer: ${notes}` : 'Transfer', transferId);
+    await accountTransactionQueries.create(userId, toAccountId, toType, toAmount, date, null, null, notes ? `Transfer: ${notes}` : 'Transfer', transferId);
 
     return transferId;
   },
@@ -853,6 +872,43 @@ export const transactionQueries = {
     return result.id;
   },
 
+  getById: async (userId: string, id: number) => {
+    const tx = await queryOne<Transaction & { user_id: string }>(
+      `SELECT t.*, a.user_id FROM transactions t
+      JOIN accounts a ON t.account_id = a.id
+      WHERE t.id = $1`,
+      [id]
+    );
+    if (!tx || tx.user_id !== userId) return undefined;
+    return tx as Transaction;
+  },
+
+  update: async (userId: string, id: number, data: { shares?: number; price?: number; fees?: number }) => {
+    // Verify ownership via account
+    const tx = await queryOne<Transaction & { user_id: string }>(
+      `SELECT t.*, a.user_id FROM transactions t
+      JOIN accounts a ON t.account_id = a.id
+      WHERE t.id = $1`,
+      [id]
+    );
+    if (!tx || tx.user_id !== userId) throw new Error('Transaction not found');
+
+    const fields: string[] = [];
+    const values: (number | string)[] = [];
+    let idx = 1;
+
+    if (data.shares !== undefined) { fields.push(`shares = $${idx++}`); values.push(data.shares); }
+    if (data.price !== undefined) { fields.push(`price = $${idx++}`); values.push(data.price); }
+    if (data.fees !== undefined) { fields.push(`fees = $${idx++}`); values.push(data.fees); }
+
+    if (fields.length === 0) return tx as Transaction;
+
+    values.push(id);
+    await query(`UPDATE transactions SET ${fields.join(', ')} WHERE id = $${idx}`, values);
+
+    return queryOne<Transaction>('SELECT * FROM transactions WHERE id = $1', [id]);
+  },
+
   delete: async (userId: string, id: number) => {
     // Verify ownership via account
     const tx = await queryOne<Transaction & { user_id: string }>(
@@ -864,6 +920,7 @@ export const transactionQueries = {
     if (!tx || tx.user_id !== userId) throw new Error('Transaction not found');
 
     await query('DELETE FROM transactions WHERE id = $1', [id]);
+    return tx as Transaction;
   },
 };
 
@@ -946,11 +1003,23 @@ export const dividendQueries = {
     const account = await accountQueries.getById(userId, accountId);
     if (!account) throw new Error('Account not found');
 
-    const result = await insert<Dividend>(
-      'INSERT INTO dividends (symbol, amount, shares_held, ex_date, pay_date, tax_rate, tax_amount, net_amount, account_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
+    const rows = await query<Dividend>(
+      'INSERT INTO dividends (symbol, amount, shares_held, ex_date, pay_date, tax_rate, tax_amount, net_amount, account_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT (account_id, symbol, ex_date) DO NOTHING RETURNING *',
       [symbol.toUpperCase(), amount, sharesHeld, exDate, payDate, taxRate, taxAmount, netAmount, accountId]
     );
-    return result.id;
+    if (rows.length === 0) return null;
+    return rows[0].id;
+  },
+
+  getUnpaidDue: async (accountId: number) => {
+    return query<Dividend>(
+      'SELECT * FROM dividends WHERE account_id = $1 AND transaction_created = FALSE AND pay_date <= CURRENT_DATE ORDER BY pay_date ASC',
+      [accountId]
+    );
+  },
+
+  markTransactionCreated: async (id: number) => {
+    await query('UPDATE dividends SET transaction_created = TRUE WHERE id = $1', [id]);
   },
 
   delete: async (userId: string, id: number) => {

@@ -225,7 +225,9 @@ router.post('/:id/apply', async (req: Request, res: Response) => {
     }
 
     // Use provided date or the next due date
-    const transactionDate = date || (recurring.next_due_date instanceof Date ? format(recurring.next_due_date, 'yyyy-MM-dd') : recurring.next_due_date);
+    // Ensure transactionDate is a string — DB may return a Date object
+    const rawDate = date || recurring.next_due_date;
+    const transactionDate = typeof rawDate === 'string' ? rawDate : format(rawDate, 'yyyy-MM-dd');
 
     // Create the actual transaction (use overridden amount if provided)
     const txId = await accountTransactionQueries.create(
