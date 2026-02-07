@@ -26,6 +26,7 @@ import {
 import { getMultipleQuotes } from './yahoo.js';
 import { convertToMainCurrency, getExchangeRates, ExchangeRates } from './currency.js';
 import { getAggregatedPortfolio, PortfolioSummary } from './portfolio.js';
+import { calculateNextDueDate } from '../utils/dates.js';
 
 /**
  * Summary information for a single account
@@ -157,7 +158,11 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     batchQueries.getAllAccountsWithBalances(userId),
     holdingsQueries.getAll(userId),
     getAggregatedPortfolio(userId),
-    recurringQueries.getDue(userId, new Date().toISOString().split('T')[0]),
+    (() => {
+      const today = new Date();
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+      return recurringQueries.getDue(userId, endOfMonth);
+    })(),
     batchQueries.getRecentTransactions(userId, 10),
     getExchangeRates(),
   ]);
@@ -244,20 +249,38 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     }
   }
 
-  // Transform due recurring transactions
+  // Transform and expand due recurring transactions for the current month
+  const today = new Date();
+  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+
   type DueRecurringRow = RecurringTransaction & { account_name: string; account_currency: Currency };
-  const dueRecurring: DueRecurring[] = dueRecurringRaw.map((r: DueRecurringRow) => ({
-    id: r.id,
-    accountId: r.account_id,
-    accountName: r.account_name,
-    type: r.type,
-    amount: Number(r.amount),
-    currency: r.account_currency,
-    payee: r.payee_name || null,
-    category: r.category_name || null,
-    frequency: r.frequency,
-    nextDueDate: r.next_due_date,
-  }));
+  const dueRecurring: DueRecurring[] = [];
+  for (const r of dueRecurringRaw as DueRecurringRow[]) {
+    const baseEntry = {
+      id: r.id,
+      accountId: r.account_id,
+      accountName: r.account_name,
+      type: r.type,
+      amount: Number(r.amount),
+      currency: r.account_currency,
+      payee: r.payee_name || null,
+      category: r.category_name || null,
+      frequency: r.frequency,
+    };
+
+    // Expand into multiple entries for weekly/biweekly within the month
+    let currentDate = typeof r.next_due_date === 'string'
+      ? r.next_due_date
+      : new Date(r.next_due_date).toISOString().split('T')[0];
+
+    while (currentDate <= endOfMonth) {
+      dueRecurring.push({ ...baseEntry, nextDueDate: currentDate });
+      currentDate = calculateNextDueDate(currentDate, r.frequency as any);
+    }
+  }
+
+  // Sort by date
+  dueRecurring.sort((a, b) => a.nextDueDate.localeCompare(b.nextDueDate));
 
   // Transform recent transactions (already fetched with batch query)
   type RecentTxRow = {

@@ -1,16 +1,15 @@
-import { useState, useEffect } from 'react';
-import { Payee, payeesApi } from '../../lib/api';
+import { useState } from 'react';
+import { payeesApi } from '../../lib/api';
 import { PayeesSkeleton } from '../../components/Skeleton';
 import { useToast } from '../../contexts/ToastContext';
 import { useConfirm } from '../../hooks/useConfirm';
+import { useSWR } from '../../hooks/useSWR';
 import ConfirmModal from '../../components/ConfirmModal';
 import AddPayeeModal from '../../components/AddPayeeModal';
 import MergePayeesModal from '../../components/MergePayeesModal';
 
 export default function PayeesPage() {
-  const [payees, setPayees] = useState<Payee[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: payees, loading } = useSWR('/payees', () => payeesApi.getAll());
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -18,28 +17,10 @@ export default function PayeesPage() {
   const toast = useToast();
   const { confirm, confirmState, handleConfirm, handleCancel } = useConfirm();
 
-  useEffect(() => {
-    loadPayees();
-  }, []);
-
-  const loadPayees = async () => {
-    try {
-      setLoading(true);
-      const data = await payeesApi.getAll();
-      setPayees(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load payees');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleUpdate = async (id: number) => {
     try {
       await payeesApi.update(id, { name: editName });
       setEditingId(null);
-      loadPayees();
     } catch (err) {
       toast.error('Payee', err instanceof Error ? err.message : 'Failed to update payee');
     }
@@ -49,25 +30,15 @@ export default function PayeesPage() {
     if (!await confirm({ title: 'Delete Payee', message: 'Are you sure you want to delete this payee?', confirmLabel: 'Delete', variant: 'danger' })) return;
     try {
       await payeesApi.delete(id);
-      loadPayees();
     } catch (err) {
       toast.error('Payee', err instanceof Error ? err.message : 'Failed to delete payee');
     }
   };
 
+  const allPayees = payees ?? [];
+
   if (loading) {
     return <PayeesSkeleton />;
-  }
-
-  if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-2">
-        <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <span>{error}</span>
-      </div>
-    );
   }
 
   return (
@@ -75,8 +46,8 @@ export default function PayeesPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Payees</h1>
-          <p className="text-gray-500 mt-1">Manage merchants and recipients</p>
+          <h2 className="text-xl font-bold text-gray-900">Payees</h2>
+          <p className="text-sm text-gray-500 mt-0.5">Manage merchants and recipients</p>
         </div>
         <div className="flex gap-3">
           <button
@@ -111,11 +82,11 @@ export default function PayeesPage() {
             </div>
             <div>
               <h2 className="font-semibold text-gray-900">All Payees</h2>
-              <p className="text-sm text-gray-500">{payees.length} payees</p>
+              <p className="text-sm text-gray-500">{allPayees.length} payees</p>
             </div>
           </div>
         </div>
-        {payees.length === 0 ? (
+        {allPayees.length === 0 ? (
           <div className="p-12 text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -127,7 +98,7 @@ export default function PayeesPage() {
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
-            {payees.map((payee) => (
+            {allPayees.map((payee) => (
               <div key={payee.id} className="px-6 py-4 flex justify-between items-center hover:bg-gray-50 transition-colors group">
                 {editingId === payee.id ? (
                   <div className="flex gap-3 flex-1 items-center">
@@ -188,14 +159,14 @@ export default function PayeesPage() {
       <AddPayeeModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
-        onAdded={loadPayees}
+        onAdded={() => {}}
       />
 
       <MergePayeesModal
         isOpen={showMergeModal}
         onClose={() => setShowMergeModal(false)}
-        onMerged={loadPayees}
-        payees={payees}
+        onMerged={() => {}}
+        payees={allPayees}
       />
 
       <ConfirmModal

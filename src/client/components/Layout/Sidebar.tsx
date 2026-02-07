@@ -1,46 +1,9 @@
 import { NavLink } from 'react-router-dom';
 import { useState } from 'react';
-import { Account, accountsApi, Currency } from '../../lib/api';
+import { Account, accountsApi } from '../../lib/api';
+import { formatCompactCurrency } from '../../lib/currency';
 import { useSWR } from '../../hooks/useSWR';
 import AddAccountModal from '../AddAccountModal';
-
-// Compact currency formatter for sidebar (e.g., 494k L, 1.5M €)
-function formatCompactCurrency(amount: number, currency: Currency): string {
-  const absAmount = Math.abs(amount);
-  const sign = amount < 0 ? '-' : '';
-
-  let formatted: string;
-  if (absAmount >= 1_000_000) {
-    const millions = absAmount / 1_000_000;
-    formatted = millions % 1 === 0 ? `${millions}M` : `${millions.toFixed(1)}M`;
-  } else if (absAmount >= 1_000) {
-    const thousands = absAmount / 1_000;
-    formatted = thousands % 1 === 0 ? `${thousands}k` : `${thousands.toFixed(1)}k`;
-  } else {
-    formatted = absAmount.toFixed(0);
-  }
-
-  const symbols: Record<Currency, string> = {
-    EUR: ' €',
-    USD: '$',
-    ALL: ' L',
-    GBP: '£',
-    CHF: ' Fr.',
-    NOK: ' kr',
-    SEK: ' kr',
-    DKK: ' kr',
-    PLN: ' zł',
-    CZK: ' Kč',
-    HUF: ' Ft',
-    RON: ' lei',
-    BGN: ' лв',
-  };
-  // USD and GBP have prefix symbols
-  if (currency === 'USD' || currency === 'GBP') {
-    return `${sign}${symbols[currency]}${formatted}`;
-  }
-  return `${sign}${formatted}${symbols[currency]}`;
-}
 
 interface SidebarProps {
   collapsed: boolean;
@@ -328,103 +291,37 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
             {!collapsed && <span className="ml-2">Add Account</span>}
           </button>
         </div>
-
-        {/* Divider */}
-        <div className="my-4 mx-4 border-t border-gray-100" />
-
-        {/* Settings Section */}
-        {!collapsed && (
-          <div className="px-4 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
-            Settings
-          </div>
-        )}
-
-        <div className="px-2 space-y-1">
-          <NavLink
-            to="/settings/categories"
-            className={({ isActive }) =>
-              `flex items-center px-4 py-2.5 rounded-xl text-sm transition-all duration-200 ${
-                isActive
-                  ? 'bg-orange-100 text-orange-700 font-medium'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              } ${collapsed ? 'justify-center' : ''}`
-            }
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-              />
-            </svg>
-            {!collapsed && <span className="ml-3">Categories</span>}
-          </NavLink>
-
-          <NavLink
-            to="/settings/payees"
-            className={({ isActive }) =>
-              `flex items-center px-4 py-2.5 rounded-xl text-sm transition-all duration-200 ${
-                isActive
-                  ? 'bg-orange-100 text-orange-700 font-medium'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              } ${collapsed ? 'justify-center' : ''}`
-            }
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-              />
-            </svg>
-            {!collapsed && <span className="ml-3">Payees</span>}
-          </NavLink>
-
-          <NavLink
-            to="/settings/currency"
-            className={({ isActive }) =>
-              `flex items-center px-4 py-2.5 rounded-xl text-sm transition-all duration-200 ${
-                isActive
-                  ? 'bg-orange-100 text-orange-700 font-medium'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              } ${collapsed ? 'justify-center' : ''}`
-            }
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            {!collapsed && <span className="ml-3">Currency</span>}
-          </NavLink>
-
-          <NavLink
-            to="/settings/archived"
-            className={({ isActive }) =>
-              `flex items-center px-4 py-2.5 rounded-xl text-sm transition-all duration-200 ${
-                isActive
-                  ? 'bg-orange-100 text-orange-700 font-medium'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              } ${collapsed ? 'justify-center' : ''}`
-            }
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
-              />
-            </svg>
-            {!collapsed && <span className="ml-3">Archived</span>}
-          </NavLink>
-        </div>
       </nav>
+
+      {/* Settings - anchored at bottom */}
+      <div className="border-t border-gray-100 px-2 py-3">
+        <NavLink
+          to="/settings"
+          className={({ isActive }) =>
+            `flex items-center px-4 py-2.5 rounded-xl text-sm transition-all duration-200 ${
+              isActive
+                ? 'bg-orange-100 text-orange-700 font-medium'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+            } ${collapsed ? 'justify-center' : ''}`
+          }
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+            />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+            />
+          </svg>
+          {!collapsed && <span className="ml-3">Settings</span>}
+        </NavLink>
+      </div>
     </aside>
 
     {/* Add Account Modal */}

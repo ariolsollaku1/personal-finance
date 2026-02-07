@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { PnLMonthDetail, MonthlyPnL, pnlApi } from '../lib/api';
 import { useBottomSheet } from '../hooks/useBottomSheet';
-import { formatCurrency } from '../lib/currency';
+import { formatCurrency, formatCompactCurrency } from '../lib/currency';
 import { PnLSkeleton } from '../components/Skeleton';
 import { useSWR } from '../hooks/useSWR';
 
@@ -71,19 +71,19 @@ export default function PnLPage() {
             <div>
               <p className="text-orange-200 text-sm mb-1">Total Income</p>
               <p className="text-2xl font-bold">
-                +{formatCurrency(yearTotals.income, currency as 'ALL' | 'EUR' | 'USD')}
+                +{formatCompactCurrency(yearTotals.income, currency as 'ALL' | 'EUR' | 'USD')}
               </p>
             </div>
             <div>
               <p className="text-orange-200 text-sm mb-1">Total Expenses</p>
               <p className="text-2xl font-bold">
-                -{formatCurrency(yearTotals.expenses, currency as 'ALL' | 'EUR' | 'USD')}
+                -{formatCompactCurrency(yearTotals.expenses, currency as 'ALL' | 'EUR' | 'USD')}
               </p>
             </div>
             <div>
               <p className="text-orange-200 text-sm mb-1">Net Result</p>
               <p className="text-2xl font-bold">
-                {yearTotals.net >= 0 ? '+' : ''}{formatCurrency(yearTotals.net, currency as 'ALL' | 'EUR' | 'USD')}
+                {yearTotals.net >= 0 ? '+' : ''}{formatCompactCurrency(yearTotals.net, currency as 'ALL' | 'EUR' | 'USD')}
               </p>
             </div>
           </div>

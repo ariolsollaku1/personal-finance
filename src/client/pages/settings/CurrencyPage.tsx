@@ -1,52 +1,30 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Currency, dashboardApi } from '../../lib/api';
 import { formatCurrency, getCurrencySymbol } from '../../lib/currency';
 import { CurrencySkeleton } from '../../components/Skeleton';
 import { useToast } from '../../contexts/ToastContext';
+import { useSWR } from '../../hooks/useSWR';
 
 export default function CurrencyPage() {
-  const [mainCurrency, setMainCurrency] = useState<Currency>('EUR');
-  const [exchangeRates, setExchangeRates] = useState<Record<Currency, number>>({
-    EUR: 1,
-    USD: 1.08,
-    ALL: 100.0,
-    GBP: 0.86,
-    CHF: 0.94,
-    NOK: 11.5,
-    SEK: 11.2,
-    DKK: 7.46,
-    PLN: 4.35,
-    CZK: 25.0,
-    HUF: 390.0,
-    RON: 4.97,
-    BGN: 1.96,
-  });
-  const [loading, setLoading] = useState(true);
+  const { data: settings, loading } = useSWR('/dashboard/settings/currency', () =>
+    dashboardApi.getCurrencySettings()
+  );
   const [saving, setSaving] = useState(false);
   const toast = useToast();
 
-  useEffect(() => {
-    loadSettings();
-  }, []);
-
-  const loadSettings = async () => {
-    try {
-      setLoading(true);
-      const data = await dashboardApi.getCurrencySettings();
-      setMainCurrency(data.mainCurrency);
-      setExchangeRates(data.exchangeRates);
-    } catch (err) {
-      console.error('Failed to load currency settings:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const mainCurrency = settings?.mainCurrency ?? 'EUR';
+  const exchangeRates = settings?.exchangeRates ?? {};
 
   const handleSave = async (currency: Currency) => {
     try {
       setSaving(true);
       await dashboardApi.setCurrency(currency);
-      setMainCurrency(currency);
+      // Manually refresh since setCurrency isn't wrapped with withInvalidation
+      window.dispatchEvent(
+        new CustomEvent('cache:invalidated', {
+          detail: { prefixes: ['/dashboard/settings/currency'] },
+        })
+      );
     } catch (err) {
       toast.error('Currency', err instanceof Error ? err.message : 'Failed to save currency setting');
     } finally {
@@ -59,40 +37,31 @@ export default function CurrencyPage() {
   }
 
   const currencies: { code: Currency; name: string; description: string; flag: string }[] = [
-    { code: 'EUR', name: 'Euro', description: 'Official currency of the Eurozone', flag: '🇪🇺' },
-    { code: 'USD', name: 'US Dollar', description: 'Official currency of the United States', flag: '🇺🇸' },
-    { code: 'GBP', name: 'British Pound', description: 'Official currency of the United Kingdom', flag: '🇬🇧' },
-    { code: 'CHF', name: 'Swiss Franc', description: 'Official currency of Switzerland', flag: '🇨🇭' },
-    { code: 'NOK', name: 'Norwegian Krone', description: 'Official currency of Norway', flag: '🇳🇴' },
-    { code: 'SEK', name: 'Swedish Krona', description: 'Official currency of Sweden', flag: '🇸🇪' },
-    { code: 'DKK', name: 'Danish Krone', description: 'Official currency of Denmark', flag: '🇩🇰' },
-    { code: 'PLN', name: 'Polish Zloty', description: 'Official currency of Poland', flag: '🇵🇱' },
-    { code: 'CZK', name: 'Czech Koruna', description: 'Official currency of Czech Republic', flag: '🇨🇿' },
-    { code: 'HUF', name: 'Hungarian Forint', description: 'Official currency of Hungary', flag: '🇭🇺' },
-    { code: 'RON', name: 'Romanian Leu', description: 'Official currency of Romania', flag: '🇷🇴' },
-    { code: 'BGN', name: 'Bulgarian Lev', description: 'Official currency of Bulgaria', flag: '🇧🇬' },
-    { code: 'ALL', name: 'Albanian Lek', description: 'Official currency of Albania', flag: '🇦🇱' },
+    { code: 'EUR', name: 'Euro', description: 'Official currency of the Eurozone', flag: '\u{1F1EA}\u{1F1FA}' },
+    { code: 'USD', name: 'US Dollar', description: 'Official currency of the United States', flag: '\u{1F1FA}\u{1F1F8}' },
+    { code: 'GBP', name: 'British Pound', description: 'Official currency of the United Kingdom', flag: '\u{1F1EC}\u{1F1E7}' },
+    { code: 'CHF', name: 'Swiss Franc', description: 'Official currency of Switzerland', flag: '\u{1F1E8}\u{1F1ED}' },
+    { code: 'NOK', name: 'Norwegian Krone', description: 'Official currency of Norway', flag: '\u{1F1F3}\u{1F1F4}' },
+    { code: 'SEK', name: 'Swedish Krona', description: 'Official currency of Sweden', flag: '\u{1F1F8}\u{1F1EA}' },
+    { code: 'DKK', name: 'Danish Krone', description: 'Official currency of Denmark', flag: '\u{1F1E9}\u{1F1F0}' },
+    { code: 'PLN', name: 'Polish Zloty', description: 'Official currency of Poland', flag: '\u{1F1F5}\u{1F1F1}' },
+    { code: 'CZK', name: 'Czech Koruna', description: 'Official currency of Czech Republic', flag: '\u{1F1E8}\u{1F1FF}' },
+    { code: 'HUF', name: 'Hungarian Forint', description: 'Official currency of Hungary', flag: '\u{1F1ED}\u{1F1FA}' },
+    { code: 'RON', name: 'Romanian Leu', description: 'Official currency of Romania', flag: '\u{1F1F7}\u{1F1F4}' },
+    { code: 'BGN', name: 'Bulgarian Lev', description: 'Official currency of Bulgaria', flag: '\u{1F1E7}\u{1F1EC}' },
+    { code: 'ALL', name: 'Albanian Lek', description: 'Official currency of Albania', flag: '\u{1F1E6}\u{1F1F1}' },
   ];
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl shadow-xl p-6 text-white">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold">Currency Settings</h1>
-            <p className="text-white/80 text-sm mt-0.5">Manage your display currency and view exchange rates</p>
-          </div>
-        </div>
+      {/* Header */}
+      <div>
+        <h2 className="text-xl font-bold text-gray-900">Currency</h2>
+        <p className="text-sm text-gray-500 mt-0.5">Manage your display currency and view exchange rates</p>
       </div>
 
       {/* Main Currency Selection */}
-      <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100/80 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100">
           <h2 className="text-lg font-bold text-gray-900">Main Currency</h2>
           <p className="text-sm text-gray-500 mt-1">
@@ -142,7 +111,7 @@ export default function CurrencyPage() {
       </div>
 
       {/* Exchange Rates */}
-      <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100/80 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100">
           <h2 className="text-lg font-bold text-gray-900">Exchange Rates</h2>
           <p className="text-sm text-gray-500 mt-1">
@@ -213,7 +182,7 @@ export default function CurrencyPage() {
       </div>
 
       {/* Currency Formatting Examples */}
-      <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100/80 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100">
           <h2 className="text-lg font-bold text-gray-900">Formatting Examples</h2>
           <p className="text-sm text-gray-500 mt-1">Preview how amounts are displayed in each currency.</p>

@@ -27,8 +27,8 @@ export default function Dashboard() {
     }
   };
 
-  const { overdue, dueSoon } = useMemo(() => {
-    if (!data) return { overdue: [], dueSoon: [] };
+  const { overdue, dueThisMonth } = useMemo(() => {
+    if (!data) return { overdue: [], dueThisMonth: [] };
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const o: DueRecurring[] = [];
@@ -38,7 +38,7 @@ export default function Dashboard() {
       due.setHours(0, 0, 0, 0);
       (due < today ? o : d).push(r);
     }
-    return { overdue: o, dueSoon: d };
+    return { overdue: o, dueThisMonth: d };
   }, [data]);
 
   if (loading) {
@@ -170,7 +170,7 @@ export default function Dashboard() {
           </div>
           <div className="divide-y divide-red-200/60">
             {overdue.map((recurring) => (
-              <div key={recurring.id} className="flex items-center justify-between px-6 py-4">
+              <div key={`${recurring.id}-${recurring.nextDueDate}`} className="flex items-center justify-between px-6 py-4">
                 <div>
                   <p className="font-medium text-gray-900">
                     {recurring.payee || recurring.category || 'Recurring Transaction'}
@@ -197,8 +197,8 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Due Recurring Transactions */}
-      {dueSoon.length > 0 && (
+      {/* Due This Month Recurring Transactions */}
+      {dueThisMonth.length > 0 && (
         <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-xl overflow-hidden shadow-sm">
           <div className="px-6 py-4 border-b border-amber-200/60 flex items-center gap-3">
             <div className="w-8 h-8 bg-gradient-to-br from-amber-200 to-orange-300/80 shadow-sm shadow-amber-500/10 rounded-lg flex items-center justify-center">
@@ -206,11 +206,11 @@ export default function Dashboard() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h2 className="text-lg font-semibold text-amber-800">Due Recurring Transactions</h2>
+            <h2 className="text-lg font-semibold text-amber-800">Due This Month</h2>
           </div>
           <div className="divide-y divide-amber-200">
-            {dueSoon.map((recurring) => (
-              <div key={recurring.id} className="flex items-center justify-between px-6 py-4">
+            {dueThisMonth.map((recurring) => (
+              <div key={`${recurring.id}-${recurring.nextDueDate}`} className="flex items-center justify-between px-6 py-4">
                 <div>
                   <p className="font-medium text-gray-900">
                     {recurring.payee || recurring.category || 'Recurring Transaction'}

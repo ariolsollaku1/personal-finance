@@ -277,8 +277,8 @@ export function CategoriesSkeleton() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <Skeleton className="h-9 w-40 rounded-lg" />
-          <Skeleton className="h-4 w-64 rounded mt-2" />
+          <Skeleton className="h-6 w-32 rounded-lg" />
+          <Skeleton className="h-4 w-56 rounded mt-1.5" />
         </div>
         <Skeleton className="h-10 w-36 rounded-xl" />
       </div>
@@ -286,14 +286,12 @@ export function CategoriesSkeleton() {
       {/* Categories Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {[...Array(2)].map((_, i) => (
-          <div key={i} className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div className={`px-6 py-4 ${i === 0 ? 'bg-gradient-to-r from-green-400 to-emerald-500' : 'bg-gradient-to-r from-red-400 to-rose-500'}`}>
-              <div className="flex items-center gap-3">
-                <Skeleton className="w-8 h-8 rounded-lg bg-white/30" />
-                <div>
-                  <Skeleton className="h-4 w-36 rounded bg-white/30 mb-1" />
-                  <Skeleton className="h-3 w-24 rounded bg-white/30" />
-                </div>
+          <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-100/80 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
+              <Skeleton className="w-10 h-10 rounded-xl" />
+              <div>
+                <Skeleton className="h-4 w-36 rounded mb-1" />
+                <Skeleton className="h-3 w-24 rounded" />
               </div>
             </div>
             <div className="divide-y divide-gray-100">
@@ -318,8 +316,8 @@ export function PayeesSkeleton() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <Skeleton className="h-9 w-28 rounded-lg" />
-          <Skeleton className="h-4 w-56 rounded mt-2" />
+          <Skeleton className="h-6 w-24 rounded-lg" />
+          <Skeleton className="h-4 w-48 rounded mt-1.5" />
         </div>
         <div className="flex gap-3">
           <Skeleton className="h-10 w-28 rounded-xl" />
@@ -353,19 +351,14 @@ export function PayeesSkeleton() {
 export function CurrencySkeleton() {
   return (
     <div className="space-y-6 animate-pulse">
-      {/* Page Header */}
-      <div className="bg-gradient-to-r from-orange-400 to-amber-500 rounded-2xl shadow-xl p-6">
-        <div className="flex items-center gap-3">
-          <Skeleton className="w-12 h-12 rounded-xl bg-white/30" />
-          <div>
-            <Skeleton className="h-7 w-48 rounded bg-white/30 mb-1.5" />
-            <Skeleton className="h-4 w-72 rounded bg-white/30" />
-          </div>
-        </div>
+      {/* Header */}
+      <div>
+        <Skeleton className="h-6 w-28 rounded-lg" />
+        <Skeleton className="h-4 w-64 rounded mt-1.5" />
       </div>
 
       {/* Main Currency Selection */}
-      <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100/80 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100">
           <Skeleton className="h-5 w-36 rounded mb-1" />
           <Skeleton className="h-4 w-80 rounded" />
@@ -388,7 +381,7 @@ export function CurrencySkeleton() {
       </div>
 
       {/* Exchange Rates */}
-      <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100/80 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100">
           <Skeleton className="h-5 w-36 rounded mb-1" />
           <Skeleton className="h-4 w-96 rounded" />
@@ -436,6 +429,29 @@ export function AccountSkeleton() {
           <Skeleton className="h-4 w-24 rounded bg-white/15" />
           <Skeleton className="h-10 w-52 rounded bg-white/20 mt-2" />
         </div>
+      </div>
+
+      {/* Performance Chart */}
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <div className="flex justify-between items-center mb-4">
+          <Skeleton className="h-5 w-44 rounded" />
+          <div className="flex gap-1">
+            {[...Array(6)].map((_, i) => (
+              <Skeleton key={i} className="h-8 w-10 rounded-lg" />
+            ))}
+          </div>
+        </div>
+        <div className="flex gap-6 mb-4">
+          <div>
+            <Skeleton className="h-3 w-16 rounded mb-1" />
+            <Skeleton className="h-5 w-20 rounded" />
+          </div>
+          <div>
+            <Skeleton className="h-3 w-16 rounded mb-1" />
+            <Skeleton className="h-5 w-20 rounded" />
+          </div>
+        </div>
+        <Skeleton className="h-64 w-full rounded-lg" />
       </div>
 
       {/* Recurring Transactions */}

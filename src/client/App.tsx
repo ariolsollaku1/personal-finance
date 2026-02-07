@@ -5,6 +5,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import Dashboard from './pages/Dashboard';
 import SwipeAccountPage from './pages/SwipeAccountPage';
 import TransfersPage from './pages/TransfersPage';
+import SettingsPage from './pages/SettingsPage';
 import CategoriesPage from './pages/settings/CategoriesPage';
 import PayeesPage from './pages/settings/PayeesPage';
 import CurrencyPage from './pages/settings/CurrencyPage';
@@ -36,10 +37,12 @@ function App() {
                   <Route path="/transfers" element={<TransfersPage />} />
                   <Route path="/projection" element={<ProjectionPage />} />
                   <Route path="/pnl" element={<PnLPage />} />
-                  <Route path="/settings/categories" element={<CategoriesPage />} />
-                  <Route path="/settings/payees" element={<PayeesPage />} />
-                  <Route path="/settings/currency" element={<CurrencyPage />} />
-                  <Route path="/settings/archived" element={<ArchivedAccountsPage />} />
+                  <Route path="/settings/*" element={<SettingsPage />}>
+                    <Route path="categories" element={<CategoriesPage />} />
+                    <Route path="payees" element={<PayeesPage />} />
+                    <Route path="currency" element={<CurrencyPage />} />
+                    <Route path="archived" element={<ArchivedAccountsPage />} />
+                  </Route>
                 </Routes>
               </SidebarLayout>
             </ErrorBoundary>

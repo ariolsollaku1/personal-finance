@@ -14,7 +14,7 @@ import {
   ReferenceLine,
 } from 'recharts';
 import { projectionApi } from '../lib/api';
-import { formatCurrency } from '../lib/currency';
+import { formatCurrency, formatCompactCurrency } from '../lib/currency';
 import { ProjectionSkeleton } from '../components/Skeleton';
 import { useSWR } from '../hooks/useSWR';
 
@@ -88,16 +88,16 @@ export default function ProjectionPage() {
         <h2 className="text-lg font-semibold mb-2">Year-End Projection</h2>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <p className="text-orange-100 text-sm">Projected Net Worth (Dec 31)</p>
-            <p className="text-3xl font-bold">
-              {formatCurrency(data.summary.projectedYearEndNetWorth, currency)}
+            <p className="text-orange-100 text-sm">Net Worth (Dec 31)</p>
+            <p className="text-2xl font-bold">
+              {formatCompactCurrency(data.summary.projectedYearEndNetWorth, currency)}
             </p>
           </div>
           <div>
             <p className="text-orange-100 text-sm">Projected Change (YTD)</p>
-            <p className={`text-3xl font-bold ${data.summary.projectedNetWorthChange >= 0 ? 'text-green-300' : 'text-red-300'}`}>
+            <p className={`text-2xl font-bold ${data.summary.projectedNetWorthChange >= 0 ? 'text-green-300' : 'text-red-300'}`}>
               {data.summary.projectedNetWorthChange >= 0 ? '+' : ''}
-              {formatCurrency(data.summary.projectedNetWorthChange, currency)}
+              {formatCompactCurrency(data.summary.projectedNetWorthChange, currency)}
             </p>
           </div>
         </div>

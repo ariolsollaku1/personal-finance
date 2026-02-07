@@ -55,6 +55,30 @@ export function formatCurrency(amount: number, currency: Currency): string {
   }
 }
 
+// Compact currency formatter (e.g., 494k L, 1.5M €)
+export function formatCompactCurrency(amount: number, currency: Currency): string {
+  const absAmount = Math.abs(amount);
+  const sign = amount < 0 ? '-' : '';
+  const symbol = CURRENCY_SYMBOLS[currency];
+
+  let formatted: string;
+  if (absAmount >= 1_000_000) {
+    const millions = absAmount / 1_000_000;
+    formatted = millions % 1 === 0 ? `${millions}M` : `${millions.toFixed(1)}M`;
+  } else if (absAmount >= 1_000) {
+    const thousands = absAmount / 1_000;
+    formatted = thousands % 1 === 0 ? `${thousands}k` : `${thousands.toFixed(1)}k`;
+  } else {
+    formatted = absAmount.toFixed(0);
+  }
+
+  if (SYMBOL_SUFFIX_CURRENCIES.includes(currency)) {
+    return `${sign}${formatted} ${symbol}`;
+  } else {
+    return `${sign}${symbol}${formatted}`;
+  }
+}
+
 export function getCurrencySymbol(currency: Currency): string {
   return CURRENCY_SYMBOLS[currency];
 }

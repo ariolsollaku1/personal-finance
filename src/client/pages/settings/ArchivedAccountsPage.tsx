@@ -1,50 +1,31 @@
-import { useState, useEffect } from 'react';
-import { Account, accountsApi } from '../../lib/api';
+import { useState } from 'react';
+import { accountsApi } from '../../lib/api';
 import { formatCurrency } from '../../lib/currency';
 import { useToast } from '../../contexts/ToastContext';
 import { useConfirm } from '../../hooks/useConfirm';
+import { useSWR } from '../../hooks/useSWR';
 import ConfirmModal from '../../components/ConfirmModal';
 
 const ACCOUNT_ICONS: Record<string, string> = {
-  bank: '🏦',
-  cash: '💵',
-  stock: '📈',
-  asset: '🏠',
-  loan: '📋',
-  credit: '💳',
+  bank: '\u{1F3E6}',
+  cash: '\u{1F4B5}',
+  stock: '\u{1F4C8}',
+  asset: '\u{1F3E0}',
+  loan: '\u{1F4CB}',
+  credit: '\u{1F4B3}',
 };
 
 export default function ArchivedAccountsPage() {
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: accounts, loading } = useSWR('/accounts/archived', () => accountsApi.getArchived());
   const [restoringId, setRestoringId] = useState<number | null>(null);
   const toast = useToast();
   const { confirm, confirmState, handleConfirm, handleCancel } = useConfirm();
-
-  useEffect(() => {
-    loadAccounts();
-  }, []);
-
-  const loadAccounts = async () => {
-    try {
-      setLoading(true);
-      const data = await accountsApi.getArchived();
-      setAccounts(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load archived accounts');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleRestore = async (id: number) => {
     setRestoringId(id);
     try {
       await accountsApi.unarchive(id);
       toast.success('Account', 'Account restored successfully');
-      loadAccounts();
     } catch (err) {
       toast.error('Account', err instanceof Error ? err.message : 'Failed to restore account');
     } finally {
@@ -63,7 +44,6 @@ export default function ArchivedAccountsPage() {
     try {
       await accountsApi.delete(id);
       toast.success('Account', 'Account deleted permanently');
-      loadAccounts();
     } catch (err) {
       toast.error('Account', err instanceof Error ? err.message : 'Failed to delete account');
     }
@@ -79,11 +59,13 @@ export default function ArchivedAccountsPage() {
     });
   };
 
+  const allAccounts = accounts ?? [];
+
   if (loading) {
     return (
       <div className="space-y-6">
         <div>
-          <div className="h-8 bg-gray-200 rounded w-48 mb-2 animate-pulse" />
+          <div className="h-6 bg-gray-200 rounded w-48 mb-2 animate-pulse" />
           <div className="h-4 bg-gray-100 rounded w-64 animate-pulse" />
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-100/80 overflow-hidden">
@@ -105,30 +87,19 @@ export default function ArchivedAccountsPage() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-2">
-        <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <span>{error}</span>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Archived Accounts</h1>
-        <p className="text-gray-500 mt-1">
-          Archived accounts are hidden from the sidebar and dashboard. You can restore them at any time.
+        <h2 className="text-xl font-bold text-gray-900">Archived Accounts</h2>
+        <p className="text-sm text-gray-500 mt-0.5">
+          Hidden from the sidebar and dashboard. Restore them at any time.
         </p>
       </div>
 
       {/* Accounts List */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100/80 overflow-hidden">
-        {accounts.length === 0 ? (
+        {allAccounts.length === 0 ? (
           <div className="p-12 text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -142,11 +113,11 @@ export default function ArchivedAccountsPage() {
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
-            {accounts.map((account) => (
+            {allAccounts.map((account) => (
               <div key={account.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors group">
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center">
-                    <span className="text-lg">{ACCOUNT_ICONS[account.type] || '💰'}</span>
+                    <span className="text-lg">{ACCOUNT_ICONS[account.type] || '\u{1F4B0}'}</span>
                   </div>
                   <div>
                     <div className="flex items-center gap-2">

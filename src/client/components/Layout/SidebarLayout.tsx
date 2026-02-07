@@ -99,7 +99,7 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
         </div>
 
         {/* Page content */}
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto" style={{ scrollbarGutter: 'stable' }}>
           <div className="max-w-7xl mx-auto p-4 lg:p-8 pb-20 lg:pb-8">{children}</div>
         </main>
       </div>
