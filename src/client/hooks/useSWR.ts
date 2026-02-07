@@ -26,8 +26,10 @@ export function useSWR<T>(
   const [refreshing, setRefreshing] = useState(false);
 
   const fetch = useCallback(
-    (k: string) => {
-      const hasCached = getCache(k) !== null;
+    (k: string, isRevalidation = false) => {
+      // Use refreshing (not loading) when we already have data in React state,
+      // even if localStorage cache was cleared by invalidateCache()
+      const hasCached = isRevalidation || getCache(k) !== null;
       if (hasCached) {
         setRefreshing(true);
       } else {
@@ -87,7 +89,9 @@ export function useSWR<T>(
     const handler = (e: Event) => {
       const { prefixes } = (e as CustomEvent<{ prefixes: string[] }>).detail;
       if (prefixes.some((p) => key.startsWith(p))) {
-        fetch(key);
+        // Pass isRevalidation=true so we use refreshing (not loading/skeleton)
+        // since we still have data in React state even though localStorage was cleared
+        fetch(key, true);
       }
     };
 
