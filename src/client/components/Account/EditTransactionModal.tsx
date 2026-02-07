@@ -27,6 +27,8 @@ export default function EditTransactionModal({
 
   const tx = editingTransaction || dataRef.current;
 
+  if (!tx) return null;
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -40,8 +42,6 @@ export default function EditTransactionModal({
   const filteredCategories = categories.filter((c) =>
     tx.type === 'inflow' ? c.type === 'income' : c.type === 'expense'
   );
-
-  if (!tx) return null;
 
   return (
     <BaseModal isOpen={!!editingTransaction} onClose={onClose} maxWidth="md">

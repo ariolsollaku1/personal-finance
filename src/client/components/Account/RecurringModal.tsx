@@ -200,6 +200,8 @@ export function EditRecurringModal({
 
   const rec = editingRecurring || dataRef.current;
 
+  if (!rec) return null;
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -213,8 +215,6 @@ export function EditRecurringModal({
   const filteredCategories = categories.filter((c) =>
     rec.type === 'inflow' ? c.type === 'income' : c.type === 'expense'
   );
-
-  if (!rec) return null;
 
   return (
     <BaseModal isOpen={!!editingRecurring} onClose={onClose} maxWidth="md">
