@@ -2,6 +2,15 @@ import { Router, Request, Response } from 'express';
 import { dividendQueries, holdingsQueries, transactionQueries, accountTransactionQueries, accountQueries, settingsQueries } from '../db/queries.js';
 import { getDividendHistory } from '../services/yahoo.js';
 import { sendSuccess, badRequest, notFound, internalError } from '../utils/response.js';
+import {
+  validateParams,
+  validateBody,
+  idParamSchema,
+  accountIdParamSchema,
+  createDividendSchema,
+  setTaxRateSchema,
+  CreateDividendInput,
+} from '../validation/index.js';
 
 const router = Router();
 
@@ -36,10 +45,10 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 // GET /api/dividends/account/:accountId - List dividends for specific account
-router.get('/account/:accountId', async (req: Request, res: Response) => {
+router.get('/account/:accountId', validateParams(accountIdParamSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const accountId = parseInt(req.params.accountId);
+    const accountId = (req.params as any).accountId as number;
     const dividends = await dividendQueries.getByAccount(userId, accountId);
     sendSuccess(res, dividends);
   } catch (error) {
@@ -67,18 +76,10 @@ router.get('/tax', async (req: Request, res: Response) => {
 });
 
 // POST /api/dividends - Record a dividend payment (requires accountId)
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', validateBody(createDividendSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const { symbol, amountPerShare, sharesHeld, exDate, payDate, accountId } = req.body;
-
-    if (!symbol || !amountPerShare || !exDate) {
-      return badRequest(res, 'Symbol, amountPerShare, and exDate are required');
-    }
-
-    if (!accountId) {
-      return badRequest(res, 'accountId is required');
-    }
+    const { symbol, amountPerShare, sharesHeld, exDate, payDate, accountId } = req.body as CreateDividendInput;
 
     // Verify account belongs to user
     const account = await accountQueries.getById(userId, accountId);
@@ -135,10 +136,10 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // DELETE /api/dividends/:id - Delete a dividend record
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', validateParams(idParamSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const id = parseInt(req.params.id);
+    const id = (req.params as any).id as number;
     await dividendQueries.delete(userId, id);
     sendSuccess(res, { deleted: true });
   } catch (error) {
@@ -148,14 +149,10 @@ router.delete('/:id', async (req: Request, res: Response) => {
 });
 
 // PUT /api/dividends/tax-rate - Update dividend tax rate
-router.put('/tax-rate', async (req: Request, res: Response) => {
+router.put('/tax-rate', validateBody(setTaxRateSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const { rate } = req.body;
-
-    if (rate === undefined || rate < 0 || rate > 1) {
-      return badRequest(res, 'Rate is required and must be between 0 and 1');
-    }
+    const { rate } = req.body as { rate: number };
 
     await settingsQueries.set(userId, 'dividend_tax_rate', rate.toString());
     sendSuccess(res, { rate });
@@ -166,10 +163,10 @@ router.put('/tax-rate', async (req: Request, res: Response) => {
 });
 
 // POST /api/dividends/check/:accountId - Check and auto-record dividends for an account
-router.post('/check/:accountId', async (req: Request, res: Response) => {
+router.post('/check/:accountId', validateParams(accountIdParamSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const accountId = parseInt(req.params.accountId);
+    const accountId = (req.params as any).accountId as number;
 
     // Verify account belongs to user
     const account = await accountQueries.getById(userId, accountId);

@@ -1,6 +1,17 @@
 import { Router, Request, Response } from 'express';
 import { payeeQueries } from '../db/queries.js';
 import { sendSuccess, badRequest, notFound, conflict, internalError } from '../utils/response.js';
+import {
+  validateParams,
+  validateBody,
+  idParamSchema,
+  createPayeeSchema,
+  updatePayeeSchema,
+  mergePayeesSchema,
+  CreatePayeeInput,
+  UpdatePayeeInput,
+  MergePayeesInput,
+} from '../validation/index.js';
 
 const router = Router();
 
@@ -35,14 +46,10 @@ router.get('/search', async (req: Request, res: Response) => {
 });
 
 // POST /api/payees - Create payee
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', validateBody(createPayeeSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const { name } = req.body;
-
-    if (!name) {
-      return badRequest(res, 'Name is required');
-    }
+    const { name } = req.body as CreatePayeeInput;
 
     // Check if payee already exists
     const existing = await payeeQueries.getByName(userId, name);
@@ -61,15 +68,11 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // PUT /api/payees/:id - Rename payee
-router.put('/:id', async (req: Request, res: Response) => {
+router.put('/:id', validateParams(idParamSchema), validateBody(updatePayeeSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const id = parseInt(req.params.id);
-    const { name } = req.body;
-
-    if (!name) {
-      return badRequest(res, 'Name is required');
-    }
+    const id = (req.params as any).id as number;
+    const { name } = req.body as UpdatePayeeInput;
 
     const payee = await payeeQueries.getById(userId, id);
     if (!payee) {
@@ -93,10 +96,10 @@ router.put('/:id', async (req: Request, res: Response) => {
 });
 
 // DELETE /api/payees/:id - Delete payee
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', validateParams(idParamSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const id = parseInt(req.params.id);
+    const id = (req.params as any).id as number;
     const payee = await payeeQueries.getById(userId, id);
 
     if (!payee) {
@@ -112,14 +115,10 @@ router.delete('/:id', async (req: Request, res: Response) => {
 });
 
 // POST /api/payees/merge - Merge duplicate payees
-router.post('/merge', async (req: Request, res: Response) => {
+router.post('/merge', validateBody(mergePayeesSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const { sourceId, targetId } = req.body;
-
-    if (!sourceId || !targetId) {
-      return badRequest(res, 'sourceId and targetId are required');
-    }
+    const { sourceId, targetId } = req.body as MergePayeesInput;
 
     const source = await payeeQueries.getById(userId, sourceId);
     const target = await payeeQueries.getById(userId, targetId);
@@ -130,10 +129,6 @@ router.post('/merge', async (req: Request, res: Response) => {
 
     if (!target) {
       return notFound(res, 'Target payee not found');
-    }
-
-    if (sourceId === targetId) {
-      return badRequest(res, 'Cannot merge payee with itself');
     }
 
     await payeeQueries.merge(userId, sourceId, targetId);

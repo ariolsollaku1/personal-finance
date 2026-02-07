@@ -24,6 +24,21 @@ export const accountIdParamSchema = z.object({
   accountId: z.string().regex(/^\d+$/).transform(Number),
 });
 
+// Composite param schemas for routes with multiple URL params
+export const accountIdTxIdParamSchema = z.object({
+  accountId: z.string().regex(/^\d+$/).transform(Number),
+  txId: z.string().regex(/^\d+$/).transform(Number),
+});
+
+export const symbolParamSchema = z.object({
+  symbol: z.string().min(1).max(10),
+});
+
+export const symbolTxIdParamSchema = z.object({
+  symbol: z.string().min(1).max(10),
+  id: z.string().regex(/^\d+$/).transform(Number),
+});
+
 // =============================================================================
 // Account Schemas
 // =============================================================================
@@ -102,6 +117,7 @@ export const updateRecurringSchema = z.object({
 
 export const applyRecurringSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  amount: z.number().positive().optional(),
 });
 
 // =============================================================================
@@ -151,6 +167,22 @@ export const mergePayeesSchema = z.object({
 }).refine(data => data.sourceId !== data.targetId, {
   message: 'Cannot merge payee with itself',
   path: ['targetId'],
+});
+
+// =============================================================================
+// Stock Transaction Schemas
+// =============================================================================
+
+export const stockTransactionTypeSchema = z.enum(['buy', 'sell']);
+
+export const createStockTransactionSchema = z.object({
+  symbol: z.string().min(1).max(10).toUpperCase(),
+  type: stockTransactionTypeSchema,
+  shares: z.number().positive('Shares must be positive'),
+  price: z.number().positive('Price must be positive'),
+  fees: z.number().min(0).default(0),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD format'),
+  accountId: z.number().int().positive(),
 });
 
 // =============================================================================
@@ -213,9 +245,14 @@ export type CreateTransactionInput = z.infer<typeof createTransactionSchema>;
 export type UpdateTransactionInput = z.infer<typeof updateTransactionSchema>;
 export type CreateRecurringInput = z.infer<typeof createRecurringSchema>;
 export type UpdateRecurringInput = z.infer<typeof updateRecurringSchema>;
+export type ApplyRecurringInput = z.infer<typeof applyRecurringSchema>;
 export type CreateTransferInput = z.infer<typeof createTransferSchema>;
 export type CreateCategoryInput = z.infer<typeof createCategorySchema>;
+export type UpdateCategoryInput = z.infer<typeof updateCategorySchema>;
 export type CreatePayeeInput = z.infer<typeof createPayeeSchema>;
+export type UpdatePayeeInput = z.infer<typeof updatePayeeSchema>;
+export type MergePayeesInput = z.infer<typeof mergePayeesSchema>;
 export type CreateHoldingInput = z.infer<typeof createHoldingSchema>;
 export type SellHoldingInput = z.infer<typeof sellHoldingSchema>;
 export type CreateDividendInput = z.infer<typeof createDividendSchema>;
+export type CreateStockTransactionInput = z.infer<typeof createStockTransactionSchema>;

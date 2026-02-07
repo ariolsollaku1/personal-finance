@@ -2,6 +2,18 @@ import { Router, Request, Response } from 'express';
 import { holdingsQueries, transactionQueries, accountTransactionQueries, accountQueries } from '../db/queries.js';
 import { getQuote } from '../services/yahoo.js';
 import { sendSuccess, badRequest, notFound, internalError } from '../utils/response.js';
+import {
+  validateParams,
+  validateBody,
+  idParamSchema,
+  accountIdParamSchema,
+  symbolParamSchema,
+  symbolTxIdParamSchema,
+  createHoldingSchema,
+  sellHoldingSchema,
+  CreateHoldingInput,
+  SellHoldingInput,
+} from '../validation/index.js';
 
 const router = Router();
 
@@ -18,10 +30,10 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 // GET /api/holdings/account/:accountId - List holdings for specific account
-router.get('/account/:accountId', async (req: Request, res: Response) => {
+router.get('/account/:accountId', validateParams(accountIdParamSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const accountId = parseInt(req.params.accountId);
+    const accountId = (req.params as any).accountId as number;
     const holdings = await holdingsQueries.getByAccount(userId, accountId);
     sendSuccess(res, holdings);
   } catch (error) {
@@ -112,18 +124,10 @@ router.get('/:symbol/transactions', async (req: Request, res: Response) => {
 });
 
 // POST /api/holdings - Add new holding (buy shares) - requires accountId
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', validateBody(createHoldingSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const { symbol, shares, price, fees = 0, date, accountId } = req.body;
-
-    if (!symbol || !shares || !price) {
-      return badRequest(res, 'Symbol, shares, and price are required');
-    }
-
-    if (!accountId) {
-      return badRequest(res, 'accountId is required');
-    }
+    const { symbol, shares, price, fees, date, accountId } = req.body as CreateHoldingInput;
 
     // Verify account belongs to user
     const account = await accountQueries.getById(userId, accountId);
@@ -131,7 +135,7 @@ router.post('/', async (req: Request, res: Response) => {
       return notFound(res, 'Account not found');
     }
 
-    const upperSymbol = symbol.toUpperCase();
+    const upperSymbol = symbol;
 
     // Verify symbol exists
     const quote = await getQuote(upperSymbol);
@@ -193,10 +197,10 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // DELETE /api/holdings/:id - Remove holding
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', validateParams(idParamSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const id = parseInt(req.params.id);
+    const id = (req.params as any).id as number;
     await holdingsQueries.delete(userId, id);
     sendSuccess(res, { deleted: true });
   } catch (error) {
@@ -205,20 +209,12 @@ router.delete('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/holdings/:symbol/sell - Sell shares (requires accountId in query or body)
-router.post('/:symbol/sell', async (req: Request, res: Response) => {
+// POST /api/holdings/:symbol/sell - Sell shares (requires accountId in body)
+router.post('/:symbol/sell', validateParams(symbolParamSchema), validateBody(sellHoldingSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const { shares, price, fees = 0, date, accountId } = req.body;
-    const symbol = req.params.symbol.toUpperCase();
-
-    if (!shares || !price) {
-      return badRequest(res, 'Shares and price are required');
-    }
-
-    if (!accountId) {
-      return badRequest(res, 'accountId is required');
-    }
+    const { shares, price, fees, date, accountId } = req.body as SellHoldingInput;
+    const symbol = (req.params as any).symbol.toUpperCase();
 
     // Verify account belongs to user
     const account = await accountQueries.getById(userId, accountId);
@@ -288,11 +284,11 @@ router.post('/:symbol/sell', async (req: Request, res: Response) => {
 });
 
 // PUT /api/holdings/:symbol/transactions/:id - Update a stock transaction
-router.put('/:symbol/transactions/:id', async (req: Request, res: Response) => {
+router.put('/:symbol/transactions/:id', validateParams(symbolTxIdParamSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const symbol = req.params.symbol.toUpperCase();
-    const txId = parseInt(req.params.id);
+    const symbol = ((req.params as any).symbol as string).toUpperCase();
+    const txId = (req.params as any).id as number;
     const { shares, price, fees } = req.body;
 
     // Verify the transaction exists and belongs to this user/symbol
@@ -317,11 +313,11 @@ router.put('/:symbol/transactions/:id', async (req: Request, res: Response) => {
 });
 
 // DELETE /api/holdings/:symbol/transactions/:id - Delete a stock transaction
-router.delete('/:symbol/transactions/:id', async (req: Request, res: Response) => {
+router.delete('/:symbol/transactions/:id', validateParams(symbolTxIdParamSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const symbol = req.params.symbol.toUpperCase();
-    const txId = parseInt(req.params.id);
+    const symbol = ((req.params as any).symbol as string).toUpperCase();
+    const txId = (req.params as any).id as number;
 
     // Verify the transaction exists and belongs to this user/symbol
     const existing = await transactionQueries.getById(userId, txId);

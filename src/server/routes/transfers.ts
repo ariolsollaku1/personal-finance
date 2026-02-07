@@ -1,6 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { accountQueries, transferQueries } from '../db/queries.js';
 import { sendSuccess, badRequest, notFound, internalError } from '../utils/response.js';
+import {
+  validateParams,
+  validateBody,
+  idParamSchema,
+  createTransferSchema,
+  CreateTransferInput,
+} from '../validation/index.js';
 
 const router = Router();
 
@@ -17,10 +24,10 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 // GET /api/transfers/:id - Get single transfer
-router.get('/:id', async (req: Request, res: Response) => {
+router.get('/:id', validateParams(idParamSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const id = parseInt(req.params.id);
+    const id = (req.params as any).id as number;
     const transfer = await transferQueries.getById(userId, id);
 
     if (!transfer) {
@@ -35,14 +42,10 @@ router.get('/:id', async (req: Request, res: Response) => {
 });
 
 // POST /api/transfers - Create transfer
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', validateBody(createTransferSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const { fromAccountId, toAccountId, fromAmount, toAmount, date, notes } = req.body;
-
-    if (!fromAccountId || !toAccountId || !fromAmount || !date) {
-      return badRequest(res, 'fromAccountId, toAccountId, fromAmount, and date are required');
-    }
+    const { fromAccountId, toAccountId, fromAmount, toAmount, date, notes } = req.body as CreateTransferInput;
 
     const fromAccount = await accountQueries.getById(userId, fromAccountId);
     const toAccount = await accountQueries.getById(userId, toAccountId);
@@ -59,17 +62,15 @@ router.post('/', async (req: Request, res: Response) => {
       return badRequest(res, 'Transfers to/from stock accounts are not supported');
     }
 
-    if (fromAccountId === toAccountId) {
-      return badRequest(res, 'Cannot transfer to the same account');
-    }
-
     // If currencies are the same, toAmount defaults to fromAmount
     // If different currencies, toAmount must be provided
-    let finalToAmount = toAmount;
+    let finalToAmount: number;
     if (fromAccount.currency === toAccount.currency) {
       finalToAmount = toAmount || fromAmount;
     } else if (!toAmount) {
       return badRequest(res, 'toAmount is required for cross-currency transfers');
+    } else {
+      finalToAmount = toAmount;
     }
 
     const id = await transferQueries.create(
@@ -91,10 +92,10 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // DELETE /api/transfers/:id - Delete transfer (removes both linked transactions)
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', validateParams(idParamSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const id = parseInt(req.params.id);
+    const id = (req.params as any).id as number;
     const transfer = await transferQueries.getById(userId, id);
 
     if (!transfer) {

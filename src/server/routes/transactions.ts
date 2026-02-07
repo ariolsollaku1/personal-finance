@@ -1,6 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { transactionQueries, accountQueries } from '../db/queries.js';
 import { sendSuccess, badRequest, notFound, internalError } from '../utils/response.js';
+import {
+  validateParams,
+  validateBody,
+  idParamSchema,
+  createStockTransactionSchema,
+  CreateStockTransactionInput,
+} from '../validation/index.js';
 
 const router = Router();
 
@@ -25,18 +32,10 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 // POST /api/transactions - Record a transaction (standalone, doesn't affect holdings)
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', validateBody(createStockTransactionSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const { symbol, type, shares, price, fees = 0, date, accountId } = req.body;
-
-    if (!symbol || !type || !shares || !price || !date) {
-      return badRequest(res, 'Symbol, type, shares, price, and date are required');
-    }
-
-    if (!accountId) {
-      return badRequest(res, 'accountId is required');
-    }
+    const { symbol, type, shares, price, fees, date, accountId } = req.body as CreateStockTransactionInput;
 
     // Verify account belongs to user
     const account = await accountQueries.getById(userId, accountId);
@@ -44,13 +43,9 @@ router.post('/', async (req: Request, res: Response) => {
       return notFound(res, 'Account not found');
     }
 
-    if (type !== 'buy' && type !== 'sell') {
-      return badRequest(res, 'Type must be "buy" or "sell"');
-    }
-
     const id = await transactionQueries.create(
       userId,
-      symbol.toUpperCase(),
+      symbol,
       type,
       shares,
       price,
@@ -59,7 +54,7 @@ router.post('/', async (req: Request, res: Response) => {
       accountId
     );
 
-    sendSuccess(res, { id, symbol: symbol.toUpperCase(), type, shares, price, fees, date, accountId }, 201);
+    sendSuccess(res, { id, symbol, type, shares, price, fees, date, accountId }, 201);
   } catch (error) {
     console.error('Error creating transaction:', error);
     internalError(res, 'Failed to create transaction');
@@ -67,10 +62,10 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // DELETE /api/transactions/:id - Delete a transaction
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', validateParams(idParamSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const id = parseInt(req.params.id);
+    const id = (req.params as any).id as number;
     await transactionQueries.delete(userId, id);
     sendSuccess(res, { deleted: true });
   } catch (error) {

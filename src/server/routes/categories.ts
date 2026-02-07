@@ -1,6 +1,15 @@
 import { Router, Request, Response } from 'express';
 import { categoryQueries } from '../db/queries.js';
 import { sendSuccess, badRequest, notFound, conflict, internalError } from '../utils/response.js';
+import {
+  validateParams,
+  validateBody,
+  idParamSchema,
+  createCategorySchema,
+  updateCategorySchema,
+  CreateCategoryInput,
+  UpdateCategoryInput,
+} from '../validation/index.js';
 
 const router = Router();
 
@@ -17,19 +26,10 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 // POST /api/categories - Create category
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', validateBody(createCategorySchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const { name, type } = req.body;
-
-    if (!name) {
-      return badRequest(res, 'Name is required');
-    }
-
-    const categoryType = type || 'expense';
-    if (!['income', 'expense'].includes(categoryType)) {
-      return badRequest(res, 'Invalid category type');
-    }
+    const { name, type } = req.body as CreateCategoryInput;
 
     // Check if category already exists
     const existing = await categoryQueries.getByName(userId, name);
@@ -37,7 +37,7 @@ router.post('/', async (req: Request, res: Response) => {
       return conflict(res, 'Category already exists');
     }
 
-    const id = await categoryQueries.create(userId, name, categoryType);
+    const id = await categoryQueries.create(userId, name, type);
     const category = await categoryQueries.getById(userId, id as number);
 
     sendSuccess(res, category, 201);
@@ -48,15 +48,11 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // PUT /api/categories/:id - Rename category
-router.put('/:id', async (req: Request, res: Response) => {
+router.put('/:id', validateParams(idParamSchema), validateBody(updateCategorySchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const id = parseInt(req.params.id);
-    const { name } = req.body;
-
-    if (!name) {
-      return badRequest(res, 'Name is required');
-    }
+    const id = (req.params as any).id as number;
+    const { name } = req.body as UpdateCategoryInput;
 
     const category = await categoryQueries.getById(userId, id);
     if (!category) {
@@ -80,10 +76,10 @@ router.put('/:id', async (req: Request, res: Response) => {
 });
 
 // DELETE /api/categories/:id - Delete category
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', validateParams(idParamSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const id = parseInt(req.params.id);
+    const id = (req.params as any).id as number;
     const category = await categoryQueries.getById(userId, id);
 
     if (!category) {

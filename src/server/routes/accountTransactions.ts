@@ -7,15 +7,25 @@ import {
   TransactionType,
 } from '../db/queries.js';
 import { sendSuccess, badRequest, notFound, internalError } from '../utils/response.js';
+import {
+  validateParams,
+  validateBody,
+  idParamSchema,
+  accountIdTxIdParamSchema,
+  createTransactionSchema,
+  updateTransactionSchema,
+  CreateTransactionInput,
+  UpdateTransactionInput,
+} from '../validation/index.js';
 
 const router = Router();
 
 // GET /api/accounts/:id/transactions - List transactions for an account
 // Supports pagination with ?page=1&limit=50 (default: all transactions)
-router.get('/:id/transactions', async (req: Request, res: Response) => {
+router.get('/:id/transactions', validateParams(idParamSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const accountId = parseInt(req.params.id);
+    const accountId = (req.params as any).id as number;
     const account = await accountQueries.getById(userId, accountId);
 
     if (!account) {
@@ -96,23 +106,15 @@ router.get('/:id/transactions', async (req: Request, res: Response) => {
 });
 
 // POST /api/accounts/:id/transactions - Create transaction
-router.post('/:id/transactions', async (req: Request, res: Response) => {
+router.post('/:id/transactions', validateParams(idParamSchema), validateBody(createTransactionSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const accountId = parseInt(req.params.id);
-    const { type, amount, date, payee, payeeId, category, categoryId, notes } = req.body;
+    const accountId = (req.params as any).id as number;
+    const { type, amount, date, payee, payeeId, category, categoryId, notes } = req.body as CreateTransactionInput;
 
     const account = await accountQueries.getById(userId, accountId);
     if (!account) {
       return notFound(res, 'Account not found');
-    }
-
-    if (!type || !amount || !date) {
-      return badRequest(res, 'type, amount, and date are required');
-    }
-
-    if (!['inflow', 'outflow'].includes(type)) {
-      return badRequest(res, 'Invalid transaction type');
     }
 
     // Handle payee - get or create
@@ -148,12 +150,11 @@ router.post('/:id/transactions', async (req: Request, res: Response) => {
 });
 
 // PUT /api/accounts/:accountId/transactions/:txId - Update transaction
-router.put('/:accountId/transactions/:txId', async (req: Request, res: Response) => {
+router.put('/:accountId/transactions/:txId', validateParams(accountIdTxIdParamSchema), validateBody(updateTransactionSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const accountId = parseInt(req.params.accountId);
-    const txId = parseInt(req.params.txId);
-    const { type, amount, date, payee, payeeId, category, categoryId, notes } = req.body;
+    const { accountId, txId } = req.params as any as { accountId: number; txId: number };
+    const { type, amount, date, payee, payeeId, category, categoryId, notes } = req.body as UpdateTransactionInput;
 
     const account = await accountQueries.getById(userId, accountId);
     if (!account) {
@@ -174,9 +175,6 @@ router.put('/:accountId/transactions/:txId', async (req: Request, res: Response)
     }
 
     const txType = type || transaction.type;
-    if (!['inflow', 'outflow'].includes(txType)) {
-      return badRequest(res, 'Invalid transaction type');
-    }
 
     // Handle payee - get or create
     let finalPayeeId = payeeId !== undefined ? payeeId : transaction.payee_id;
@@ -211,11 +209,10 @@ router.put('/:accountId/transactions/:txId', async (req: Request, res: Response)
 });
 
 // DELETE /api/accounts/:accountId/transactions/:txId - Delete transaction
-router.delete('/:accountId/transactions/:txId', async (req: Request, res: Response) => {
+router.delete('/:accountId/transactions/:txId', validateParams(accountIdTxIdParamSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const accountId = parseInt(req.params.accountId);
-    const txId = parseInt(req.params.txId);
+    const { accountId, txId } = req.params as any as { accountId: number; txId: number };
 
     const account = await accountQueries.getById(userId, accountId);
     if (!account) {

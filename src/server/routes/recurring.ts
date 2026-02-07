@@ -11,14 +11,25 @@ import {
 } from '../db/queries.js';
 import { sendSuccess, badRequest, notFound, internalError } from '../utils/response.js';
 import { calculateNextDueDate } from '../utils/dates.js';
+import {
+  validateParams,
+  validateBody,
+  idParamSchema,
+  createRecurringSchema,
+  updateRecurringSchema,
+  applyRecurringSchema,
+  CreateRecurringInput,
+  UpdateRecurringInput,
+  ApplyRecurringInput,
+} from '../validation/index.js';
 
 const router = Router();
 
 // GET /api/accounts/:id/recurring - List recurring transactions for an account
-router.get('/accounts/:id/recurring', async (req: Request, res: Response) => {
+router.get('/accounts/:id/recurring', validateParams(idParamSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const accountId = parseInt(req.params.id);
+    const accountId = (req.params as any).id as number;
     const account = await accountQueries.getById(userId, accountId);
 
     if (!account) {
@@ -47,27 +58,15 @@ router.get('/due', async (req: Request, res: Response) => {
 });
 
 // POST /api/accounts/:id/recurring - Create recurring transaction
-router.post('/accounts/:id/recurring', async (req: Request, res: Response) => {
+router.post('/accounts/:id/recurring', validateParams(idParamSchema), validateBody(createRecurringSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const accountId = parseInt(req.params.id);
-    const { type, amount, payee, payeeId, category, categoryId, notes, frequency, nextDueDate } = req.body;
+    const accountId = (req.params as any).id as number;
+    const { type, amount, payee, payeeId, category, categoryId, notes, frequency, nextDueDate } = req.body as CreateRecurringInput;
 
     const account = await accountQueries.getById(userId, accountId);
     if (!account) {
       return notFound(res, 'Account not found');
-    }
-
-    if (!type || !amount || !frequency || !nextDueDate) {
-      return badRequest(res, 'type, amount, frequency, and nextDueDate are required');
-    }
-
-    if (!['inflow', 'outflow'].includes(type)) {
-      return badRequest(res, 'Invalid transaction type');
-    }
-
-    if (!['weekly', 'biweekly', 'monthly', 'yearly'].includes(frequency)) {
-      return badRequest(res, 'Invalid frequency');
     }
 
     // Handle payee - get or create
@@ -104,11 +103,11 @@ router.post('/accounts/:id/recurring', async (req: Request, res: Response) => {
 });
 
 // PUT /api/recurring/:id - Update recurring transaction
-router.put('/:id', async (req: Request, res: Response) => {
+router.put('/:id', validateParams(idParamSchema), validateBody(updateRecurringSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const id = parseInt(req.params.id);
-    const { type, amount, payee, payeeId, category, categoryId, notes, frequency, nextDueDate, isActive } = req.body;
+    const id = (req.params as any).id as number;
+    const { type, amount, payee, payeeId, category, categoryId, notes, frequency, nextDueDate, isActive } = req.body as UpdateRecurringInput;
 
     const recurring = await recurringQueries.getById(userId, id);
     if (!recurring) {
@@ -116,14 +115,7 @@ router.put('/:id', async (req: Request, res: Response) => {
     }
 
     const txType = type || recurring.type;
-    if (!['inflow', 'outflow'].includes(txType)) {
-      return badRequest(res, 'Invalid transaction type');
-    }
-
     const freq = frequency || recurring.frequency;
-    if (!['weekly', 'biweekly', 'monthly', 'yearly'].includes(freq)) {
-      return badRequest(res, 'Invalid frequency');
-    }
 
     // Handle payee - get or create
     let finalPayeeId = payeeId !== undefined ? payeeId : recurring.payee_id;
@@ -148,7 +140,7 @@ router.put('/:id', async (req: Request, res: Response) => {
       notes !== undefined ? notes : recurring.notes,
       freq as Frequency,
       nextDueDate || recurring.next_due_date,
-      isActive !== undefined ? isActive : recurring.is_active
+      isActive !== undefined ? isActive : Boolean(recurring.is_active)
     );
 
     const updatedRecurring = await recurringQueries.getById(userId, id);
@@ -160,10 +152,10 @@ router.put('/:id', async (req: Request, res: Response) => {
 });
 
 // DELETE /api/recurring/:id - Delete recurring transaction
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', validateParams(idParamSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const id = parseInt(req.params.id);
+    const id = (req.params as any).id as number;
     const recurring = await recurringQueries.getById(userId, id);
 
     if (!recurring) {
@@ -179,11 +171,11 @@ router.delete('/:id', async (req: Request, res: Response) => {
 });
 
 // POST /api/recurring/:id/apply - Apply recurring transaction (create real transaction)
-router.post('/:id/apply', async (req: Request, res: Response) => {
+router.post('/:id/apply', validateParams(idParamSchema), validateBody(applyRecurringSchema), async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const id = parseInt(req.params.id);
-    const { date, amount } = req.body;
+    const id = (req.params as any).id as number;
+    const { date, amount } = req.body as ApplyRecurringInput;
 
     const recurring = await recurringQueries.getById(userId, id);
     if (!recurring) {
