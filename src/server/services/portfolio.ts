@@ -18,9 +18,15 @@ import {
   holdingsQueries,
   transactionQueries,
   Holding,
+  Currency,
 } from '../db/queries.js';
 import { getMultipleQuotes, Quote } from './yahoo.js';
-import { roundCurrency } from './currency.js';
+import { roundCurrency, convertCurrency, getExchangeRates, ExchangeRates } from './currency.js';
+
+/** Currencies supported by our exchange rate service */
+const SUPPORTED_CURRENCIES: Set<string> = new Set([
+  'EUR', 'USD', 'ALL', 'GBP', 'CHF', 'NOK', 'SEK', 'DKK', 'PLN', 'CZK', 'HUF', 'RON', 'BGN',
+]);
 
 /**
  * Stock holding enriched with live quote data and calculated metrics
@@ -98,16 +104,30 @@ export interface PortfolioSummary {
  */
 function calculateHoldingMetrics(
   holding: Holding,
-  quote: Quote | undefined
+  quote: Quote | undefined,
+  accountCurrency: Currency,
+  rates: ExchangeRates
 ): HoldingWithQuote {
-  const currentPrice = quote?.regularMarketPrice || 0;
   const shares = Number(holding.shares);
-  const avgCost = Number(holding.avg_cost);
+  const rawAvgCost = Number(holding.avg_cost);
+  const rawPrice = quote?.regularMarketPrice || 0;
+
+  // Determine the stock's native currency from the quote
+  const stockCurrency = quote?.currency && SUPPORTED_CURRENCIES.has(quote.currency)
+    ? (quote.currency as Currency)
+    : 'USD';
+
+  // Convert price and avg cost from stock currency to account currency
+  const convert = (amt: number) => convertCurrency(amt, stockCurrency, accountCurrency, rates);
+  const currentPrice = convert(rawPrice);
+  const avgCost = convert(rawAvgCost);
   const marketValue = shares * currentPrice;
   const costBasis = shares * avgCost;
   const gain = marketValue - costBasis;
   const gainPercent = costBasis > 0 ? (gain / costBasis) * 100 : 0;
-  const dayChange = (quote?.regularMarketChange || 0) * shares;
+  // Day change is per-share change × shares, converted to account currency
+  const dayChange = convert(quote?.regularMarketChange || 0) * shares;
+  // Percentages don't need conversion
   const dayChangePercent = quote?.regularMarketChangePercent || 0;
 
   return {
@@ -178,7 +198,12 @@ export async function getAccountPortfolio(
 
   // Only fetch quotes for active holdings (closed ones have no market value)
   const symbols = activeHoldings.map((h) => h.symbol);
-  const quotes = symbols.length > 0 ? await getMultipleQuotes(symbols) : new Map<string, Quote>();
+  const [quotes, rates] = await Promise.all([
+    symbols.length > 0 ? getMultipleQuotes(symbols) : Promise.resolve(new Map<string, Quote>()),
+    getExchangeRates(),
+  ]);
+
+  const accountCurrency = account.currency;
 
   let totalValue = 0;
   let totalCost = 0;
@@ -186,7 +211,7 @@ export async function getAccountPortfolio(
 
   const holdingsWithQuotes = activeHoldings.map((holding) => {
     const quote = quotes.get(holding.symbol);
-    const metrics = calculateHoldingMetrics(holding, quote);
+    const metrics = calculateHoldingMetrics(holding, quote, accountCurrency, rates);
 
     totalValue += metrics.marketValue;
     totalCost += metrics.costBasis;
@@ -210,7 +235,10 @@ export async function getAccountPortfolio(
         totalSellProceeds += shares * price - fees;
       }
     }
-    const realizedGain = roundCurrency(totalSellProceeds - totalBuyCost);
+    // Transaction prices are stored in stock's native currency (default USD)
+    const rawRealizedGain = totalSellProceeds - totalBuyCost;
+    const stockCurrency: Currency = 'USD';
+    const realizedGain = roundCurrency(convertCurrency(rawRealizedGain, stockCurrency, accountCurrency, rates));
 
     return {
       id: holding.id,
@@ -270,7 +298,8 @@ export async function getAccountPortfolio(
  * ```
  */
 export async function getAggregatedPortfolio(
-  userId: string
+  userId: string,
+  mainCurrency: Currency
 ): Promise<PortfolioSummary> {
   const accounts = await accountQueries.getAll(userId);
   const stockAccounts = accounts.filter(a => a.type === 'stock');
@@ -304,21 +333,29 @@ export async function getAggregatedPortfolio(
     };
   }
 
-  // Get quotes for all unique symbols at once
+  // Get quotes and exchange rates in parallel
   const uniqueSymbols = [...new Set(allHoldings.map(h => h.symbol))];
-  const quotes = await getMultipleQuotes(uniqueSymbols);
+  const [quotes, rates] = await Promise.all([
+    getMultipleQuotes(uniqueSymbols),
+    getExchangeRates(),
+  ]);
 
-  // Calculate portfolio totals
+  // Calculate portfolio totals, converting each holding to mainCurrency
   let totalValue = 0;
   let totalCost = 0;
   let dayChange = 0;
 
   for (const holding of allHoldings) {
     const quote = quotes.get(holding.symbol);
-    const currentPrice = quote?.regularMarketPrice || holding.avg_cost;
+    const stockCurrency = quote?.currency && SUPPORTED_CURRENCIES.has(quote.currency)
+      ? (quote.currency as Currency)
+      : 'USD';
+
+    const convert = (amt: number) => convertCurrency(amt, stockCurrency, mainCurrency, rates);
+    const currentPrice = convert(quote?.regularMarketPrice || holding.avg_cost);
     const marketValue = holding.shares * currentPrice;
-    const costBasis = holding.shares * holding.avg_cost;
-    const holdingDayChange = (quote?.regularMarketChange || 0) * holding.shares;
+    const costBasis = holding.shares * convert(holding.avg_cost);
+    const holdingDayChange = convert(quote?.regularMarketChange || 0) * holding.shares;
 
     totalValue += marketValue;
     totalCost += costBasis;

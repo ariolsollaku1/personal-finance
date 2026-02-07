@@ -1,24 +1,19 @@
 import { useState } from 'react';
-import { TaxSummary, dividendsApi } from '../../lib/api';
+import { TaxSummary, dividendsApi, Currency } from '../../lib/api';
+import { formatCurrency } from '../../lib/currency';
 import { useToast } from '../../contexts/ToastContext';
 
 interface TaxSummaryCardProps {
   taxSummary: TaxSummary | null;
+  currency?: Currency;
   onUpdate: () => void;
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(value);
 }
 
 function formatPercent(value: number): string {
   return `${(value * 100).toFixed(1)}%`;
 }
 
-export default function TaxSummaryCard({ taxSummary, onUpdate }: TaxSummaryCardProps) {
+export default function TaxSummaryCard({ taxSummary, currency = 'EUR', onUpdate }: TaxSummaryCardProps) {
   const [editingRate, setEditingRate] = useState(false);
   const [newRate, setNewRate] = useState('');
   const [saving, setSaving] = useState(false);
@@ -101,18 +96,18 @@ export default function TaxSummaryCard({ taxSummary, onUpdate }: TaxSummaryCardP
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
           <div>
             <p className="text-sm text-gray-500">{currentYear} Gross Dividends</p>
-            <p className="text-xl font-bold">{formatCurrency(currentYearSummary.total_gross)}</p>
+            <p className="text-xl font-bold">{formatCurrency(currentYearSummary.total_gross, currency)}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500">{currentYear} Tax Withheld</p>
             <p className="text-xl font-bold text-red-600">
-              -{formatCurrency(currentYearSummary.total_tax)}
+              -{formatCurrency(currentYearSummary.total_tax, currency)}
             </p>
           </div>
           <div>
             <p className="text-sm text-gray-500">{currentYear} Net Dividends</p>
             <p className="text-xl font-bold text-green-600">
-              {formatCurrency(currentYearSummary.total_net)}
+              {formatCurrency(currentYearSummary.total_net, currency)}
             </p>
           </div>
           <div>
@@ -149,12 +144,12 @@ export default function TaxSummaryCard({ taxSummary, onUpdate }: TaxSummaryCardP
               {taxSummary.summary.map((year) => (
                 <tr key={year.year}>
                   <td className="px-4 py-2 text-sm font-medium">{year.year}</td>
-                  <td className="px-4 py-2 text-sm text-right">{formatCurrency(year.total_gross)}</td>
+                  <td className="px-4 py-2 text-sm text-right">{formatCurrency(year.total_gross, currency)}</td>
                   <td className="px-4 py-2 text-sm text-right text-red-600">
-                    -{formatCurrency(year.total_tax)}
+                    -{formatCurrency(year.total_tax, currency)}
                   </td>
                   <td className="px-4 py-2 text-sm text-right text-green-600">
-                    {formatCurrency(year.total_net)}
+                    {formatCurrency(year.total_net, currency)}
                   </td>
                   <td className="px-4 py-2 text-sm text-right">{year.dividend_count}</td>
                 </tr>

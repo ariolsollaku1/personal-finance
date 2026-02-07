@@ -9,9 +9,12 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useHistoricalPrices } from '../../hooks/useQuotes';
+import { Currency } from '../../lib/api';
+import { formatCurrency, getCurrencySymbol } from '../../lib/currency';
 
 interface PerformanceChartProps {
   symbol: string;
+  currency?: Currency;
 }
 
 const periods = [
@@ -23,14 +26,7 @@ const periods = [
   { value: '5y', label: '5Y' },
 ];
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(value);
-}
-
-export default function PerformanceChart({ symbol }: PerformanceChartProps) {
+export default function PerformanceChart({ symbol, currency = 'EUR' }: PerformanceChartProps) {
   const [period, setPeriod] = useState('1y');
   const { history, loading, error } = useHistoricalPrices(symbol, period);
 
@@ -85,7 +81,7 @@ export default function PerformanceChart({ symbol }: PerformanceChartProps) {
           <div className="mb-4">
             <span className={`text-2xl font-bold ${priceChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {priceChange >= 0 ? '+' : ''}
-              {formatCurrency(priceChange)} ({priceChangePercent.toFixed(2)}%)
+              {formatCurrency(priceChange, currency)} ({priceChangePercent.toFixed(2)}%)
             </span>
             <span className="text-sm text-gray-500 ml-2">over {period}</span>
           </div>
@@ -104,10 +100,10 @@ export default function PerformanceChart({ symbol }: PerformanceChartProps) {
                   domain={[minPrice * 0.95, maxPrice * 1.05]}
                   tick={{ fontSize: 12 }}
                   tickLine={false}
-                  tickFormatter={(value) => `$${value.toFixed(0)}`}
+                  tickFormatter={(value) => `${getCurrencySymbol(currency)}${value.toFixed(0)}`}
                 />
                 <Tooltip
-                  formatter={(value: number) => [formatCurrency(value), 'Price']}
+                  formatter={(value: number) => [formatCurrency(value, currency), 'Price']}
                   contentStyle={{
                     backgroundColor: '#fff',
                     border: '1px solid #e5e7eb',

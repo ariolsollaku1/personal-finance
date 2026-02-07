@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { accountsApi, AccountType, Currency } from '../lib/api';
+import { getCurrencySymbol } from '../lib/currency';
 import BaseModal from './BaseModal';
 
 const accountTypeInfo = {
   bank: { icon: '🏦', label: 'Bank Account', shortLabel: 'Bank', description: 'Checking, savings, or other bank accounts' },
   cash: { icon: '💵', label: 'Cash Account', shortLabel: 'Cash', description: 'Physical cash or wallet tracking' },
-  stock: { icon: '📈', label: 'Stock Account', shortLabel: 'Stock', description: 'Investment portfolios (USD only)' },
+  stock: { icon: '📈', label: 'Stock Account', shortLabel: 'Stock', description: 'Investment portfolios' },
   asset: { icon: '🏠', label: 'Asset', shortLabel: 'Asset', description: 'Real estate, vehicles, or valuables' },
   loan: { icon: '📋', label: 'Loan Account', shortLabel: 'Loan', description: 'Debts and loans you owe' },
   credit: { icon: '💳', label: 'Credit Card', shortLabel: 'Credit', description: 'Credit cards - enter the credit limit' },
@@ -105,7 +106,7 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
                         setFormData({
                           ...formData,
                           type,
-                          currency: type === 'stock' ? 'USD' : formData.currency,
+                          currency: formData.currency,
                         });
                       }}
                       className={`flex flex-col items-center justify-center w-[calc((100%-1rem)/3)] min-w-[calc((100%-1rem)/3)] py-3 rounded-xl border-2 transition-all duration-200 flex-shrink-0 ${
@@ -140,7 +141,7 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
                         setFormData({
                           ...formData,
                           type,
-                          currency: type === 'stock' ? 'USD' : formData.currency,
+                          currency: formData.currency,
                         });
                       }}
                       className={`p-4 rounded-xl border-2 text-left transition-all duration-200 ${
@@ -187,8 +188,7 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
                   <select
                     value={formData.currency}
                     onChange={(e) => setFormData({ ...formData, currency: e.target.value as Currency })}
-                    disabled={formData.type === 'stock'}
-                    className="appearance-none pl-3 pr-1 py-3 bg-gray-50 border-r border-gray-300 text-gray-700 text-sm font-medium focus:outline-none disabled:bg-gray-100 disabled:text-gray-500"
+                    className="appearance-none pl-3 pr-1 py-3 bg-gray-50 border-r border-gray-300 text-gray-700 text-sm font-medium focus:outline-none"
                   >
                     <option value="EUR">EUR</option>
                     <option value="USD">USD</option>
@@ -214,9 +214,6 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
                     placeholder="0.00"
                   />
                 </div>
-                {formData.type === 'stock' && (
-                  <p className="text-xs text-gray-500 mt-1.5">Stock accounts use USD</p>
-                )}
               </div>
 
               {/* Desktop: separate currency + balance fields */}
@@ -229,8 +226,7 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
                     id="currency"
                     value={formData.currency}
                     onChange={(e) => setFormData({ ...formData, currency: e.target.value as Currency })}
-                    className="appearance-none w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 disabled:bg-gray-100 disabled:text-gray-500"
-                    disabled={formData.type === 'stock'}
+                    className="appearance-none w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
                   >
                     <option value="EUR">EUR - Euro</option>
                     <option value="USD">USD - US Dollar</option>
@@ -246,11 +242,6 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
                     <option value="BGN">BGN - Bulgarian Lev</option>
                     <option value="ALL">ALL - Albanian Lek</option>
                   </select>
-                  {formData.type === 'stock' && (
-                    <p className="text-xs text-gray-500 mt-1.5">
-                      Stock accounts use USD
-                    </p>
-                  )}
                 </div>
 
                 <div>
@@ -259,7 +250,7 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
                   </label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-                      {formData.currency === 'USD' ? '$' : formData.currency === 'EUR' ? '€' : 'L'}
+                      {getCurrencySymbol(formData.currency)}
                     </span>
                     <input
                       id="balance"

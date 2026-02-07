@@ -150,7 +150,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs font-medium flex-shrink-0 text-gray-400">
                         {account.type === 'stock'
-                          ? formatCompactCurrency(account.costBasis || 0, 'USD')
+                          ? formatCompactCurrency(account.costBasis || 0, account.currency)
                           : formatCompactCurrency(account.balance || 0, account.currency)}
                       </span>
                       <button
@@ -229,7 +229,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                         <div className="flex items-center gap-1.5">
                           <span className="text-xs font-medium flex-shrink-0 text-gray-400" title={account.type === 'stock' ? 'Cost Basis' : account.type === 'credit' ? 'Available Credit' : 'Balance'}>
                             {account.type === 'stock'
-                              ? formatCompactCurrency(account.costBasis || 0, 'USD')
+                              ? formatCompactCurrency(account.costBasis || 0, account.currency)
                               : formatCompactCurrency(account.balance || 0, account.currency)}
                           </span>
                           <button
@@ -267,7 +267,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     }`
                   }
                   title={`${account.name}${account.type === 'stock'
-                    ? ` (Cost: ${formatCompactCurrency(account.costBasis || 0, 'USD')})`
+                    ? ` (Cost: ${formatCompactCurrency(account.costBasis || 0, account.currency)})`
                     : account.type === 'credit'
                     ? ` (Available: ${formatCompactCurrency(account.balance || 0, account.currency)})`
                     : ` (${formatCompactCurrency(account.balance || 0, account.currency)})`}${(account.recurringInflow || 0) > 0 ? ` | ${account.recurringInflow} income` : ''}${(account.recurringOutflow || 0) > 0 ? ` | ${account.recurringOutflow} expense` : ''}`}

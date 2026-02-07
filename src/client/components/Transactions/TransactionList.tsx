@@ -1,19 +1,14 @@
 import { useState } from 'react';
-import { Transaction, transactionsApi } from '../../lib/api';
+import { Transaction, transactionsApi, Currency } from '../../lib/api';
+import { formatCurrency } from '../../lib/currency';
 import { useToast } from '../../contexts/ToastContext';
 import { useConfirm } from '../../hooks/useConfirm';
 import ConfirmModal from '../ConfirmModal';
 
 interface TransactionListProps {
   transactions: Transaction[];
+  currency?: Currency;
   onDelete: () => void;
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(value);
 }
 
 function formatDate(dateStr: string): string {
@@ -24,7 +19,7 @@ function formatDate(dateStr: string): string {
   });
 }
 
-export default function TransactionList({ transactions, onDelete }: TransactionListProps) {
+export default function TransactionList({ transactions, currency = 'EUR', onDelete }: TransactionListProps) {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const toast = useToast();
   const { confirm, confirmState, handleConfirm, handleCancel } = useConfirm();
@@ -111,13 +106,13 @@ export default function TransactionList({ transactions, onDelete }: TransactionL
                     {tx.shares.toLocaleString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
-                    {formatCurrency(tx.price)}
+                    {formatCurrency(tx.price, currency)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-500">
-                    {formatCurrency(tx.fees)}
+                    {formatCurrency(tx.fees, currency)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">
-                    {formatCurrency(total)}
+                    {formatCurrency(total, currency)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                     <button

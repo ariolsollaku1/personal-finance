@@ -21,7 +21,7 @@ import {
   AccountBalanceRow,
   RecurringCountRow,
 } from '../db/queries.js';
-import { convertToMainCurrency, roundCurrency } from './currency.js';
+import { convertToMainCurrency, convertCurrency, getExchangeRates, roundCurrency, ExchangeRates } from './currency.js';
 
 /**
  * Account balance information including recurring transaction counts
@@ -87,10 +87,15 @@ export async function getAccountBalance(
   const recurringOutflow = recurring?.outflow_count || 0;
 
   if (account.type === 'stock') {
-    const holdings = await holdingsQueries.getByAccount(userId, accountId);
+    const [holdings, rates] = await Promise.all([
+      holdingsQueries.getByAccount(userId, accountId),
+      getExchangeRates(),
+    ]);
     let costBasis = 0;
     for (const holding of holdings) {
-      costBasis += Number(holding.shares) * Number(holding.avg_cost);
+      // avg_cost is stored in stock's native currency (default USD)
+      const rawCost = Number(holding.shares) * Number(holding.avg_cost);
+      costBasis += convertCurrency(rawCost, 'USD', account.currency, rates);
     }
 
     return {
@@ -139,10 +144,11 @@ export async function getAllAccountBalances(
   userId: string
 ): Promise<AccountBalance[]> {
   // Batch fetch all data in parallel
-  const [accountsWithBalances, allHoldings, allRecurringCounts] = await Promise.all([
+  const [accountsWithBalances, allHoldings, allRecurringCounts, rates] = await Promise.all([
     batchQueries.getAllAccountsWithBalances(userId),
     holdingsQueries.getAll(userId),
     batchQueries.getAllRecurringCounts(userId),
+    getExchangeRates(),
   ]);
 
   // Group holdings by account_id
@@ -174,7 +180,9 @@ export async function getAllAccountBalances(
       const holdings = holdingsByAccount.get(account.id) || [];
       let costBasis = 0;
       for (const holding of holdings) {
-        costBasis += Number(holding.shares) * Number(holding.avg_cost);
+        // avg_cost is stored in stock's native currency (default USD)
+        const rawCost = Number(holding.shares) * Number(holding.avg_cost);
+        costBasis += convertCurrency(rawCost, 'USD', account.currency, rates);
       }
 
       return {
@@ -289,10 +297,11 @@ export async function getAllAccountBalancesWithConversion(
   mainCurrency: Currency
 ): Promise<AccountBalanceWithConversion[]> {
   // Batch fetch all data in parallel
-  const [accountsWithBalances, allHoldings, allRecurringCounts] = await Promise.all([
+  const [accountsWithBalances, allHoldings, allRecurringCounts, rates] = await Promise.all([
     batchQueries.getAllAccountsWithBalances(userId),
     holdingsQueries.getAll(userId),
     batchQueries.getAllRecurringCounts(userId),
+    getExchangeRates(),
   ]);
 
   // Group holdings by account_id
@@ -325,9 +334,11 @@ export async function getAllAccountBalancesWithConversion(
       const holdings = holdingsByAccount.get(account.id) || [];
       let costBasis = 0;
       for (const holding of holdings) {
-        costBasis += Number(holding.shares) * Number(holding.avg_cost);
+        // avg_cost is stored in stock's native currency (default USD), convert to account currency
+        const rawCost = Number(holding.shares) * Number(holding.avg_cost);
+        costBasis += convertCurrency(rawCost, 'USD', account.currency, rates);
       }
-      const costBasisInMain = convertToMainCurrency(costBasis, account.currency, mainCurrency);
+      const costBasisInMain = convertToMainCurrency(costBasis, account.currency, mainCurrency, rates);
 
       return {
         id: account.id,

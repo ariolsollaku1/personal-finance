@@ -1,23 +1,18 @@
 import { useState, useMemo } from 'react';
-import { Dividend, dividendsApi } from '../../lib/api';
+import { Dividend, dividendsApi, Currency } from '../../lib/api';
+import { formatCurrency } from '../../lib/currency';
 import { useToast } from '../../contexts/ToastContext';
 import { useConfirm } from '../../hooks/useConfirm';
 import ConfirmModal from '../ConfirmModal';
 
 interface DividendListProps {
   dividends: Dividend[];
+  currency?: Currency;
   onDelete: () => void;
 }
 
 type SortColumn = 'ex_date' | 'pay_date' | 'symbol' | 'amount' | 'tax_rate' | 'tax_amount' | 'net_amount';
 type SortDirection = 'asc' | 'desc';
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(value);
-}
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-GB', {
@@ -31,7 +26,7 @@ function formatPercent(value: number): string {
   return `${(value * 100).toFixed(1)}%`;
 }
 
-export default function DividendList({ dividends, onDelete }: DividendListProps) {
+export default function DividendList({ dividends, currency = 'EUR', onDelete }: DividendListProps) {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const toast = useToast();
   const { confirm, confirmState, handleConfirm, handleCancel } = useConfirm();
@@ -211,16 +206,16 @@ export default function DividendList({ dividends, onDelete }: DividendListProps)
                   {div.symbol}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
-                  {formatCurrency(div.amount)}
+                  {formatCurrency(div.amount, currency)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-500">
                   {formatPercent(div.tax_rate)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-red-600">
-                  -{formatCurrency(div.tax_amount)}
+                  -{formatCurrency(div.tax_amount, currency)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-green-600">
-                  {formatCurrency(div.net_amount)}
+                  {formatCurrency(div.net_amount, currency)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                   <button

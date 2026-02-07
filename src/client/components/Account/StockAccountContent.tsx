@@ -1,6 +1,6 @@
 import { RecurringTransaction, AccountTransaction, Currency, Category, Payee } from '../../lib/api';
 import { PortfolioData, AccountModals, DividendCheckState, NewRecurringFormState } from '../../hooks/useAccountPage';
-import AddHoldingForm from '../Portfolio/AddHoldingForm';
+import AddHoldingModal from '../Portfolio/AddHoldingForm';
 import HoldingsList from '../Portfolio/HoldingsList';
 import Summary from '../Portfolio/Summary';
 import PortfolioPerformanceChart from '../Charts/PortfolioPerformanceChart';
@@ -57,12 +57,13 @@ export default function StockAccountContent({
     <>
       <Summary
         portfolio={portfolio}
+        currency={currency}
         lastUpdated={lastUpdated}
         refreshing={portfolioRefreshing}
         onRefresh={refreshPortfolio}
       />
 
-      <PortfolioPerformanceChart accountId={accountId} />
+      <PortfolioPerformanceChart accountId={accountId} currency={currency} />
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
@@ -88,24 +89,23 @@ export default function StockAccountContent({
         <div className="space-y-6">
           <div className="flex justify-end">
             <button
-              onClick={() => modals.setShowAddHolding(!modals.showAddHolding)}
+              onClick={() => modals.setShowAddHolding(true)}
               className="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl hover:from-orange-600 hover:to-amber-600 shadow-sm shadow-orange-500/25 font-medium transition-all duration-200"
             >
-              {modals.showAddHolding ? 'Cancel' : 'Add Holding'}
+              Add Holding
             </button>
           </div>
 
-          {modals.showAddHolding && (
-            <AddHoldingForm
-              accountId={accountId}
-              onSuccess={() => {
-                modals.setShowAddHolding(false);
-              }}
-              onCancel={() => modals.setShowAddHolding(false)}
-            />
-          )}
+          <AddHoldingModal
+            isOpen={modals.showAddHolding}
+            accountId={accountId}
+            onSuccess={() => {
+              modals.setShowAddHolding(false);
+            }}
+            onClose={() => modals.setShowAddHolding(false)}
+          />
 
-          <HoldingsList holdings={portfolio.holdings} closedHoldings={portfolio.closedHoldings} accountId={accountId} onUpdate={refreshData} />
+          <HoldingsList holdings={portfolio.holdings} closedHoldings={portfolio.closedHoldings} accountId={accountId} currency={currency} onUpdate={refreshData} />
         </div>
       )}
 
@@ -137,8 +137,8 @@ export default function StockAccountContent({
             </div>
           )}
 
-          <TaxSummary taxSummary={taxSummary} onUpdate={refreshData} />
-          <DividendList dividends={dividends || []} onDelete={refreshData} />
+          <TaxSummary taxSummary={taxSummary} currency={currency} onUpdate={refreshData} />
+          <DividendList dividends={dividends || []} currency={currency} onDelete={refreshData} />
         </div>
       )}
 

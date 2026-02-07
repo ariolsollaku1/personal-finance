@@ -1,18 +1,19 @@
 import { useState, useMemo } from 'react';
-import { HoldingWithQuote } from '../../lib/api';
+import { HoldingWithQuote, Currency } from '../../lib/api';
 import HoldingRow, { MobileHoldingCard } from './HoldingRow';
 
 interface HoldingsListProps {
   holdings: HoldingWithQuote[];
   closedHoldings?: HoldingWithQuote[];
   accountId: number;
+  currency: Currency;
   onUpdate: () => void;
 }
 
 type SortColumn = 'symbol' | 'shares' | 'avgCost' | 'currentPrice' | 'marketValue' | 'gain' | 'dayChange';
 type SortDirection = 'asc' | 'desc';
 
-export default function HoldingsList({ holdings, closedHoldings = [], accountId, onUpdate }: HoldingsListProps) {
+export default function HoldingsList({ holdings, closedHoldings = [], accountId, currency, onUpdate }: HoldingsListProps) {
   const [sortColumn, setSortColumn] = useState<SortColumn>('symbol');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
@@ -153,7 +154,7 @@ export default function HoldingsList({ holdings, closedHoldings = [], accountId,
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {sortedActive.map((holding) => (
-              <HoldingRow key={holding.id} holding={holding} accountId={accountId} onUpdate={onUpdate} />
+              <HoldingRow key={holding.id} holding={holding} accountId={accountId} currency={currency} onUpdate={onUpdate} />
             ))}
             {sortedClosed.length > 0 && sortedActive.length > 0 && (
               <tr>
@@ -163,7 +164,7 @@ export default function HoldingsList({ holdings, closedHoldings = [], accountId,
               </tr>
             )}
             {sortedClosed.map((holding) => (
-              <HoldingRow key={holding.id} holding={holding} accountId={accountId} onUpdate={onUpdate} />
+              <HoldingRow key={holding.id} holding={holding} accountId={accountId} currency={currency} onUpdate={onUpdate} />
             ))}
           </tbody>
         </table>
@@ -172,7 +173,7 @@ export default function HoldingsList({ holdings, closedHoldings = [], accountId,
       {/* Mobile card layout */}
       <div className="lg:hidden divide-y divide-gray-200">
         {sortedActive.map((holding) => (
-          <MobileHoldingCard key={holding.id} holding={holding} accountId={accountId} onUpdate={onUpdate} />
+          <MobileHoldingCard key={holding.id} holding={holding} accountId={accountId} currency={currency} onUpdate={onUpdate} />
         ))}
         {sortedClosed.length > 0 && sortedActive.length > 0 && (
           <div className="px-4 py-2 bg-gray-50 text-xs font-medium text-gray-400 uppercase tracking-wider">
@@ -180,7 +181,7 @@ export default function HoldingsList({ holdings, closedHoldings = [], accountId,
           </div>
         )}
         {sortedClosed.map((holding) => (
-          <MobileHoldingCard key={holding.id} holding={holding} accountId={accountId} onUpdate={onUpdate} />
+          <MobileHoldingCard key={holding.id} holding={holding} accountId={accountId} currency={currency} onUpdate={onUpdate} />
         ))}
       </div>
     </div>

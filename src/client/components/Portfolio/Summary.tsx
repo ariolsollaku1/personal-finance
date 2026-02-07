@@ -1,18 +1,13 @@
 import { useState, useEffect } from 'react';
-import { PortfolioSummary } from '../../lib/api';
+import { PortfolioSummary, Currency } from '../../lib/api';
+import { formatCurrency } from '../../lib/currency';
 
 interface SummaryProps {
   portfolio: PortfolioSummary | null;
+  currency: Currency;
   lastUpdated?: Date | null;
   refreshing?: boolean;
   onRefresh?: () => void;
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(value);
 }
 
 function formatPercent(value: number): string {
@@ -32,7 +27,7 @@ function formatTimeAgo(date: Date): string {
   return `${hours}h ago`;
 }
 
-export default function Summary({ portfolio, lastUpdated, refreshing, onRefresh }: SummaryProps) {
+export default function Summary({ portfolio, currency, lastUpdated, refreshing, onRefresh }: SummaryProps) {
   const [timeAgo, setTimeAgo] = useState<string>('');
 
   // Update "time ago" every second
@@ -97,13 +92,13 @@ export default function Summary({ portfolio, lastUpdated, refreshing, onRefresh 
             <div>
               <p className="text-sm text-gray-500">Cash Balance</p>
               <p className={`text-xl font-bold ${cashBalance >= 0 ? 'text-gray-900' : 'text-red-600'}`}>
-                {formatCurrency(cashBalance)}
+                {formatCurrency(cashBalance, currency)}
               </p>
             </div>
             <div className="text-right">
               <p className="text-sm text-gray-500">Total Account Value</p>
               <p className="text-xl font-bold text-gray-900">
-                {formatCurrency(totalValue + cashBalance)}
+                {formatCurrency(totalValue + cashBalance, currency)}
               </p>
             </div>
           </div>
@@ -114,18 +109,18 @@ export default function Summary({ portfolio, lastUpdated, refreshing, onRefresh 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
         <div>
           <p className="text-sm text-gray-500">Total Value</p>
-          <p className="text-2xl font-bold">{formatCurrency(totalValue)}</p>
+          <p className="text-2xl font-bold">{formatCurrency(totalValue, currency)}</p>
         </div>
 
         <div>
           <p className="text-sm text-gray-500">Total Cost</p>
-          <p className="text-2xl font-bold">{formatCurrency(totalCost)}</p>
+          <p className="text-2xl font-bold">{formatCurrency(totalCost, currency)}</p>
         </div>
 
         <div>
           <p className="text-sm text-gray-500">Total Gain/Loss</p>
           <p className={`text-2xl font-bold ${totalGain >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {formatCurrency(totalGain)}
+            {formatCurrency(totalGain, currency)}
           </p>
           <p className={`text-sm ${totalGain >= 0 ? 'text-green-600' : 'text-red-600'}`}>
             {formatPercent(totalGainPercent)}
@@ -135,7 +130,7 @@ export default function Summary({ portfolio, lastUpdated, refreshing, onRefresh 
         <div>
           <p className="text-sm text-gray-500">Day Change</p>
           <p className={`text-2xl font-bold ${dayChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {formatCurrency(dayChange)}
+            {formatCurrency(dayChange, currency)}
           </p>
           <p className={`text-sm ${dayChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
             {formatPercent(dayChangePercent)}

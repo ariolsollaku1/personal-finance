@@ -24,9 +24,14 @@ import {
   TransactionType,
 } from '../db/queries.js';
 import { getMultipleQuotes } from './yahoo.js';
-import { convertToMainCurrency, getExchangeRates, ExchangeRates } from './currency.js';
+import { convertToMainCurrency, convertCurrency, getExchangeRates, ExchangeRates } from './currency.js';
 import { getAggregatedPortfolio, PortfolioSummary } from './portfolio.js';
 import { calculateNextDueDate } from '../utils/dates.js';
+
+/** Currencies supported by our exchange rate service */
+const SUPPORTED_CURRENCIES: Set<string> = new Set([
+  'EUR', 'USD', 'ALL', 'GBP', 'CHF', 'NOK', 'SEK', 'DKK', 'PLN', 'CZK', 'HUF', 'RON', 'BGN',
+]);
 
 /**
  * Summary information for a single account
@@ -144,9 +149,11 @@ export interface DashboardData {
  * ```
  */
 export async function getDashboardData(userId: string): Promise<DashboardData> {
-  // Fetch all data in parallel using batch queries
+  // Fetch mainCurrency first since aggregated portfolio needs it for conversion
+  const mainCurrency = await settingsQueries.getMainCurrency(userId);
+
+  // Fetch remaining data in parallel using batch queries
   const [
-    mainCurrency,
     accountsWithBalances,
     allHoldings,
     stockPortfolio,
@@ -154,10 +161,9 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     recentTxRaw,
     exchangeRates,
   ] = await Promise.all([
-    settingsQueries.getMainCurrency(userId),
     batchQueries.getAllAccountsWithBalances(userId),
     holdingsQueries.getAll(userId),
-    getAggregatedPortfolio(userId),
+    getAggregatedPortfolio(userId, mainCurrency),
     (() => {
       const today = new Date();
       const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
@@ -204,13 +210,17 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
       let stockValue = 0;
       for (const holding of holdings) {
         const quote = quotes.get(holding.symbol);
-        if (quote) {
-          stockValue += Number(holding.shares) * quote.regularMarketPrice;
-        } else {
-          stockValue += Number(holding.shares) * Number(holding.avg_cost);
-        }
+        // Determine stock's native currency from quote (default USD)
+        const stockCurrency = quote?.currency && SUPPORTED_CURRENCIES.has(quote.currency)
+          ? (quote.currency as Currency)
+          : 'USD';
+        const rawValue = quote
+          ? Number(holding.shares) * quote.regularMarketPrice
+          : Number(holding.shares) * Number(holding.avg_cost);
+        // Convert from stock currency to account currency
+        stockValue += convertCurrency(rawValue, stockCurrency, account.currency, exchangeRates);
       }
-      // Cash balance is already in transaction_total, so add stock value
+      // Cash balance is already in account currency via transaction_total, so add converted stock value
       balance = stockValue + balance;
     }
 

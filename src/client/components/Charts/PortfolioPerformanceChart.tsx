@@ -10,10 +10,12 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
-import { accountsApi, PerformanceData, PerformanceEvent } from '../../lib/api';
+import { accountsApi, PerformanceData, PerformanceEvent, Currency } from '../../lib/api';
+import { formatCurrency } from '../../lib/currency';
 
 interface PortfolioPerformanceChartProps {
   accountId: number;
+  currency: Currency;
 }
 
 const periods = [
@@ -83,7 +85,7 @@ function EventMarkerShape({ cx, cy, payload }: { cx?: number; cy?: number; paylo
 }
 
 // Custom tooltip that shows event details when hovering event markers
-function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ dataKey: string; value: number; payload: ChartDataPoint }>; label?: string }) {
+function CustomTooltip({ active, payload, label, currency }: { active?: boolean; payload?: Array<{ dataKey: string; value: number; payload: ChartDataPoint }>; label?: string; currency: Currency }) {
   if (!active || !payload?.length) return null;
 
   const dataPoint = payload[0]?.payload;
@@ -114,9 +116,9 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
         <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '6px', paddingTop: '6px' }}>
           {events.map((evt, i) => (
             <p key={i} style={{ margin: '2px 0', fontSize: '12px', color: evt.type === 'buy' ? '#16a34a' : evt.type === 'sell' ? '#dc2626' : '#2563eb' }}>
-              {evt.type === 'buy' && `Buy ${evt.shares} ${evt.symbol} @ $${evt.price?.toFixed(2)}`}
-              {evt.type === 'sell' && `Sell ${evt.shares} ${evt.symbol} @ $${evt.price?.toFixed(2)}`}
-              {evt.type === 'dividend' && `Dividend ${evt.symbol}: $${evt.amount?.toFixed(2)}`}
+              {evt.type === 'buy' && `Buy ${evt.shares} ${evt.symbol} @ ${formatCurrency(evt.price ?? 0, currency)}`}
+              {evt.type === 'sell' && `Sell ${evt.shares} ${evt.symbol} @ ${formatCurrency(evt.price ?? 0, currency)}`}
+              {evt.type === 'dividend' && `Dividend ${evt.symbol}: ${formatCurrency(evt.amount ?? 0, currency)}`}
             </p>
           ))}
         </div>
@@ -125,7 +127,7 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
   );
 }
 
-export default function PortfolioPerformanceChart({ accountId }: PortfolioPerformanceChartProps) {
+export default function PortfolioPerformanceChart({ accountId, currency }: PortfolioPerformanceChartProps) {
   const [period, setPeriod] = useState('1y');
   const [data, setData] = useState<PerformanceData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -301,7 +303,7 @@ export default function PortfolioPerformanceChart({ accountId }: PortfolioPerfor
                   tickLine={false}
                   tickFormatter={(value) => `${value.toFixed(1)}%`}
                 />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<CustomTooltip currency={currency} />} />
                 <Legend
                   formatter={(value) => {
                     if (value === 'portfolio') return 'Portfolio';

@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { HoldingWithQuote, holdingsApi } from '../../lib/api';
+import { HoldingWithQuote, holdingsApi, Currency } from '../../lib/api';
 import type { StockTransaction } from '../../../shared/types';
+import { formatCurrency } from '../../lib/currency';
 import { useToast } from '../../contexts/ToastContext';
 import { useConfirm } from '../../hooks/useConfirm';
 import ConfirmModal from '../ConfirmModal';
@@ -10,14 +11,8 @@ import ActionDropdown from '../ActionDropdown';
 interface HoldingRowProps {
   holding: HoldingWithQuote;
   accountId: number;
+  currency: Currency;
   onUpdate: () => void;
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(value);
 }
 
 function formatPercent(value: number): string {
@@ -39,10 +34,12 @@ interface EditingTx {
 
 function TransactionRow({
   tx,
+  currency,
   onEdit,
   onDelete,
 }: {
   tx: StockTransaction;
+  currency: Currency;
   onEdit: (tx: StockTransaction) => void;
   onDelete: (tx: StockTransaction) => void;
 }) {
@@ -71,13 +68,13 @@ function TransactionRow({
         {formatShares(tx.shares)}
       </td>
       <td className="px-4 py-2 text-sm text-right text-gray-700">
-        {formatCurrency(tx.price)}
+        {formatCurrency(tx.price, currency)}
       </td>
       <td className="px-4 py-2 text-sm text-right text-gray-500">
-        {tx.fees > 0 ? formatCurrency(tx.fees) : '-'}
+        {tx.fees > 0 ? formatCurrency(tx.fees, currency) : '-'}
       </td>
       <td className="px-4 py-2 text-sm text-right font-medium text-gray-900">
-        {formatCurrency(total)}
+        {formatCurrency(total, currency)}
       </td>
       <td className="px-4 py-2 text-right text-sm whitespace-nowrap space-x-2">
         <button onClick={() => onEdit(tx)} className="text-orange-600 hover:text-orange-800">
@@ -94,6 +91,7 @@ function TransactionRow({
 function EditTransactionRow({
   editing,
   txType,
+  currency,
   onChange,
   onSave,
   onCancel,
@@ -101,6 +99,7 @@ function EditTransactionRow({
 }: {
   editing: EditingTx;
   txType: 'buy' | 'sell';
+  currency: Currency;
   onChange: (field: keyof EditingTx, value: string) => void;
   onSave: () => void;
   onCancel: () => void;
@@ -152,7 +151,7 @@ function EditTransactionRow({
         />
       </td>
       <td className="px-4 py-2 text-sm text-right font-medium text-gray-900">
-        {formatCurrency(total)}
+        {formatCurrency(total, currency)}
       </td>
       <td className="px-4 py-2 text-right text-sm whitespace-nowrap space-x-2">
         <button
@@ -190,7 +189,7 @@ const emptyNewTx = (): NewTxForm => ({
   date: new Date().toISOString().split('T')[0],
 });
 
-export default function HoldingRow({ holding, accountId, onUpdate }: HoldingRowProps) {
+export default function HoldingRow({ holding, accountId, currency, onUpdate }: HoldingRowProps) {
   const [deleting, setDeleting] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [transactions, setTransactions] = useState<StockTransaction[]>([]);
@@ -331,7 +330,7 @@ export default function HoldingRow({ holding, accountId, onUpdate }: HoldingRowP
   const handleDeleteTx = async (tx: StockTransaction) => {
     if (!await confirm({
       title: 'Delete Transaction',
-      message: `Delete this ${tx.type} of ${Number(tx.shares)} shares @ $${Number(tx.price).toFixed(2)}?`,
+      message: `Delete this ${tx.type} of ${Number(tx.shares)} shares @ ${formatCurrency(Number(tx.price), currency)}?`,
       confirmLabel: 'Delete',
       variant: 'danger',
     })) {
@@ -377,19 +376,19 @@ export default function HoldingRow({ holding, accountId, onUpdate }: HoldingRowP
           {formatShares(holding.shares)}
         </td>
         <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
-          {formatCurrency(holding.avgCost)}
+          {formatCurrency(holding.avgCost, currency)}
         </td>
         <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
-          {isClosed ? '-' : formatCurrency(holding.currentPrice)}
+          {isClosed ? '-' : formatCurrency(holding.currentPrice, currency)}
         </td>
         <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
-          {isClosed ? '-' : formatCurrency(holding.marketValue)}
+          {isClosed ? '-' : formatCurrency(holding.marketValue, currency)}
         </td>
         <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
           {isClosed ? (
             holding.realizedGain !== undefined ? (
               <div className={holding.realizedGain >= 0 ? 'text-green-600' : 'text-red-600'}>
-                {formatCurrency(holding.realizedGain)}
+                {formatCurrency(holding.realizedGain, currency)}
               </div>
             ) : (
               <span className="text-gray-400">-</span>
@@ -397,7 +396,7 @@ export default function HoldingRow({ holding, accountId, onUpdate }: HoldingRowP
           ) : (
             <>
               <div className={holding.gain >= 0 ? 'text-green-600' : 'text-red-600'}>
-                {formatCurrency(holding.gain)}
+                {formatCurrency(holding.gain, currency)}
               </div>
               <div className={`text-xs ${holding.gain >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {formatPercent(holding.gainPercent)}
@@ -411,7 +410,7 @@ export default function HoldingRow({ holding, accountId, onUpdate }: HoldingRowP
           ) : (
             <>
               <div className={holding.dayChange >= 0 ? 'text-green-600' : 'text-red-600'}>
-                {formatCurrency(holding.dayChange)}
+                {formatCurrency(holding.dayChange, currency)}
               </div>
               <div className={`text-xs ${holding.dayChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {formatPercent(holding.dayChangePercent)}
@@ -465,6 +464,7 @@ export default function HoldingRow({ holding, accountId, onUpdate }: HoldingRowP
                           key={tx.id}
                           editing={editing}
                           txType={editingType}
+                          currency={currency}
                           onChange={handleEditChange}
                           onSave={handleSaveEdit}
                           onCancel={() => setEditing(null)}
@@ -474,6 +474,7 @@ export default function HoldingRow({ holding, accountId, onUpdate }: HoldingRowP
                         <TransactionRow
                           key={tx.id}
                           tx={tx}
+                          currency={currency}
                           onEdit={handleEditTx}
                           onDelete={handleDeleteTx}
                         />
@@ -605,10 +606,12 @@ export default function HoldingRow({ holding, accountId, onUpdate }: HoldingRowP
 
 function MobileTransactionRow({
   tx,
+  currency,
   onEdit,
   onDelete,
 }: {
   tx: StockTransaction;
+  currency: Currency;
   onEdit: (tx: StockTransaction) => void;
   onDelete: (tx: StockTransaction) => void;
 }) {
@@ -635,11 +638,11 @@ function MobileTransactionRow({
             {tx.type.toUpperCase()}
           </span>
           <div className="text-sm text-gray-700">
-            {formatShares(tx.shares)} @ {formatCurrency(price)}
+            {formatShares(tx.shares)} @ {formatCurrency(price, currency)}
           </div>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
-          <span className="text-sm font-medium text-gray-900">{formatCurrency(total)}</span>
+          <span className="text-sm font-medium text-gray-900">{formatCurrency(total, currency)}</span>
           <ActionDropdown
             actions={[
               { label: 'Edit', onClick: () => onEdit(tx) },
@@ -655,6 +658,7 @@ function MobileTransactionRow({
 function MobileEditTransaction({
   editing,
   txType,
+  currency,
   onChange,
   onSave,
   onCancel,
@@ -662,6 +666,7 @@ function MobileEditTransaction({
 }: {
   editing: EditingTx;
   txType: 'buy' | 'sell';
+  currency: Currency;
   onChange: (field: keyof EditingTx, value: string) => void;
   onSave: () => void;
   onCancel: () => void;
@@ -680,7 +685,7 @@ function MobileEditTransaction({
         }`}>
           {txType.toUpperCase()}
         </span>
-        <span className="text-sm text-gray-500">Total: {formatCurrency(total)}</span>
+        <span className="text-sm text-gray-500">Total: {formatCurrency(total, currency)}</span>
       </div>
       <div className="grid grid-cols-3 gap-2 mb-2">
         <div>
@@ -850,7 +855,7 @@ function MobileAddTransaction({
   );
 }
 
-export function MobileHoldingCard({ holding, accountId, onUpdate }: HoldingRowProps) {
+export function MobileHoldingCard({ holding, accountId, currency, onUpdate }: HoldingRowProps) {
   const [expanded, setExpanded] = useState(false);
   const [transactions, setTransactions] = useState<StockTransaction[]>([]);
   const [loadingTx, setLoadingTx] = useState(false);
@@ -986,7 +991,7 @@ export function MobileHoldingCard({ holding, accountId, onUpdate }: HoldingRowPr
   const handleDeleteTx = async (tx: StockTransaction) => {
     if (!await confirm({
       title: 'Delete Transaction',
-      message: `Delete this ${tx.type} of ${Number(tx.shares)} shares @ $${Number(tx.price).toFixed(2)}?`,
+      message: `Delete this ${tx.type} of ${Number(tx.shares)} shares @ ${formatCurrency(Number(tx.price), currency)}?`,
       confirmLabel: 'Delete',
       variant: 'danger',
     })) {
@@ -1031,7 +1036,7 @@ export function MobileHoldingCard({ holding, accountId, onUpdate }: HoldingRowPr
                 )}
               </div>
               <div className="text-xs text-gray-500">
-                {formatShares(holding.shares)} shares @ {formatCurrency(holding.avgCost)}
+                {formatShares(holding.shares)} shares @ {formatCurrency(holding.avgCost, currency)}
               </div>
             </div>
           </div>
@@ -1040,16 +1045,16 @@ export function MobileHoldingCard({ holding, accountId, onUpdate }: HoldingRowPr
               {isClosed ? (
                 holding.realizedGain !== undefined ? (
                   <div className={`text-sm font-medium ${holding.realizedGain >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {formatCurrency(holding.realizedGain)}
+                    {formatCurrency(holding.realizedGain, currency)}
                   </div>
                 ) : (
                   <div className="text-sm text-gray-400">-</div>
                 )
               ) : (
                 <>
-                  <div className="text-sm font-medium text-gray-900">{formatCurrency(holding.marketValue)}</div>
+                  <div className="text-sm font-medium text-gray-900">{formatCurrency(holding.marketValue, currency)}</div>
                   <div className={`text-xs ${holding.gain >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {formatCurrency(holding.gain)} ({formatPercent(holding.gainPercent)})
+                    {formatCurrency(holding.gain, currency)} ({formatPercent(holding.gainPercent)})
                   </div>
                 </>
               )}
@@ -1085,6 +1090,7 @@ export function MobileHoldingCard({ holding, accountId, onUpdate }: HoldingRowPr
                     key={tx.id}
                     editing={editing}
                     txType={editingType}
+                    currency={currency}
                     onChange={handleEditChange}
                     onSave={handleSaveEdit}
                     onCancel={() => setEditing(null)}
@@ -1094,6 +1100,7 @@ export function MobileHoldingCard({ holding, accountId, onUpdate }: HoldingRowPr
                   <MobileTransactionRow
                     key={tx.id}
                     tx={tx}
+                    currency={currency}
                     onEdit={handleEditTx}
                     onDelete={handleDeleteTx}
                   />

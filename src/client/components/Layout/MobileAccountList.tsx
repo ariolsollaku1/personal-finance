@@ -41,7 +41,7 @@ const typeConfig: Record<string, { label: string; icon: string; color: string }>
 
 function getDisplayBalance(account: Account): { value: string; negative: boolean } {
   if (account.type === 'stock') {
-    return { value: formatCompactCurrency(account.costBasis || 0, 'USD'), negative: false };
+    return { value: formatCompactCurrency(account.costBasis || 0, account.currency), negative: false };
   }
   if (account.type === 'credit') {
     return { value: formatCompactCurrency(account.balance || 0, account.currency), negative: false };
