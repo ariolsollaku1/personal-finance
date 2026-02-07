@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { createPortal } from 'react-dom';
 import { EditAccountForm } from '../../hooks/useAccountPage';
-import { useBottomSheet } from '../../hooks/useBottomSheet';
+import BaseModal from '../BaseModal';
 
 interface EditAccountModalProps {
   isOpen: boolean;
@@ -21,9 +20,6 @@ export default function EditAccountModal({
   isStockAccount,
 }: EditAccountModalProps) {
   const [submitting, setSubmitting] = useState(false);
-  const { shouldRender, isVisible } = useBottomSheet(isOpen);
-
-  if (!shouldRender) return null;
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,21 +31,9 @@ export default function EditAccountModal({
     }
   };
 
-  return createPortal(
-    <div
-      className={`fixed inset-0 !mt-0 bg-black/40 backdrop-blur-md flex items-end lg:items-center lg:justify-center z-50 lg:p-4 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div
-        className={`bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl shadow-black/20 ring-1 ring-gray-200/50 w-full lg:max-w-md max-h-[90vh] overflow-hidden transition-transform duration-300 lg:transition-none ${isVisible ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}`}
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-      >
-        {/* Drag handle - mobile only */}
-        <div className="flex justify-center pt-3 pb-2 lg:hidden flex-shrink-0">
-          <div className="w-10 h-1 bg-gray-300 rounded-full" />
-        </div>
-
-        <div className="p-6">
+  return (
+    <BaseModal isOpen={isOpen} onClose={onClose} maxWidth="md">
+      <div className="p-6">
         <h2 className="text-lg font-semibold mb-4">Edit Account</h2>
         <form onSubmit={handleFormSubmit} className="space-y-4">
           <div>
@@ -104,9 +88,7 @@ export default function EditAccountModal({
             </button>
           </div>
         </form>
-        </div>
       </div>
-    </div>,
-    document.body
+    </BaseModal>
   );
 }

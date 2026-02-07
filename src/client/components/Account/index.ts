@@ -6,3 +6,5 @@ export { default as EditAccountModal } from './EditAccountModal';
 export { default as EditTransactionModal } from './EditTransactionModal';
 export { AddRecurringModal, EditRecurringModal } from './RecurringModal';
 export { default as ApplyRecurringModal } from './ApplyRecurringModal';
+export { default as StockAccountContent } from './StockAccountContent';
+export { default as BankAccountContent } from './BankAccountContent';

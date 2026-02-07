@@ -252,6 +252,10 @@ export function useAccountPage(accountId: number) {
   };
 }
 
+export type AccountModals = ReturnType<typeof useAccountModals>;
+export type DividendCheckState = ReturnType<typeof useDividendCheck>;
+export type NewRecurringFormState = ReturnType<typeof useNewRecurringForm>;
+
 export function useAccountModals() {
   const [showAddRecurring, setShowAddRecurring] = useState(false);
   const [showEditAccount, setShowEditAccount] = useState(false);

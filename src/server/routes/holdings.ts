@@ -185,7 +185,9 @@ router.post('/', validateBody(createHoldingSchema), async (req: Request, res: Re
       txDate,
       null,
       null,
-      `Buy ${shares} ${upperSymbol} @ $${price.toFixed(2)}`
+      `Buy ${shares} ${upperSymbol} @ $${price.toFixed(2)}`,
+      null,
+      'stock_trade'
     );
 
     const updatedHolding = await holdingsQueries.getBySymbol(userId, upperSymbol, accountId);
@@ -261,7 +263,9 @@ router.post('/:symbol/sell', validateParams(symbolParamSchema), validateBody(sel
       txDate,
       null,
       null,
-      `Sell ${sellShares} ${symbol} @ $${price.toFixed(2)}`
+      `Sell ${sellShares} ${symbol} @ $${price.toFixed(2)}`,
+      null,
+      'stock_trade'
     );
 
     const remainingShares = heldShares - sellShares;

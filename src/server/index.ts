@@ -14,6 +14,8 @@ import transactionsRoutes from './routes/transactions.js';
 import quotesRoutes from './routes/quotes.js';
 import dividendsRoutes from './routes/dividends.js';
 import accountsRoutes from './routes/accounts.js';
+import accountStatusRoutes from './routes/accountStatus.js';
+import accountPerformanceRoutes from './routes/accountPerformance.js';
 import categoriesRoutes from './routes/categories.js';
 import payeesRoutes from './routes/payees.js';
 import accountTransactionsRoutes from './routes/accountTransactions.js';
@@ -79,6 +81,8 @@ async function start() {
 
     // API routes - New finance manager routes
     app.use('/api/accounts', accountsRoutes);
+    app.use('/api/accounts', accountStatusRoutes);
+    app.use('/api/accounts', accountPerformanceRoutes);
     app.use('/api/accounts', accountTransactionsRoutes); // Nested under accounts
     app.use('/api/categories', categoriesRoutes);
     app.use('/api/payees', payeesRoutes);

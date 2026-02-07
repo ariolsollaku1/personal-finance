@@ -23,20 +23,14 @@ import {
 } from '../hooks/useAccountPage';
 import {
   SwipeableAccountHeader,
-  RecurringList,
-  TransactionList,
   EditAccountModal,
   EditTransactionModal,
   AddRecurringModal,
   EditRecurringModal,
   ApplyRecurringModal,
+  StockAccountContent,
+  BankAccountContent,
 } from '../components/Account';
-import AddHoldingForm from '../components/Portfolio/AddHoldingForm';
-import HoldingsList from '../components/Portfolio/HoldingsList';
-import Summary from '../components/Portfolio/Summary';
-import PortfolioPerformanceChart from '../components/Charts/PortfolioPerformanceChart';
-import DividendList from '../components/Dividends/DividendList';
-import TaxSummary from '../components/Dividends/TaxSummary';
 import AddTransactionModal from '../components/AddTransactionModal';
 import { AccountSkeleton } from '../components/Skeleton';
 import { useToast } from '../contexts/ToastContext';
@@ -135,9 +129,6 @@ export default function SwipeAccountPage() {
   const recurringForm = useNewRecurringForm();
   const { confirm, confirmState, handleConfirm, handleCancel } = useConfirm();
 
-  // refreshData for child components that call it after their own mutations.
-  // With SWR + withInvalidation this is mostly a no-op (cache events auto-refetch),
-  // but provides the expected callback signature.
   const refreshData = useCallback(async () => {
     // no-op: SWR auto-refetches via cache:invalidated events from withInvalidation
   }, []);
@@ -166,8 +157,6 @@ export default function SwipeAccountPage() {
   }, [isStockAccount, accountId, refreshPortfolio]);
 
   // ── Event handlers ──
-  const handleTabChange = (tab: StockTab) => setStockTab(tab);
-
   const handleDeleteTransaction = async (txId: number) => {
     if (!await confirm({ title: 'Delete Transaction', message: 'Are you sure you want to delete this transaction?', confirmLabel: 'Delete', variant: 'danger' })) return;
     try {
@@ -290,7 +279,6 @@ export default function SwipeAccountPage() {
   // Loan payment handlers
   const handlePayLoanSuccess = (newBalance: number) => {
     setShowPayLoanModal(false);
-    // Check if loan is fully paid off (balance >= 0)
     if (newBalance >= 0) {
       setShowPaidOffModal(true);
     }
@@ -302,7 +290,6 @@ export default function SwipeAccountPage() {
     navigate('/');
   };
 
-  // Filter source accounts for loan payments (bank/cash only, not the loan itself)
   const sourceAccountsForLoan = useMemo(() => {
     if (!allAccounts) return [];
     return allAccounts.filter(
@@ -311,7 +298,6 @@ export default function SwipeAccountPage() {
   }, [allAccounts, accountId]);
 
   // ── Loading states ──
-  // No cached accounts at all — first visit ever
   if (!allAccounts) {
     return <AccountSkeleton />;
   }
@@ -324,12 +310,10 @@ export default function SwipeAccountPage() {
     );
   }
 
-  // Content loading: no cached transactions for this account yet
   const contentLoading = txLoading;
 
   return (
     <div className="space-y-6">
-      {/* Swipeable Account Header */}
       <SwipeableAccountHeader
         accounts={sortedAccounts}
         activeIndex={activeIndex >= 0 ? activeIndex : 0}
@@ -354,7 +338,6 @@ export default function SwipeAccountPage() {
         </div>
       ) : (
         <>
-          {/* Edit Account Modal */}
           <EditAccountModal
             isOpen={modals.showEditAccount}
             onClose={() => modals.setShowEditAccount(false)}
@@ -364,140 +347,41 @@ export default function SwipeAccountPage() {
             isStockAccount={isStockAccount}
           />
 
-          {/* Stock Account Content */}
           {isStockAccount && portfolio && (
-            <>
-              <Summary
-                portfolio={portfolio}
-                lastUpdated={lastUpdated}
-                refreshing={portfolioRefreshing}
-                onRefresh={() => refreshPortfolio()}
-              />
-
-              <PortfolioPerformanceChart accountId={accountId} />
-
-              {/* Tabs */}
-              <div className="border-b border-gray-200">
-                <nav className="flex -mb-px">
-                  {(['holdings', 'dividends', 'transactions'] as StockTab[]).map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => handleTabChange(tab)}
-                      className={`px-6 py-3 text-sm font-medium border-b-2 capitalize ${
-                        stockTab === tab
-                          ? 'border-orange-500 text-orange-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      {tab}
-                    </button>
-                  ))}
-                </nav>
-              </div>
-
-              {/* Holdings Tab */}
-              {stockTab === 'holdings' && (
-                <div className="space-y-6">
-                  <div className="flex justify-end">
-                    <button
-                      onClick={() => modals.setShowAddHolding(!modals.showAddHolding)}
-                      className="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl hover:from-orange-600 hover:to-amber-600 shadow-sm shadow-orange-500/25 font-medium transition-all duration-200"
-                    >
-                      {modals.showAddHolding ? 'Cancel' : 'Add Holding'}
-                    </button>
-                  </div>
-
-                  {modals.showAddHolding && (
-                    <AddHoldingForm
-                      accountId={accountId}
-                      onSuccess={() => {
-                        modals.setShowAddHolding(false);
-                      }}
-                      onCancel={() => modals.setShowAddHolding(false)}
-                    />
-                  )}
-
-                  <HoldingsList holdings={portfolio.holdings} closedHoldings={portfolio.closedHoldings} accountId={accountId} onUpdate={refreshData} />
-                </div>
-              )}
-
-              {/* Dividends Tab */}
-              {stockTab === 'dividends' && (
-                <div className="space-y-6">
-                  <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-500">
-                      Automatically checks Yahoo Finance for dividends based on your holdings and purchase dates.
-                    </p>
-                    <button
-                      onClick={dividendCheck.handleCheckDividends}
-                      disabled={dividendCheck.checkingDividends}
-                      className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50"
-                    >
-                      {dividendCheck.checkingDividends ? 'Checking...' : 'Check Dividends'}
-                    </button>
-                  </div>
-
-                  {dividendCheck.dividendCheckResult && (
-                    <div
-                      className={`p-4 rounded-md ${
-                        dividendCheck.dividendCheckResult.includes('Failed')
-                          ? 'bg-red-50 text-red-700'
-                          : 'bg-green-50 text-green-700'
-                      }`}
-                    >
-                      {dividendCheck.dividendCheckResult}
-                    </div>
-                  )}
-
-                  <TaxSummary taxSummary={taxSummary} onUpdate={refreshData} />
-                  <DividendList dividends={dividends || []} onDelete={refreshData} />
-                </div>
-              )}
-
-              {/* Transactions Tab (for stock accounts) */}
-              {stockTab === 'transactions' && (
-                <div className="space-y-6">
-                  <RecurringList
-                    recurring={recurring || []}
-                    currency={account.currency}
-                    onApply={handleApplyRecurring}
-                    onEdit={modals.setEditingRecurring}
-                    onDelete={handleDeleteRecurring}
-                    onAdd={() => modals.setShowAddRecurring(true)}
-                  />
-                  <TransactionList
-                    transactions={transactions || []}
-                    currency={account.currency}
-                    isStockAccount={true}
-                    onEdit={modals.setEditingTransaction}
-                    onDelete={handleDeleteTransaction}
-                    onAdd={() => modals.setShowTransactionModal(true)}
-                  />
-                </div>
-              )}
-            </>
+            <StockAccountContent
+              accountId={accountId}
+              currency={account.currency}
+              portfolio={portfolio}
+              portfolioRefreshing={portfolioRefreshing}
+              refreshPortfolio={() => refreshPortfolio()}
+              lastUpdated={lastUpdated}
+              stockTab={stockTab}
+              onTabChange={setStockTab}
+              dividends={dividends}
+              taxSummary={taxSummary}
+              transactions={transactions}
+              recurring={recurring}
+              categories={categories || []}
+              payees={payees || []}
+              modals={modals}
+              dividendCheck={dividendCheck}
+              refreshData={refreshData}
+              onApplyRecurring={handleApplyRecurring}
+              onDeleteRecurring={handleDeleteRecurring}
+              onDeleteTransaction={handleDeleteTransaction}
+            />
           )}
 
-          {/* Bank/Cash Account Content */}
           {!isStockAccount && (
-            <>
-              <RecurringList
-                recurring={recurring || []}
-                currency={account.currency}
-                onApply={handleApplyRecurring}
-                onEdit={modals.setEditingRecurring}
-                onDelete={handleDeleteRecurring}
-                onAdd={() => modals.setShowAddRecurring(true)}
-              />
-              <TransactionList
-                transactions={transactions || []}
-                currency={account.currency}
-                isStockAccount={false}
-                onEdit={modals.setEditingTransaction}
-                onDelete={handleDeleteTransaction}
-                onAdd={() => modals.setShowTransactionModal(true)}
-              />
-            </>
+            <BankAccountContent
+              currency={account.currency}
+              transactions={transactions}
+              recurring={recurring}
+              modals={modals}
+              onApplyRecurring={handleApplyRecurring}
+              onDeleteRecurring={handleDeleteRecurring}
+              onDeleteTransaction={handleDeleteTransaction}
+            />
           )}
 
           {/* Modals */}
@@ -560,7 +444,6 @@ export default function SwipeAccountPage() {
         onCancel={handleCancel}
       />
 
-      {/* Loan Payment Modals */}
       {account && account.type === 'loan' && (
         <>
           <PayLoanModal

@@ -21,17 +21,18 @@ export default function TransactionList({
   onAdd,
 }: TransactionListProps) {
   const isEditable = (tx: AccountTransaction) => {
-    if (tx.transfer_id) return false;
-    if (isStockAccount && (tx.notes?.startsWith('Buy ') || tx.notes?.startsWith('Sell '))) return false;
-    return true;
+    return tx.source === 'manual' || !tx.source;
   };
 
   const getTransactionLabel = (tx: AccountTransaction) => {
-    if (tx.notes?.startsWith('Buy ') || tx.notes?.startsWith('Sell ')) {
+    if (tx.source === 'stock_trade') {
       return <span className="text-xs text-gray-400">Stock Trade</span>;
     }
-    if (tx.transfer_id) {
+    if (tx.source === 'transfer' || tx.transfer_id) {
       return <span className="text-xs text-gray-400">Transfer</span>;
+    }
+    if (tx.source === 'dividend') {
+      return <span className="text-xs text-gray-400">Dividend</span>;
     }
     return null;
   };
@@ -61,8 +62,7 @@ export default function TransactionList({
               year: 'numeric',
             })}
             {tx.notes &&
-              !tx.notes.startsWith('Buy ') &&
-              !tx.notes.startsWith('Sell ') &&
+              tx.source === 'manual' &&
               ` \u2022 ${tx.notes}`}
             {tx.balance !== undefined && ` \u2022 Bal: ${formatCurrency(tx.balance, currency)}`}
           </p>

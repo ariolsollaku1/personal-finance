@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import { RecurringTransaction, DueRecurring, Currency } from '../../lib/api';
 import { formatCurrency } from '../../lib/currency';
-import { useBottomSheet } from '../../hooks/useBottomSheet';
+import BaseModal from '../BaseModal';
 
 interface ApplyRecurringModalProps {
   recurring: RecurringTransaction | DueRecurring | null;
@@ -22,7 +21,6 @@ export default function ApplyRecurringModal({
   onConfirm,
   onClose,
 }: ApplyRecurringModalProps) {
-  const { shouldRender, isVisible } = useBottomSheet(!!recurring);
   const dataRef = useRef(recurring);
   if (recurring) dataRef.current = recurring;
 
@@ -45,25 +43,13 @@ export default function ApplyRecurringModal({
     }
   };
 
-  if (!shouldRender || !dataRef.current) return null;
+  if (!dataRef.current) return null;
 
   const data = dataRef.current;
 
-  return createPortal(
-    <div
-      className={`fixed inset-0 !mt-0 bg-black/40 backdrop-blur-md flex items-end lg:items-center lg:justify-center z-50 lg:p-4 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div
-        className={`bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl shadow-black/20 ring-1 ring-gray-200/50 w-full lg:max-w-sm max-h-[90vh] overflow-hidden transition-transform duration-300 lg:transition-none ${isVisible ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}`}
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-      >
-        {/* Drag handle - mobile only */}
-        <div className="flex justify-center pt-3 pb-2 lg:hidden flex-shrink-0">
-          <div className="w-10 h-1 bg-gray-300 rounded-full" />
-        </div>
-
-        <div className="p-6">
+  return (
+    <BaseModal isOpen={!!recurring} onClose={onClose} maxWidth="sm">
+      <div className="p-6">
         <h2 className="text-lg font-semibold mb-1">Apply Transaction</h2>
         <p className="text-sm text-gray-500 mb-4">{getLabel(data)}</p>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -107,9 +93,7 @@ export default function ApplyRecurringModal({
             </button>
           </div>
         </form>
-        </div>
       </div>
-    </div>,
-    document.body
+    </BaseModal>
   );
 }

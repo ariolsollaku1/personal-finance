@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { createPortal } from 'react-dom';
-import { useBottomSheet } from '../hooks/useBottomSheet';
 import { Account, accountsApi } from '../lib/api';
+import BaseModal from './BaseModal';
 
 interface LoanPaidOffModalProps {
   isOpen: boolean;
@@ -17,8 +16,6 @@ export default function LoanPaidOffModal({
   onArchive,
 }: LoanPaidOffModalProps) {
   const [archiving, setArchiving] = useState(false);
-
-  const { shouldRender, isVisible } = useBottomSheet(isOpen);
 
   const handleArchive = async () => {
     setArchiving(true);
@@ -36,23 +33,9 @@ export default function LoanPaidOffModal({
     onClose();
   };
 
-  if (!shouldRender) return null;
-
-  return createPortal(
-    <div
-      className={`fixed inset-0 !mt-0 bg-black/40 backdrop-blur-md flex items-end lg:items-center lg:justify-center z-50 lg:p-4 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
-      onClick={(e) => { if (e.target === e.currentTarget && !archiving) onClose(); }}
-    >
-      <div
-        className={`bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl shadow-black/20 ring-1 ring-gray-200/50 w-full lg:max-w-md max-h-[90vh] overflow-hidden transition-transform duration-300 lg:transition-none ${isVisible ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}`}
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-      >
-        {/* Drag handle - mobile only */}
-        <div className="flex justify-center pt-3 pb-2 lg:hidden flex-shrink-0">
-          <div className="w-10 h-1 bg-gray-300 rounded-full" />
-        </div>
-
-        {/* Content */}
+  return (
+    <BaseModal isOpen={isOpen} onClose={() => { if (!archiving) onClose(); }} maxWidth="md">
+      {/* Content */}
         <div className="p-6 text-center">
           {/* Celebration Icon */}
           <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-green-500/30">
@@ -119,8 +102,6 @@ export default function LoanPaidOffModal({
             </button>
           </div>
         </div>
-      </div>
-    </div>,
-    document.body
+    </BaseModal>
   );
 }

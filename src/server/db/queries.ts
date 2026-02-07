@@ -441,16 +441,17 @@ export const accountTransactionQueries = {
     payeeId: number | null = null,
     categoryId: number | null = null,
     notes: string | null = null,
-    transferId: number | null = null
+    transferId: number | null = null,
+    source: string = 'manual'
   ) => {
     // Verify account ownership
     const account = await accountQueries.getById(userId, accountId);
     if (!account) throw new Error('Account not found');
 
     const result = await insert<AccountTransaction>(
-      `INSERT INTO account_transactions (account_id, type, amount, date, payee_id, category_id, notes, transfer_id)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-      [accountId, type, amount, date, payeeId, categoryId, notes, transferId]
+      `INSERT INTO account_transactions (account_id, type, amount, date, payee_id, category_id, notes, transfer_id, source)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [accountId, type, amount, date, payeeId, categoryId, notes, transferId, source]
     );
     return result.id;
   },
@@ -712,8 +713,8 @@ export const transferQueries = {
     const fromType = fromAccount.type === 'loan' ? 'inflow' : 'outflow';
     const toType = toAccount.type === 'loan' ? 'outflow' : 'inflow';
 
-    await accountTransactionQueries.create(userId, fromAccountId, fromType, fromAmount, date, null, null, notes ? `Transfer: ${notes}` : 'Transfer', transferId);
-    await accountTransactionQueries.create(userId, toAccountId, toType, toAmount, date, null, null, notes ? `Transfer: ${notes}` : 'Transfer', transferId);
+    await accountTransactionQueries.create(userId, fromAccountId, fromType, fromAmount, date, null, null, notes ? `Transfer: ${notes}` : 'Transfer', transferId, 'transfer');
+    await accountTransactionQueries.create(userId, toAccountId, toType, toAmount, date, null, null, notes ? `Transfer: ${notes}` : 'Transfer', transferId, 'transfer');
 
     return transferId;
   },

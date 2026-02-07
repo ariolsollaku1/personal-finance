@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { useBottomSheet } from '../hooks/useBottomSheet';
 import { Combobox, ComboboxInput, ComboboxButton, ComboboxOptions, ComboboxOption } from '@headlessui/react';
 import { accountTransactionsApi, categoriesApi, payeesApi, Category, Payee, TransactionType, Currency } from '../lib/api';
 import { getCurrencySymbol } from '../lib/currency';
+import BaseModal from './BaseModal';
 
 interface AddTransactionModalProps {
   isOpen: boolean;
@@ -38,8 +37,6 @@ export default function AddTransactionModal({
 
   const [payeeQuery, setPayeeQuery] = useState('');
   const [categoryQuery, setCategoryQuery] = useState('');
-
-  const { shouldRender, isVisible } = useBottomSheet(isOpen);
 
   useEffect(() => {
     if (isOpen) {
@@ -138,8 +135,6 @@ export default function AddTransactionModal({
     }
   };
 
-  if (!shouldRender) return null;
-
   const currencySymbol = getCurrencySymbol(accountCurrency);
 
   // Filter payees based on query
@@ -160,21 +155,9 @@ export default function AddTransactionModal({
     .filter((c) => formData.type === 'inflow' ? c.type === 'income' : c.type === 'expense')
     .some((c) => c.name.toLowerCase() === categoryQuery.toLowerCase());
 
-  return createPortal(
-    <div
-      className={`fixed inset-0 !mt-0 bg-black/40 backdrop-blur-md flex items-end lg:items-center lg:justify-center z-50 lg:p-4 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
-      onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
-    >
-      <div
-        className={`bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl shadow-black/20 ring-1 ring-gray-200/50 w-full lg:max-w-md max-h-[90vh] overflow-hidden transition-transform duration-300 lg:transition-none ${isVisible ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}`}
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-      >
-        {/* Drag handle - mobile only */}
-        <div className="flex justify-center pt-3 pb-2 lg:hidden flex-shrink-0">
-          <div className="w-10 h-1 bg-gray-300 rounded-full" />
-        </div>
-
-        {/* Header */}
+  return (
+    <BaseModal isOpen={isOpen} onClose={handleClose} maxWidth="md">
+      {/* Header */}
         <div className="px-6 py-4 lg:border-b border-gray-100 flex justify-between items-center">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Add Transaction</h2>
@@ -422,8 +405,6 @@ export default function AddTransactionModal({
             </button>
           </div>
         </form>
-      </div>
-    </div>,
-    document.body
+    </BaseModal>
   );
 }

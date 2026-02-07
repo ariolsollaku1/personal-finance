@@ -1,8 +1,7 @@
 import { useState, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import { RecurringTransaction, Category, Payee, Frequency } from '../../lib/api';
-import { useBottomSheet } from '../../hooks/useBottomSheet';
 import { NewRecurringForm } from '../../hooks/useAccountPage';
+import BaseModal from '../BaseModal';
 
 interface AddRecurringModalProps {
   isOpen: boolean;
@@ -26,9 +25,6 @@ export function AddRecurringModal({
   isStockAccount,
 }: AddRecurringModalProps) {
   const [submitting, setSubmitting] = useState(false);
-  const { shouldRender, isVisible } = useBottomSheet(isOpen);
-
-  if (!shouldRender) return null;
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,21 +40,9 @@ export function AddRecurringModal({
     newRecurring.type === 'inflow' ? c.type === 'income' : c.type === 'expense'
   );
 
-  return createPortal(
-    <div
-      className={`fixed inset-0 !mt-0 bg-black/40 backdrop-blur-md flex items-end lg:items-center lg:justify-center z-50 lg:p-4 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div
-        className={`bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl shadow-black/20 ring-1 ring-gray-200/50 w-full lg:max-w-md max-h-[90vh] overflow-hidden transition-transform duration-300 lg:transition-none ${isVisible ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}`}
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-      >
-        {/* Drag handle - mobile only */}
-        <div className="flex justify-center pt-3 pb-2 lg:hidden flex-shrink-0">
-          <div className="w-10 h-1 bg-gray-300 rounded-full" />
-        </div>
-
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-3rem)]">
+  return (
+    <BaseModal isOpen={isOpen} onClose={onClose} maxWidth="md">
+      <div className="p-6 overflow-y-auto max-h-[calc(90vh-3rem)]">
         <h2 className="text-lg font-semibold mb-4">Add Recurring Transaction</h2>
         <form onSubmit={handleFormSubmit} className="space-y-4">
           <div className="flex gap-4">
@@ -186,10 +170,8 @@ export function AddRecurringModal({
             </button>
           </div>
         </form>
-        </div>
       </div>
-    </div>,
-    document.body
+    </BaseModal>
   );
 }
 
@@ -213,11 +195,8 @@ export function EditRecurringModal({
   isStockAccount,
 }: EditRecurringModalProps) {
   const [submitting, setSubmitting] = useState(false);
-  const { shouldRender, isVisible } = useBottomSheet(!!editingRecurring);
   const dataRef = useRef(editingRecurring);
   if (editingRecurring) dataRef.current = editingRecurring;
-
-  if (!shouldRender || !dataRef.current) return null;
 
   const rec = editingRecurring || dataRef.current;
 
@@ -235,21 +214,11 @@ export function EditRecurringModal({
     rec.type === 'inflow' ? c.type === 'income' : c.type === 'expense'
   );
 
-  return createPortal(
-    <div
-      className={`fixed inset-0 !mt-0 bg-black/40 backdrop-blur-md flex items-end lg:items-center lg:justify-center z-50 lg:p-4 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div
-        className={`bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl shadow-black/20 ring-1 ring-gray-200/50 w-full lg:max-w-md max-h-[90vh] overflow-hidden transition-transform duration-300 lg:transition-none ${isVisible ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}`}
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-      >
-        {/* Drag handle - mobile only */}
-        <div className="flex justify-center pt-3 pb-2 lg:hidden flex-shrink-0">
-          <div className="w-10 h-1 bg-gray-300 rounded-full" />
-        </div>
+  if (!rec) return null;
 
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-3rem)]">
+  return (
+    <BaseModal isOpen={!!editingRecurring} onClose={onClose} maxWidth="md">
+      <div className="p-6 overflow-y-auto max-h-[calc(90vh-3rem)]">
         <h2 className="text-lg font-semibold mb-4">Edit Recurring Transaction</h2>
         <form onSubmit={handleFormSubmit} className="space-y-4">
           <div className="flex gap-4">
@@ -392,9 +361,7 @@ export function EditRecurringModal({
             </button>
           </div>
         </form>
-        </div>
       </div>
-    </div>,
-    document.body
+    </BaseModal>
   );
 }

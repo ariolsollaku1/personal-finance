@@ -17,6 +17,7 @@ import * as m005 from './005_unique_dividends_per_symbol_exdate.js';
 import * as m006 from './006_add_dividend_transaction_created.js';
 import * as m007 from './007_recalc_holdings_fix_string_coercion.js';
 import * as m008 from './008_add_fk_on_delete_set_null.js';
+import * as m009 from './009_add_account_transaction_source.js';
 
 export interface Migration {
   version: number;
@@ -75,5 +76,11 @@ export const migrations: Migration[] = [
     description: m008.description,
     up: m008.up,
     down: m008.down,
+  },
+  {
+    version: m009.version,
+    description: m009.description,
+    up: m009.up,
+    down: m009.down,
   },
 ];

@@ -296,7 +296,9 @@ router.post('/check/:accountId', validateParams(accountIdParamSchema), async (re
         payDateStr,
         null,
         null,
-        `Dividend: ${div.symbol} ($${amountPerShare.toFixed(4)}/share x ${sharesHeld} shares, ${(divTaxRate * 100).toFixed(0)}% tax)`
+        `Dividend: ${div.symbol} ($${amountPerShare.toFixed(4)}/share x ${sharesHeld} shares, ${(divTaxRate * 100).toFixed(0)}% tax)`,
+        null,
+        'dividend'
       );
       await dividendQueries.markTransactionCreated(div.id);
       transactionsCreated++;

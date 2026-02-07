@@ -83,6 +83,7 @@ export interface AccountTransaction {
   category_id: number | null;
   notes: string | null;
   transfer_id: number | null;
+  source?: string; // 'manual' | 'stock_trade' | 'dividend' | 'transfer'
   created_at: string;
   // Joined fields (optional)
   payee_name?: string;

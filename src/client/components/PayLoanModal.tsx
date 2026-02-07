@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { useBottomSheet } from '../hooks/useBottomSheet';
 import { Account, transfersApi } from '../lib/api';
 import { getCurrencySymbol, formatCurrency } from '../lib/currency';
+import BaseModal from './BaseModal';
 
 interface PayLoanModalProps {
   isOpen: boolean;
@@ -28,8 +27,6 @@ export default function PayLoanModal({
     date: new Date().toISOString().split('T')[0],
     notes: '',
   });
-
-  const { shouldRender, isVisible } = useBottomSheet(isOpen);
 
   // Calculate remaining balance on the loan (negative = debt owed)
   const loanBalance = loanAccount.balance || 0;
@@ -105,23 +102,9 @@ export default function PayLoanModal({
     (a) => String(a.id) === formData.sourceAccountId
   );
 
-  if (!shouldRender) return null;
-
-  return createPortal(
-    <div
-      className={`fixed inset-0 !mt-0 bg-black/40 backdrop-blur-md flex items-end lg:items-center lg:justify-center z-50 lg:p-4 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
-      onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
-    >
-      <div
-        className={`bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl shadow-black/20 ring-1 ring-gray-200/50 w-full lg:max-w-md max-h-[90vh] overflow-hidden transition-transform duration-300 lg:transition-none ${isVisible ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}`}
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-      >
-        {/* Drag handle - mobile only */}
-        <div className="flex justify-center pt-3 pb-2 lg:hidden flex-shrink-0">
-          <div className="w-10 h-1 bg-gray-300 rounded-full" />
-        </div>
-
-        {/* Header */}
+  return (
+    <BaseModal isOpen={isOpen} onClose={handleClose} maxWidth="md">
+      {/* Header */}
         <div className="px-6 py-4 lg:border-b border-gray-100 flex justify-between items-center">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Pay Loan</h2>
@@ -266,8 +249,6 @@ export default function PayLoanModal({
             </button>
           </div>
         </form>
-      </div>
-    </div>,
-    document.body
+    </BaseModal>
   );
 }
