@@ -284,20 +284,23 @@ useEffect(() => {
 ## Common Tasks
 
 ### Add new API endpoint
-1. Create/update `src/server/routes/yourRoute.ts`
-2. Add query functions to `src/server/db/queries.ts`
-3. Register in `src/server/index.ts`: `app.use('/api/your-route', yourRouter)`
-4. Add client function in `src/client/lib/api.ts`
+1. Define Zod schemas in `src/server/validation/schemas.ts` (body, params, query)
+2. Create/update `src/server/routes/yourRoute.ts` — use `asyncHandler()`, `validateBody()`, `sendSuccess()`/`badRequest()`/`notFound()`
+3. Add query functions to `src/server/db/queries.ts` — parameterized queries only
+4. Register in `src/server/index.ts`: `app.use('/api/your-route', yourRouter)`
+5. Add client function in `src/client/lib/api.ts` — wrap mutations with `withInvalidation()`
 
 ### Add new database table
-1. Add CREATE TABLE + indexes in `src/server/db/schema.ts`
-2. Add query functions in `src/server/db/queries.ts`
-3. For migrations: create file in `src/server/db/migrations/`, register in `migrations/index.ts`
+1. Add CREATE TABLE + indexes in `src/server/db/schema.ts` — include NOT NULL, CHECK constraints, ON DELETE actions, and indexes
+2. Add query functions in `src/server/db/queries.ts` — use batch queries for list operations
+3. For migrations: create file in `src/server/db/migrations/`, include `up()` and `down()`, wrap in transactions, register in `migrations/index.ts`
 
 ### Add new page
-1. Create `src/client/pages/YourPage.tsx`
-2. Add route in `src/client/App.tsx`
-3. Add nav link in `src/client/components/Layout/Sidebar.tsx`
+1. Create `src/client/pages/YourPage.tsx` (max 300 lines)
+2. Use `useSWR()` for data fetching, handle loading/error/success states
+3. Use `formatCurrency()` and `formatDate()` for display — never hardcode symbols
+4. Add route in `src/client/App.tsx`
+5. Add nav link in `src/client/components/Layout/Sidebar.tsx`
 
 ---
 
@@ -326,3 +329,96 @@ VITE_API_URL=https://api.0ec.ai  # Production API
 - **Frontend**: Cloudflare Pages (`npm run deploy`)
 - **Backend**: Docker on 207.180.192.49 (`npm run deploy:server`)
 - **Database**: PostgreSQL in Docker, databases: `personal_finance` (prod), `personal_finance_dev` (dev)
+
+---
+
+## Coding Standards & Rules
+
+> **These rules are mandatory.** Every code change must follow them. They exist to prevent recurring technical debt.
+
+### Security Rules
+
+- **NEVER commit credentials, passwords, API keys, or private keys to git.** All secrets go in `.env` files (which are gitignored). If you accidentally commit a secret, it must be rotated immediately and scrubbed from git history.
+- **NEVER disable SSH host key checking** (`StrictHostKeyChecking=no`) in deployment scripts.
+- **All SQL queries MUST use parameterized queries** (`$1, $2, ...`). Never concatenate user input into SQL strings.
+- **All deployment secrets** (DB passwords, SSH keys, API keys) must come from environment variables or a secrets manager — never hardcoded in scripts, compose files, or config files checked into git.
+
+### Backend: Input Validation
+
+- **Every route that accepts input MUST use a Zod schema** via `validateBody()`, `validateParams()`, or `validateQuery()` from `src/server/validation/middleware.ts`. Never do manual `if (!field)` validation.
+- **Every route param ID MUST be validated as a number.** Use Zod params schema or check `isNaN()` immediately after `parseInt()`. Never pass an unvalidated ID to a query function.
+- **Numeric values MUST be validated for valid ranges:**
+  - `amount > 0` for transactions, holdings, dividends, transfers
+  - `shares > 0` for holdings and dividends
+  - `taxRate >= 0 && taxRate <= 100` for tax rates
+  - Dates must be valid `YYYY-MM-DD` format
+- **Enum fields** (type, frequency, currency) must be validated against the allowed values in the Zod schema.
+
+### Backend: Error Handling
+
+- **Every route handler MUST be wrapped with `asyncHandler()`** to catch async errors.
+- **Use the response utilities consistently:** `sendSuccess()`, `badRequest()`, `notFound()`, `sendError()`. Never call `res.json()` or `res.status()` directly.
+- **Query functions that check existence** (getById, ownership checks) should return `null` on not-found. Routes should then call `notFound()`. Never throw raw `Error('not found')` from the query layer.
+- **Never swallow errors silently.** Every `catch` block must either: (a) return an error response to the client, or (b) log the error with full context. Never use empty `catch {}` or `catch(() => {})`.
+
+### Backend: Database
+
+- **Use batch queries for lists.** When loading data for multiple entities (e.g., all accounts with balances), use `batchQueries.*` methods. Never loop through entities and query individually (N+1 pattern). If a batch method doesn't exist for your use case, create one.
+- **Every foreign key MUST have an ON DELETE action.** Use `ON DELETE SET NULL` for optional references (payee_id, category_id) and `ON DELETE CASCADE` for owned entities (account_id on transactions).
+- **Every new table MUST have:**
+  - `NOT NULL` on required columns
+  - `CHECK` constraints for valid ranges (`amount > 0`, `shares > 0`)
+  - Indexes on columns used in `WHERE` clauses and `JOIN` conditions
+  - Composite indexes for common query patterns (e.g., `(account_id, date)`)
+- **Never assume data ordering from the database.** Always add explicit `ORDER BY` clauses. If processing depends on chronological order, sort explicitly before iterating.
+- **Guard against division by zero** in all arithmetic. Check the divisor before dividing, especially for `shares`, `totalShares`, or any user-derived denominator.
+- **Date comparisons:** Use string comparison for date-only values (`YYYY-MM-DD`). Never convert to `Date` objects for comparison — timezone shifts can change the date. Use `new Date().toISOString().split('T')[0]` only for getting today's date.
+
+### Backend: Route Files
+
+- **Route files MUST stay under 300 lines.** If a route file grows beyond this, split by responsibility (e.g., `accounts.ts` for CRUD, `accountBalance.ts` for balance/portfolio calculations).
+- **Route files MUST NOT contain business logic.** Complex calculations (TWR, projections, dividend processing) belong in `services/` files. Routes should only: validate input, call a service or query, return the response.
+
+### Frontend: Components
+
+- **Page components MUST stay under 300 lines.** Extract sub-sections into focused child components. If a page manages more than 8 pieces of state, the state management should move to a custom hook or context.
+- **All modals MUST follow the established pattern:** use `useBottomSheet`, `createPortal`, responsive desktop/mobile layout. Reference `AddAccountModal.tsx` for the canonical structure.
+- **Never return `null` on data fetch failure.** Always show an error state with a retry option. The pattern is:
+  ```typescript
+  if (loading) return <Skeleton />;
+  if (!data) return <ErrorState onRetry={refresh} />;
+  ```
+- **All data fetching in components MUST use `useSWR()`.** Never use the `useState` + `useEffect` + manual fetch pattern for GET requests. The only exception is one-off fetches triggered by user action (e.g., loading detail on click).
+
+### Frontend: Formatting & Display
+
+- **Always use `formatCurrency()` from `lib/currency.ts` for currency display.** Never hardcode `$`, `€`, or any currency symbol. Never assume USD.
+- **Always use a shared date formatter for display.** Use `formatDate()` from `lib/formatters.ts`. Never inline `new Date(x).toLocaleDateString(...)` in components.
+- **Account type constants** (type ordering, icons, labels) must be defined in one place and imported — never duplicated across files.
+
+### Frontend: Error Handling
+
+- **`useSWR` consumers MUST handle the error case.** When the hook provides stale data after a failed refresh, show a subtle indicator that data may be outdated.
+- **All mutation buttons (save, delete, submit) MUST:**
+  - Show a loading spinner during the API call
+  - Be disabled during the API call (prevent double-submit)
+  - Show an error toast on failure with the error message
+- **Use `toast.error()` for user-facing errors.** Never use `console.error()` alone — it's invisible to users. Use both if you need logging.
+
+### Database Migrations
+
+- **Every migration MUST include a `down()` function** that reverses the changes. Even if rollback is complex, document why and provide a best-effort reversal.
+- **Data migrations** (recalculations, backfills) should be idempotent — safe to run multiple times with the same result.
+- **Migration files MUST be named** with sequential version numbers: `NNN_description.ts` (e.g., `008_add_transfer_notes.ts`).
+- **After creating a migration**, register it in `src/server/db/migrations/index.ts`.
+
+### Shared Types
+
+- **All types shared between client and server MUST live in `src/shared/types.ts`.** Never duplicate type definitions between `src/server/` and `src/client/`.
+- **`src/shared/` MUST NOT import from `src/server/` or `src/client/`.** It is the leaf of the dependency tree.
+
+### General
+
+- **No `as any` type assertions.** If TypeScript complains, fix the types properly. The only exception is Express middleware where generic typing is genuinely impractical — and those must have a `// TypeScript limitation` comment.
+- **No unused dependencies.** Before adding a dependency, check if the functionality already exists in the codebase. When removing a feature, remove its dependencies too.
+- **Constants over magic numbers.** Extract repeated values (intervals, retry counts, thresholds) into named constants at the top of the file with a brief comment explaining the value.

@@ -1,0 +1,244 @@
+---                                                                                                                                                        Technical Debt & Refactor Plan                                                                                                                           
+                                                                                                                                                             Executive Summary                                                                                                                                                                                                                                                                                                   
+  The codebase has solid foundations — good SWR caching strategy, batch query patterns, a validation framework, and consistent UI design system. However,
+  there are meaningful gaps in consistency, safety, and modularity that will compound as the app grows. I've categorized findings into 4 severity tiers    
+  across backend, frontend, and infrastructure.
+
+  ---
+  TIER 1 — CRITICAL (Fix Now)
+
+  1. N+1 Query in Accounts Endpoint
+
+  src/server/routes/accounts.ts:19-60
+
+  GET /api/accounts fetches all accounts, then calls getAccountBalance() individually per account inside Promise.all(). For 50 accounts, this fires 50+ DB 
+  queries. Batch query methods (batchQueries.getAllAccountsWithBalances) already exist but aren't used here.
+
+  Fix: Replace the map+individual-fetch pattern with existing batch queries.
+
+  ---
+  2. Race Condition in User Initialization
+
+  src/server/middleware/auth.ts:16,47-56
+
+  Uses an in-memory Set<string> to track recently initialized users. Two concurrent requests from a new user can both see "not initialized" and both call  
+  initializeNewUser(), causing duplicate constraint violations.
+
+  Fix: Use a database-level flag or INSERT ... ON CONFLICT DO NOTHING to make initialization idempotent.
+
+  ---
+  3. Dangerous Date Handling in Dividend Calculation
+
+  src/server/routes/dividends.ts:224-226
+
+  Reverses a transaction array assuming it's pre-sorted newest-first, with no explicit sort. If transactions arrive unsorted, dividend share calculations  
+  are wrong. Also, new Date(tx.date).toISOString() can shift dates across timezone boundaries.
+
+  Fix: Explicit chronological sort before processing. Use date-only string comparison instead of Date object conversion.
+
+  ---
+  4. Missing Cascading Delete Constraints
+
+  src/server/db/schema.ts:369-380
+
+  account_transactions references payees(id) and categories(id) with no ON DELETE action. Deleting a payee/category leaves orphaned foreign keys.
+
+  Fix: Add ON DELETE SET NULL via migration.
+
+  ---
+  TIER 2 — HIGH (Fix Soon)
+
+  5. Inconsistent Input Validation Across Routes
+
+  Multiple routes use manual validation instead of the Zod-based validateBody() that exists in the codebase:
+  - accountTransactions.ts:99-117 — manual if (!type || !amount) checks
+  - recurring.ts:49-103 — no amount > 0, no date format validation
+  - dividends.ts:73-117 — no validation on amountPerShare, shares, taxRate
+  - holdings.ts:118-125 — no validation on price, shares, fees
+
+  Fix: Create Zod schemas for each mutation endpoint. The validation middleware already exists.
+
+  ---
+  6. Integer Param Parsing Without NaN Checks
+
+  accountTransactions.ts:18,102, recurring.ts:21, transfers.ts:23
+
+  parseInt(req.params.id) with no isNaN() check. Only accounts.ts:96 does it properly. NaN propagates silently to DB queries.
+
+  Fix: Centralized param validation middleware or Zod params schema.
+
+  ---
+  7. Error Handling Inconsistency (Backend)
+
+  - Queries throw raw Error('Account not found') — no HTTP status code context
+  - Some routes catch and return 500 via internalError(); legitimate 404s become 500s
+  - No centralized error transformation layer
+
+  Fix: Introduce an ApiError class with status codes. Catch and transform in a centralized error middleware.
+
+  ---
+  8. SwipeAccountPage God Component (583 lines)
+
+  src/client/pages/SwipeAccountPage.tsx
+
+  16+ hooks, manages: account data, transactions, recurring, portfolio, dividends, tax, form state, modal states, editing, auto-refresh. Untestable as a   
+  unit.
+
+  Fix: Decompose into focused components: <AccountHeader>, <AccountTransactions>, <AccountRecurring>, <StockPortfolio>. Use context to avoid prop drilling.
+
+  ---
+  9. 10+ Modals with Duplicate Boilerplate
+
+  Every modal repeats: useBottomSheet, createPortal, drag handle, overlay, close handler, error state, button layout. ~200+ lines of duplication across    
+  AddAccountModal, AddTransactionModal, AddTransferModal, EditTransactionModal, etc.
+
+  Fix: Extract a <BaseModal> component that handles the shell. Modals only provide content + submit logic.
+
+  ---
+  10. Silent SWR Error Swallowing
+
+  src/client/hooks/useSWR.ts:46-48
+
+  .catch(() => {
+    // keep stale data on error
+  })
+
+  Network failures are completely silent. Users see stale data with no indication of staleness.
+
+  Fix: Add an error state to the hook. Let pages optionally show a "data may be outdated" indicator.
+
+  ---
+  TIER 3 — MEDIUM (Plan For)
+
+  11. Hardcoded USD in Dashboard Stock Portfolio
+
+  src/client/pages/Dashboard.tsx:127,133,140,150 — Uses $ instead of the user's mainCurrency format.
+
+  12. Sync/Async Currency Conversion Split
+
+  src/server/services/currency.ts:114-146 — Two functions (getExchangeRates async, getExchangeRatesSync) do the same thing. Many call sites silently use   
+  stale cached rates via the sync version.
+
+  13. Division by Zero in Holdings
+
+  src/server/routes/holdings.ts:152 — newAvgCost = totalValue / totalShares with no guard for totalShares === 0.
+
+  14. Stock Trade Detection via String Matching
+
+  src/client/components/TransactionList.tsx:23-26 — tx.notes?.startsWith('Buy ') to determine if a transaction is a stock trade. Fragile; should use a type
+   flag.
+
+  15. No Route-Based Code Splitting
+
+  src/client/App.tsx — All pages statically imported. No React.lazy(). Entire app loads upfront.
+
+  16. Duplicate Date Formatting Logic
+
+  new Date(x).toLocaleDateString('en-GB', {...}) copy-pasted across Dashboard, TransfersPage, TransactionList, PnLPage. Should be a shared formatDate()    
+  utility.
+
+  17. Inconsistent Data Fetching Patterns (Frontend)
+
+  Three patterns coexist: useSWR hook, direct useState + useEffect + API call, and custom hooks. New code unclear which to use.
+
+  18. Floating-Point Share Comparison
+
+  src/server/routes/holdings.ts:234 — shares > Number(holding.shares) with no epsilon tolerance. Users can't sell exact share counts due to rounding.      
+
+  19. Large Route Files
+
+  accounts.ts (550 lines) mixes CRUD, balance calculations, portfolio performance, and archive operations.
+
+  ---
+  TIER 4 — LOW (Improve Over Time)
+
+  20. Zero Test Coverage
+
+  No test files, no test framework configured, no CI pipeline. The codebase has no automated tests.
+
+  21. No Structured Logging
+
+  Mix of console.error with and without stack traces. No log levels, no structured format, no correlation IDs.
+
+  22. Accessibility Gaps
+
+  Missing ARIA labels on icon buttons, no focus trapping in modals, color-only transaction type indicators (green/red with no icon fallback).
+
+  23. Hardcoded Fallback Exchange Rates
+
+  src/server/services/currency.ts:16-31 — Rates labeled "2024" used when API is down. Will silently drift from reality.
+
+  24. as any Type Bypasses
+
+  src/server/validation/middleware.ts:64,88 — req.params = result.data as any defeats TypeScript safety.
+
+  25. Missing Form State Abstraction (Frontend)
+
+  Each modal reinvents: local state, error handling, loading state, reset logic. No shared form utility.
+
+  ---
+  Refactor Plan
+
+  Phase 1 — Safety & Correctness (1-2 weeks)
+  ┌─────┬───────────────────────────────────────────────────────────┬────────┐
+  │  #  │                           Item                            │ Effort │
+  ├─────┼───────────────────────────────────────────────────────────┼────────┤
+  │ 1   │ Fix N+1 accounts query (use existing batch methods)       │ S      │
+  ├─────┼───────────────────────────────────────────────────────────┼────────┤
+  │ 2   │ Make user initialization idempotent                       │ S      │
+  ├─────┼───────────────────────────────────────────────────────────┼────────┤
+  │ 3   │ Fix dividend date sorting                                 │ S      │
+  ├─────┼───────────────────────────────────────────────────────────┼────────┤
+  │ 4   │ Add ON DELETE SET NULL migration for payees/categories FK │ S      │
+  ├─────┼───────────────────────────────────────────────────────────┼────────┤
+  │ 5   │ Add NaN guard middleware for all :id params               │ S      │
+  ├─────┼───────────────────────────────────────────────────────────┼────────┤
+  │ 6   │ Fix division-by-zero in holdings                          │ S      │
+  ├─────┼───────────────────────────────────────────────────────────┼────────┤
+  │ 7   │ Fix Dashboard hardcoded USD                               │ S      │
+  └─────┴───────────────────────────────────────────────────────────┴────────┘
+  Phase 2 — Consistency & Validation (2-3 weeks)
+  ┌─────┬──────────────────────────────────────────────────────┬────────┐
+  │  #  │                         Item                         │ Effort │
+  ├─────┼──────────────────────────────────────────────────────┼────────┤
+  │ 8   │ Create Zod schemas for all mutation endpoints        │ M      │
+  ├─────┼──────────────────────────────────────────────────────┼────────┤
+  │ 9   │ Introduce ApiError class + centralized error handler │ M      │
+  ├─────┼──────────────────────────────────────────────────────┼────────┤
+  │ 10  │ Add error state to useSWR hook                       │ S      │
+  ├─────┼──────────────────────────────────────────────────────┼────────┤
+  │ 11  │ Consolidate currency service (remove sync variant)   │ S      │
+  ├─────┼──────────────────────────────────────────────────────┼────────┤
+  │ 12  │ Extract shared formatDate() / formatCurrency() utils │ S      │
+  ├─────┼──────────────────────────────────────────────────────┼────────┤
+  │ 13  │ Standardize frontend data fetching on useSWR         │ M      │
+  └─────┴──────────────────────────────────────────────────────┴────────┘
+  Phase 3 — Modularity (3-4 weeks)
+  ┌─────┬───────────────────────────────────────────────────────────┬────────┐
+  │  #  │                           Item                            │ Effort │
+  ├─────┼───────────────────────────────────────────────────────────┼────────┤
+  │ 14  │ Extract <BaseModal> component                             │ M      │
+  ├─────┼───────────────────────────────────────────────────────────┼────────┤
+  │ 15  │ Decompose SwipeAccountPage into 4-5 components            │ L      │
+  ├─────┼───────────────────────────────────────────────────────────┼────────┤
+  │ 16  │ Split accounts.ts route (CRUD / balance / performance)    │ M      │
+  ├─────┼───────────────────────────────────────────────────────────┼────────┤
+  │ 17  │ Add React.lazy() code splitting for routes                │ S      │
+  ├─────┼───────────────────────────────────────────────────────────┼────────┤
+  │ 18  │ Replace string-based stock trade detection with type flag │ M      │
+  └─────┴───────────────────────────────────────────────────────────┴────────┘
+  Phase 4 — Quality Infrastructure (ongoing)
+  ┌─────┬─────────────────────────────────────────────────────────────┬────────┐
+  │  #  │                            Item                             │ Effort │
+  ├─────┼─────────────────────────────────────────────────────────────┼────────┤
+  │ 19  │ Set up Vitest + React Testing Library                       │ M      │
+  ├─────┼─────────────────────────────────────────────────────────────┼────────┤
+  │ 20  │ Add tests for critical paths (balance calc, dividends, TWR) │ L      │
+  ├─────┼─────────────────────────────────────────────────────────────┼────────┤
+  │ 21  │ Add structured logging (pino or winston)                    │ M      │
+  ├─────┼─────────────────────────────────────────────────────────────┼────────┤
+  │ 22  │ Accessibility pass (ARIA, focus management)                 │ M      │
+  ├─────┼─────────────────────────────────────────────────────────────┼────────┤
+  │ 23  │ CI pipeline (lint + type-check + test on PR)                │ M      │
+  └─────┴─────────────────────────────────────────────────────────────┴────────┘
+  S = small (< 1 day), M = medium (1-3 days), L = large (3-5 days)

@@ -44,15 +44,21 @@ export async function authMiddleware(
     req.userEmail = user.email;
 
     // Auto-initialize new users (skip if recently checked)
+    // Add to Set before async work to prevent concurrent requests from both initializing
     if (!recentlyInitialized.has(user.id)) {
-      const initialized = await isUserInitialized(user.id);
-      if (!initialized) {
-        await initializeNewUser(user.id);
-        console.log(`Auto-initialized new user: ${user.email}`);
-      }
-      // Cache to avoid repeated checks
       recentlyInitialized.add(user.id);
-      setTimeout(() => recentlyInitialized.delete(user.id), INIT_CACHE_TTL);
+      try {
+        const initialized = await isUserInitialized(user.id);
+        if (!initialized) {
+          await initializeNewUser(user.id);
+          console.log(`Auto-initialized new user: ${user.email}`);
+        }
+        setTimeout(() => recentlyInitialized.delete(user.id), INIT_CACHE_TTL);
+      } catch (initError) {
+        // Remove from Set so it retries on next request
+        recentlyInitialized.delete(user.id);
+        console.error('User initialization failed:', initError);
+      }
     }
 
     next();

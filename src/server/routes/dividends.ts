@@ -219,16 +219,18 @@ router.post('/check/:accountId', async (req: Request, res: Response) => {
         }
 
         // Calculate shares held on ex-dividend date
-        // Start from 0 and replay transactions up to and including ex-date
+        // Sort chronologically and replay transactions up to and including ex-date
         let sharesHeldOnExDate = 0;
-        for (const tx of [...stockTransactions].reverse()) { // oldest first
+        const sortedTransactions = [...stockTransactions].sort(
+          (a, b) => a.date.localeCompare(b.date) || a.id - b.id
+        );
+        for (const tx of sortedTransactions) {
           const txDate = new Date(tx.date).toISOString().split('T')[0];
-          if (txDate <= exDate) {
-            if (tx.type === 'buy') {
-              sharesHeldOnExDate += Number(tx.shares);
-            } else if (tx.type === 'sell') {
-              sharesHeldOnExDate -= Number(tx.shares);
-            }
+          if (txDate > exDate) break;
+          if (tx.type === 'buy') {
+            sharesHeldOnExDate += Number(tx.shares);
+          } else if (tx.type === 'sell') {
+            sharesHeldOnExDate -= Number(tx.shares);
           }
         }
 

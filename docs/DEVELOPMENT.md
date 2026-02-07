@@ -104,6 +104,47 @@ Located in `src/server/db/migrations/`. Applied automatically on server start.
 psql -d $DB_NAME -c "SELECT * FROM schema_migrations ORDER BY version;"
 ```
 
+#### Creating a New Migration
+
+1. Create file: `src/server/db/migrations/NNN_description.ts` (next sequential number)
+2. Implement both `up()` and `down()` functions:
+   ```typescript
+   import { Pool } from 'pg';
+
+   export async function up(pool: Pool): Promise<void> {
+     await pool.query('BEGIN');
+     try {
+       await pool.query(`ALTER TABLE accounts ADD COLUMN archived_at TIMESTAMPTZ`);
+       await pool.query('COMMIT');
+     } catch (err) {
+       await pool.query('ROLLBACK');
+       throw err;
+     }
+   }
+
+   export async function down(pool: Pool): Promise<void> {
+     await pool.query('BEGIN');
+     try {
+       await pool.query(`ALTER TABLE accounts DROP COLUMN archived_at`);
+       await pool.query('COMMIT');
+     } catch (err) {
+       await pool.query('ROLLBACK');
+       throw err;
+     }
+   }
+   ```
+3. Register in `src/server/db/migrations/index.ts`
+4. Restart the dev server — migration runs automatically
+
+#### Migration Rules
+
+- **Always wrap in a transaction** (BEGIN/COMMIT/ROLLBACK)
+- **Always include `down()`** — even for data migrations, provide best-effort reversal
+- **Data migrations must be idempotent** — safe to run multiple times
+- **New columns with NOT NULL** must have a DEFAULT or be added in two steps: add nullable, backfill, then set NOT NULL
+- **New foreign keys MUST specify ON DELETE** action (SET NULL or CASCADE)
+- **Test on dev database first** before deploying to production
+
 ---
 
 ## Docker Deployment
@@ -148,23 +189,35 @@ services:
 
 ### Add API Endpoint
 
-1. Create route in `src/server/routes/newfeature.ts`
-2. Add Zod schema in `src/server/validation/schemas.ts`
+1. **Define Zod schemas** in `src/server/validation/schemas.ts` for body, params, and query
+2. Create route in `src/server/routes/newfeature.ts`:
+   - Wrap all handlers with `asyncHandler()`
+   - Apply `validateBody(schema)` / `validateParams(schema)` / `validateQuery(schema)` middleware
+   - Use `sendSuccess()`, `badRequest()`, `notFound()` for responses
+   - Validate numeric amounts > 0, dates as YYYY-MM-DD, enums against allowed values
 3. Register in `src/server/index.ts`
-4. Add client in `src/client/lib/api.ts`
+4. Add client function in `src/client/lib/api.ts` with `withInvalidation()` for mutations
+5. Add cache invalidation keys to the `withInvalidation()` call for any affected data
 
 ### Add Database Table
 
-1. Update schema in `src/server/db/schema.ts`
-2. Add queries in `src/server/db/queries.ts`
-3. Create migration if modifying existing table
+1. Update schema in `src/server/db/schema.ts`:
+   - Add `NOT NULL` on required columns
+   - Add `CHECK` constraints for valid ranges (amount > 0, etc.)
+   - Add `ON DELETE SET NULL` or `CASCADE` on foreign keys
+   - Add indexes on columns used in WHERE/JOIN
+2. Add queries in `src/server/db/queries.ts` — use parameterized queries only
+3. Create migration if modifying existing table (see Migration Rules above)
 4. Restart server
 
 ### Add React Page
 
-1. Create component in `src/client/pages/`
-2. Add route in `src/client/App.tsx`
-3. Add navigation in Sidebar if needed
+1. Create component in `src/client/pages/` (max 300 lines)
+2. Use `useSWR()` for data fetching
+3. Handle all states: loading (skeleton), error (error state with retry), success (render data)
+4. Use `formatCurrency()` and `formatDate()` — never hardcode symbols or date formats
+5. Add route in `src/client/App.tsx`
+6. Add navigation in Sidebar if needed
 
 ---
 
@@ -213,23 +266,59 @@ curl -X POST http://localhost:3000/api/accounts/1/transactions \
 
 ---
 
+## Security Practices
+
+### Secrets Management
+
+- **All secrets go in `.env` files** — never in source code, scripts, or compose files committed to git
+- `.env`, `.env.local`, `.env.*.local`, and `ansible/.env.production` are gitignored
+- If a secret is accidentally committed: **rotate it immediately**, then scrub from git history using `git filter-branch` or BFG Repo-Cleaner
+- Deployment scripts must read secrets from environment variables: `${DB_PASSWORD}`, not hardcoded values
+
+### What MUST NOT be committed
+
+| Item | Where it belongs |
+|------|-----------------|
+| Database passwords | `.env` / `.env.production` |
+| Supabase keys | `.env` / `.env.production` |
+| SSH private keys | CI/CD secrets manager or local `~/.ssh/` |
+| API keys / tokens | `.env` / `.env.production` |
+| SSL certificates | Deployed separately, never in git |
+
+### Before every commit to `ansible/`
+
+Check that no file contains hardcoded passwords, keys, or tokens. Deployment scripts should reference environment variables only.
+
+---
+
 ## Code Style
 
 ### TypeScript
 - Strict mode enabled
 - Explicit types for function parameters
 - Shared types in `src/shared/types.ts`
+- **No `as any` casts** — fix types properly
 
 ### React
 - Functional components with hooks
 - Props interface above component
 - Custom hooks in `hooks/` folder
+- **Max 300 lines per component** — extract sub-components when larger
+- **Use `useSWR()` for all GET data fetching** — never manual `useState` + `useEffect` + fetch
+
+### Backend
+- **All route inputs validated with Zod schemas** via `validateBody()` / `validateParams()` / `validateQuery()`
+- **All route handlers wrapped with `asyncHandler()`**
+- **Use `sendSuccess()`, `badRequest()`, `notFound()`** — never raw `res.json()`
+- **Use batch queries** — never loop + query individually (N+1)
+- **Route files under 300 lines** — split by responsibility if larger
 
 ### Naming
 - Components: PascalCase (`HoldingRow.tsx`)
 - Hooks: camelCase with `use` prefix
 - API functions: camelCase
 - Database columns: snake_case
+- Migration files: `NNN_description.ts` (sequential)
 
 ---
 

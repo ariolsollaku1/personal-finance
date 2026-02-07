@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { accountQueries, holdingsQueries, transactionQueries, dividendQueries } from '../db/queries.js';
+import { accountQueries, holdingsQueries, transactionQueries, dividendQueries, batchQueries } from '../db/queries.js';
 import { getAccountBalance } from '../services/balance.js';
 import { getAccountPortfolio } from '../services/portfolio.js';
 import { getHistoricalPrices } from '../services/yahoo.js';
@@ -12,6 +12,7 @@ import {
   UpdateAccountInput,
 } from '../validation/index.js';
 import { sendSuccess, badRequest, notFound, internalError } from '../utils/response.js';
+import { roundCurrency } from '../services/currency.js';
 
 const router = Router();
 
@@ -19,40 +20,62 @@ const router = Router();
 router.get('/', async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const accounts = await accountQueries.getAll(userId);
 
-    // Calculate balances for each account using the balance service
-    const accountsWithBalances = await Promise.all(accounts.map(async (account) => {
-      const balance = await getAccountBalance(userId, account.id);
+    // Batch fetch all data in 3 queries (instead of N+1 per account)
+    const [accountsWithBalances, allHoldings, allRecurringCounts] = await Promise.all([
+      batchQueries.getAllAccountsWithBalances(userId),
+      holdingsQueries.getAll(userId),
+      batchQueries.getAllRecurringCounts(userId),
+    ]);
 
-      if (!balance) {
-        return {
-          ...account,
-          balance: 0,
-          recurringInflow: 0,
-          recurringOutflow: 0,
-        };
+    // Group holdings by account_id
+    const holdingsByAccount = new Map<number, typeof allHoldings>();
+    for (const holding of allHoldings) {
+      const accountId = holding.account_id!;
+      if (!holdingsByAccount.has(accountId)) {
+        holdingsByAccount.set(accountId, []);
       }
+      holdingsByAccount.get(accountId)!.push(holding);
+    }
+
+    // Group recurring counts by account_id
+    const recurringByAccount = new Map<number, (typeof allRecurringCounts)[0]>();
+    for (const recurring of allRecurringCounts) {
+      recurringByAccount.set(recurring.account_id, recurring);
+    }
+
+    // Build results in-memory
+    const results = accountsWithBalances.map((account) => {
+      const recurring = recurringByAccount.get(account.id);
+      const recurringInflow = recurring?.inflow_count || 0;
+      const recurringOutflow = recurring?.outflow_count || 0;
+      const balance = Number(account.initial_balance) + Number(account.transaction_total);
 
       if (account.type === 'stock') {
+        const holdings = holdingsByAccount.get(account.id) || [];
+        let costBasis = 0;
+        for (const holding of holdings) {
+          costBasis += Number(holding.shares) * Number(holding.avg_cost);
+        }
+
         return {
           ...account,
-          balance: balance.balance,
-          costBasis: balance.costBasis,
-          recurringInflow: balance.recurringInflow,
-          recurringOutflow: balance.recurringOutflow,
+          balance: roundCurrency(balance),
+          costBasis: roundCurrency(costBasis),
+          recurringInflow,
+          recurringOutflow,
         };
       }
 
       return {
         ...account,
-        balance: balance.balance,
-        recurringInflow: balance.recurringInflow,
-        recurringOutflow: balance.recurringOutflow,
+        balance: roundCurrency(balance),
+        recurringInflow,
+        recurringOutflow,
       };
-    }));
+    });
 
-    sendSuccess(res, accountsWithBalances);
+    sendSuccess(res, results);
   } catch (error) {
     console.error('Error fetching accounts:', error);
     internalError(res, 'Failed to fetch accounts');

@@ -124,20 +124,20 @@ export default function Dashboard() {
             <div>
               <p className="text-sm text-gray-500 mb-1">Market Value</p>
               <p className="text-xl font-semibold text-gray-900">
-                ${data.stockPortfolio.totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {formatCurrency(data.stockPortfolio.totalValue, data.mainCurrency)}
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-500 mb-1">Cost Basis</p>
               <p className="text-xl font-semibold text-gray-900">
-                ${data.stockPortfolio.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {formatCurrency(data.stockPortfolio.totalCost, data.mainCurrency)}
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-500 mb-1">Total Gain/Loss</p>
               <p className={`text-xl font-semibold ${data.stockPortfolio.totalGain >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {data.stockPortfolio.totalGain >= 0 ? '+' : ''}
-                ${data.stockPortfolio.totalGain.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {formatCurrency(data.stockPortfolio.totalGain, data.mainCurrency)}
                 <span className="text-sm ml-1 font-normal">
                   ({data.stockPortfolio.totalGainPercent >= 0 ? '+' : ''}{data.stockPortfolio.totalGainPercent.toFixed(2)}%)
                 </span>
@@ -147,7 +147,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-500 mb-1">Day Change</p>
               <p className={`text-xl font-semibold ${data.stockPortfolio.dayChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {data.stockPortfolio.dayChange >= 0 ? '+' : ''}
-                ${data.stockPortfolio.dayChange.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {formatCurrency(data.stockPortfolio.dayChange, data.mainCurrency)}
                 <span className="text-sm ml-1 font-normal">
                   ({data.stockPortfolio.dayChangePercent >= 0 ? '+' : ''}{data.stockPortfolio.dayChangePercent.toFixed(2)}%)
                 </span>

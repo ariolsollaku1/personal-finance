@@ -35,6 +35,15 @@ type Frequency = 'weekly' | 'biweekly' | 'monthly' | 'yearly';
 
 All foreign keys indexed: `account_id`, `user_id`, `payee_id`, `category_id`, `from_account_id`, `to_account_id`. Additional: `account_transactions(date)`.
 
+### Schema Rules (for new tables and migrations)
+
+- **NOT NULL** on all required columns
+- **CHECK constraints** for valid ranges: `amount > 0`, `shares > 0`, `tax_rate BETWEEN 0 AND 100`
+- **ON DELETE action** on every foreign key: `SET NULL` for optional refs, `CASCADE` for owned entities
+- **Indexes** on every column used in `WHERE`, `JOIN`, or `ORDER BY`
+- **Composite indexes** for common query patterns (e.g., `(account_id, date)`)
+- **UNIQUE constraints** where business logic requires it (documented in schema)
+
 ### Query Functions (`src/server/db/queries.ts`)
 
 ```typescript

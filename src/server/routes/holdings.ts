@@ -231,19 +231,25 @@ router.post('/:symbol/sell', async (req: Request, res: Response) => {
       return notFound(res, 'Holding not found');
     }
 
-    if (shares > Number(holding.shares)) {
+    const SHARE_EPSILON = 0.0001;
+    const heldShares = Number(holding.shares);
+
+    if (shares > heldShares + SHARE_EPSILON) {
       return badRequest(res, 'Cannot sell more shares than owned');
     }
 
+    // Clamp to exact shares if within epsilon (selling "all" shares)
+    const sellShares = Math.abs(shares - heldShares) < SHARE_EPSILON ? heldShares : shares;
+
     const txDate = date || new Date().toISOString().split('T')[0];
-    const proceeds = shares * price - (fees || 0);
+    const proceeds = sellShares * price - (fees || 0);
 
     // Record sell transaction with accountId
     await transactionQueries.create(
       userId,
       symbol,
       'sell',
-      shares,
+      sellShares,
       price,
       fees || 0,
       txDate,
@@ -259,12 +265,12 @@ router.post('/:symbol/sell', async (req: Request, res: Response) => {
       txDate,
       null,
       null,
-      `Sell ${shares} ${symbol} @ $${price.toFixed(2)}`
+      `Sell ${sellShares} ${symbol} @ $${price.toFixed(2)}`
     );
 
-    const remainingShares = Number(holding.shares) - shares;
+    const remainingShares = heldShares - sellShares;
 
-    if (remainingShares <= 0) {
+    if (remainingShares < SHARE_EPSILON) {
       // Keep holding with 0 shares for transaction history
       await holdingsQueries.update(userId, holding.id, 0, Number(holding.avg_cost));
       const updatedHolding = await holdingsQueries.getBySymbol(userId, symbol, accountId);
